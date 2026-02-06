@@ -31,7 +31,11 @@ import {
   Close,
   Store,
   Star,
-  LocalOffer
+  LocalOffer,
+  BusinessCenter,
+  Receipt,
+  Logout,
+  SmartToy
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -169,19 +173,22 @@ const Header = () => {
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Button
-              color="inherit"
-              startIcon={<Star />}
-              sx={{ 
-                color: 'white',
-                fontSize: '0.8rem',
-                textTransform: 'none',
-                minWidth: 'auto'
-              }}
-              onClick={() => navigate('/become-seller')}
-            >
-              Become a Seller
-            </Button>
+            {/* Show Become Seller button only for non-authenticated users or customers */}
+            {(!isAuthenticated || user?.role !== 'seller') && (
+              <Button
+                color="inherit"
+                startIcon={<Star />}
+                sx={{ 
+                  color: 'white',
+                  fontSize: '0.8rem',
+                  textTransform: 'none',
+                  minWidth: 'auto'
+                }}
+                onClick={() => navigate('/become-seller')}
+              >
+                Become a Seller
+              </Button>
+            )}
             <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.3)', mx: 1 }} />
             <Button
               color="inherit"
@@ -222,18 +229,38 @@ const Header = () => {
                 open={Boolean(anchorEl)}
                 onClose={handleMenuClose}
               >
+                {user?.role === 'seller' && (
+                  <MenuItem onClick={() => { navigate('/seller-dashboard'); handleMenuClose(); }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <BusinessCenter fontSize="small" />
+                      Seller Dashboard
+                    </Box>
+                  </MenuItem>
+                )}
                 <MenuItem onClick={() => { navigate('/profile'); handleMenuClose(); }}>
-                  Profile
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Person fontSize="small" />
+                    Profile
+                  </Box>
                 </MenuItem>
                 <MenuItem onClick={() => { navigate('/orders'); handleMenuClose(); }}>
-                  Orders
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Receipt fontSize="small" />
+                    Orders
+                  </Box>
                 </MenuItem>
                 <MenuItem onClick={() => { setChatbotOpen(true); handleMenuClose(); }}>
-                  AI Assistant
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <SmartToy fontSize="small" />
+                    AI Assistant
+                  </Box>
                 </MenuItem>
                 <Divider />
                 <MenuItem onClick={handleLogout}>
-                  Logout
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Logout fontSize="small" />
+                    Logout
+                  </Box>
                 </MenuItem>
               </Menu>
             </>

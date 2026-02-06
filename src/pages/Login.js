@@ -23,13 +23,17 @@ import {
   Security,
   Verified
 } from '@mui/icons-material';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, loading, error } = useAuth();
   const theme = useTheme();
+  
+  // Get the redirect path from location state, or default to home
+  const from = location.state?.from?.pathname || '/';
   
   const [formData, setFormData] = useState({
     email: '',
@@ -47,7 +51,7 @@ const Login = () => {
     e.preventDefault();
     try {
       await login(formData.email, formData.password);
-      navigate('/');
+      navigate(from, { replace: true });
     } catch (error) {
       // Error is handled by the auth context
     }

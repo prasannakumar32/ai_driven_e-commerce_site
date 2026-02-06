@@ -55,7 +55,7 @@ const initialState = {
   isAuthenticated: false,
   token: localStorage.getItem('token'),
   user: null,
-  loading: true,
+  loading: !!localStorage.getItem('token'), // Only load if token exists
   error: null
 };
 
@@ -84,7 +84,9 @@ export const AuthProvider = ({ children }) => {
         }
       });
     } catch (error) {
+      console.error('Token verification failed:', error);
       localStorage.removeItem('token');
+      delete api.defaults.headers.common['Authorization'];
       dispatch({ type: 'LOGOUT' });
     }
   };

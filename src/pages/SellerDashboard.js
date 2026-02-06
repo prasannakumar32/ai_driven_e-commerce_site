@@ -59,7 +59,10 @@ import {
   Cancel,
   Refresh,
   FilterList,
-  Search
+  Search,
+  Category,
+  LocalOffer,
+  CloudUpload
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -67,13 +70,15 @@ import api from '../utils/api';
 
 const SellerDashboard = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const theme = useTheme();
   
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [ordersLoading, setOrdersLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -101,30 +106,14 @@ const SellerDashboard = () => {
   ];
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-    
-    if (user?.role !== 'seller') {
-      navigate('/');
-      return;
-    }
-
-    // Validate seller has complete business information
-    if (!user.businessName || !user.businessType || !user.phone) {
-      setError('Please complete your business profile to access the seller dashboard.');
-      setLoading(false);
-      return;
-    }
-    
+    // Authentication is handled by ProtectedRoute, so we can safely fetch data
     fetchProducts();
     fetchOrders();
-  }, [isAuthenticated, user, navigate]);
+  }, []);
 
   const fetchProducts = async () => {
     try {
-      setLoading(true);
+      setProductsLoading(true);
       setError(null);
       const response = await api.get('/products/seller');
       setProducts(response.data);
@@ -138,58 +127,74 @@ const SellerDashboard = () => {
         setError('Failed to fetch products. Please try again.');
       }
     } finally {
-      setLoading(false);
+      setProductsLoading(false);
     }
   };
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch('/api/orders/seller');
-      const data = await response.json();
-      setOrders(data);
+      setOrdersLoading(true);
+      setError(null);
+      const response = await api.get('/orders/seller');
+      setOrders(response.data);
     } catch (error) {
       console.error('Error fetching orders:', error);
-      // Add mock data for demonstration
-      setOrders([
-        {
-          _id: 'order1',
-          customer: { name: 'John Doe', email: 'john@example.com' },
-          items: [
-            { quantity: 2, product: { name: 'iPhone 15 Pro' } },
-            { quantity: 1, product: { name: 'AirPods Pro' } }
-          ],
-          total: 159999,
-          status: 'pending',
-          createdAt: new Date().toISOString()
-        },
-        {
-          _id: 'order2',
-          customer: { name: 'Jane Smith', email: 'jane@example.com' },
-          items: [
-            { quantity: 1, product: { name: 'Samsung Galaxy S24' } }
-          ],
-          total: 95999,
-          status: 'processing',
-          createdAt: new Date(Date.now() - 86400000).toISOString()
-        },
-        {
-          _id: 'order3',
-          customer: { name: 'Mike Johnson', email: 'mike@example.com' },
-          items: [
-            { quantity: 3, product: { name: 'Nike Air Max 270' } }
-          ],
-          total: 29997,
-          status: 'delivered',
-          createdAt: new Date(Date.now() - 172800000).toISOString()
-        }
-      ]);
+      if (error.response?.status === 403) {
+        setError('Access denied. Only sellers can view orders.');
+      } else if (error.response?.status === 401) {
+        setError('Please login to continue.');
+      } else {
+        setError('Failed to fetch orders. Please try again.');
+        // Add mock data for demonstration
+        setOrders([
+          {
+            _id: 'order1',
+            customer: { name: 'John Doe', email: 'john@example.com' },
+            items: [
+              { quantity: 2, product: { name: 'iPhone 15 Pro' } },
+              { quantity: 1, product: { name: 'AirPods Pro' } }
+            ],
+            total: 159999,
+            status: 'pending',
+            createdAt: new Date().toISOString()
+          },
+          {
+            _id: 'order2',
+            customer: { name: 'Jane Smith', email: 'jane@example.com' },
+            items: [
+              { quantity: 1, product: { name: 'Samsung Galaxy S24' } }
+            ],
+            total: 95999,
+            status: 'processing',
+            createdAt: new Date(Date.now() - 86400000).toISOString()
+          },
+          {
+            _id: 'order3',
+            customer: { name: 'Mike Johnson', email: 'mike@example.com' },
+            items: [
+              { quantity: 3, product: { name: 'Nike Air Max 270' } }
+            ],
+            total: 29997,
+            status: 'delivered',
+            createdAt: new Date(Date.now() - 172800000).toISOString()
+          }
+        ]);
+      }
+    } finally {
+      setOrdersLoading(false);
     }
   };
 
   const handleInputChange = (field) => (event) => {
+    const value = event.target.value;
+    
+    // Clear any existing errors when user starts typing
+    if (error) setError(null);
+    if (success) setSuccess(null);
+    
     setFormData({
       ...formData,
-      [field]: event.target.value
+      [field]: value
     });
   };
 
@@ -205,28 +210,77 @@ const SellerDashboard = () => {
     e.preventDefault();
     
     try {
+      // Validate required fields before sending
+      if (!formData.name || !formData.description || !formData.price || !formData.category || !formData.brand || !formData.stock) {
+        setError('Please fill in all required fields');
+        return;
+      }
+
+      // Validate numeric fields
+      const price = parseFloat(formData.price);
+      const stock = parseInt(formData.stock);
+      
+      if (isNaN(price) || price <= 0) {
+        setError('Please enter a valid price greater than 0');
+        return;
+      }
+      
+      if (isNaN(stock) || stock < 0) {
+        setError('Please enter a valid stock quantity (0 or greater)');
+        return;
+      }
+
       const productData = {
-        ...formData,
-        price: parseFloat(formData.price),
-        stock: parseInt(formData.stock),
-        tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-        features: formData.features.split(',').map(feature => feature.trim()).filter(feature => feature),
-        seller: user._id
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        price: price,
+        category: formData.category,
+        brand: formData.brand.trim(),
+        stock: stock,
+        images: formData.images && formData.images.length > 0 ? formData.images : [],
+        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
+        features: formData.features ? formData.features.split(',').map(feature => feature.trim()).filter(feature => feature) : []
       };
 
+      console.log('Submitting product data:', productData);
+
+      let response;
       if (editingProduct) {
-        await api.put(`/products/${editingProduct._id}`, productData);
+        response = await api.put(`/products/${editingProduct._id}`, productData);
+        console.log('Product updated successfully:', response.data);
       } else {
-        await api.post('/products', productData);
+        response = await api.post('/products', productData);
+        console.log('Product created successfully:', response.data);
       }
 
       setOpenDialog(false);
       setEditingProduct(null);
       resetForm();
       fetchProducts();
+      
+      // Show success message
+      setSuccess(editingProduct ? 'Product updated successfully!' : 'Product created successfully!');
+      setError(null);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000);
+      
     } catch (error) {
-      setError('Failed to save product');
       console.error('Error saving product:', error);
+      let errorMessage = 'Failed to save product';
+      
+      if (error.response) {
+        // Server responded with error
+        errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
+      } else if (error.request) {
+        // Network error
+        errorMessage = 'Network error. Please check your connection.';
+      } else {
+        // Other error
+        errorMessage = error.message || 'An unexpected error occurred';
+      }
+      
+      setError(errorMessage);
     }
   };
 
@@ -260,11 +314,7 @@ const SellerDashboard = () => {
 
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
     try {
-      await fetch(`/api/orders/${orderId}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
-      });
+      await api.put(`/orders/${orderId}/status`, { status: newStatus });
       fetchOrders();
     } catch (error) {
       setError('Failed to update order status');
@@ -288,141 +338,240 @@ const SellerDashboard = () => {
 
   const renderProductForm = () => (
     <Box component="form" onSubmit={handleSubmit}>
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12 }}>
-          <TextField
-            fullWidth
-            label="Product Name"
-            value={formData.name}
-            onChange={handleInputChange('name')}
-            required
-          />
-        </Grid>
+      <Typography variant="h6" gutterBottom sx={{ mb: 3, color: '#2874F0', fontWeight: 600 }}>
+        {editingProduct ? 'Edit Product' : 'Add New Product'}
+      </Typography>
+      
+      {/* Product Information Section */}
+      <Paper sx={{ p: 3, mb: 3, border: '1px solid #e0e0e0', borderRadius: 2 }}>
+        <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#333' }}>
+          📦 Product Information
+        </Typography>
         
-        <Grid size={{ xs: 12 }}>
-          <TextField
-            fullWidth
-            label="Description"
-            multiline
-            rows={4}
-            value={formData.description}
-            onChange={handleInputChange('description')}
-            required
-          />
-        </Grid>
-        
-        <Grid size={{ xs: 12, md: 6 }}>
-          <TextField
-            fullWidth
-            label="Price (₹)"
-            type="number"
-            value={formData.price}
-            onChange={handleInputChange('price')}
-            required
-          />
-        </Grid>
-        
-        <Grid size={{ xs: 12, md: 6 }}>
-          <TextField
-            fullWidth
-            label="Stock Quantity"
-            type="number"
-            value={formData.stock}
-            onChange={handleInputChange('stock')}
-            required
-          />
-        </Grid>
-        
-        <Grid size={{ xs: 12, md: 6 }}>
-          <TextField
-            fullWidth
-            label="Brand"
-            value={formData.brand}
-            onChange={handleInputChange('brand')}
-            required
-          />
-        </Grid>
-        
-        <Grid size={{ xs: 12, md: 6 }}>
-          <TextField
-            fullWidth
-            select
-            label="Category"
-            value={formData.category}
-            onChange={handleInputChange('category')}
-            required
-          >
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat.charAt(0).toUpperCase() + cat.slice(1)}
-              </option>
-            ))}
-          </TextField>
-        </Grid>
-        
-        <Grid size={{ xs: 12 }}>
-          <TextField
-            fullWidth
-            label="Tags (comma separated)"
-            value={formData.tags}
-            onChange={handleInputChange('tags')}
-            helperText="e.g., electronics, smartphone, premium"
-          />
-        </Grid>
-        
-        <Grid size={{ xs: 12 }}>
-          <TextField
-            fullWidth
-            label="Features (comma separated)"
-            value={formData.features}
-            onChange={handleInputChange('features')}
-            helperText="e.g., 5G enabled, Water resistant, Premium materials"
-          />
-        </Grid>
-        
-        <Grid size={{ xs: 12 }}>
-          <Button
-            variant="outlined"
-            component="label"
-            sx={{ border: '2px dashed #ccc', p: 3, width: '100%' }}
-          >
-            <Box sx={{ textAlign: 'center' }}>
-              <Upload sx={{ fontSize: 40, color: '#ccc', mb: 1 }} />
-              <Typography variant="body2" color="text.secondary">
-                Click to upload product images
-              </Typography>
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImageUpload}
-                style={{ display: 'none' }}
-              />
-            </Box>
-          </Button>
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 12 }}>
+            <TextField
+              fullWidth
+              label="Product Name"
+              value={formData.name}
+              onChange={handleInputChange('name')}
+              required
+              variant="outlined"
+              sx={{ '& .MuiOutlinedInput-root': { '&:hover fieldset': { borderColor: '#2874F0' } } }}
+            />
+          </Grid>
           
-          {formData.images.length > 0 && (
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
+          <Grid size={{ xs: 12 }}>
+            <TextField
+              fullWidth
+              label="Description"
+              multiline
+              rows={4}
+              value={formData.description}
+              onChange={handleInputChange('description')}
+              required
+              variant="outlined"
+              placeholder="Describe your product in detail..."
+              sx={{ '& .MuiOutlinedInput-root': { '&:hover fieldset': { borderColor: '#2874F0' } } }}
+            />
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* Pricing & Inventory Section */}
+      <Paper sx={{ p: 3, mb: 3, border: '1px solid #e0e0e0', borderRadius: 2 }}>
+        <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#333' }}>
+          💰 Pricing & Inventory
+        </Typography>
+        
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField
+              fullWidth
+              label="Price (₹)"
+              type="number"
+              value={formData.price}
+              onChange={handleInputChange('price')}
+              required
+              variant="outlined"
+              InputProps={{
+                startAdornment: <Typography sx={{ mr: 1 }}>₹</Typography>,
+                inputProps: { min: 0 }
+              }}
+              sx={{ '& .MuiOutlinedInput-root': { '&:hover fieldset': { borderColor: '#2874F0' } } }}
+            />
+          </Grid>
+          
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField
+              fullWidth
+              label="Stock Quantity"
+              type="number"
+              value={formData.stock}
+              onChange={handleInputChange('stock')}
+              required
+              variant="outlined"
+              InputProps={{
+                startAdornment: <Inventory sx={{ mr: 1, fontSize: 20, color: '#666' }} />,
+                inputProps: { min: 0 }
+              }}
+              sx={{ '& .MuiOutlinedInput-root': { '&:hover fieldset': { borderColor: '#2874F0' } } }}
+            />
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* Category & Brand Section */}
+      <Paper sx={{ p: 3, mb: 3, border: '1px solid #e0e0e0', borderRadius: 2 }}>
+        <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#333' }}>
+          🏷️ Category & Brand
+        </Typography>
+        
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField
+              fullWidth
+              label="Brand"
+              value={formData.brand}
+              onChange={handleInputChange('brand')}
+              required
+              variant="outlined"
+              sx={{ '& .MuiOutlinedInput-root': { '&:hover fieldset': { borderColor: '#2874F0' } } }}
+            />
+          </Grid>
+          
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth variant="outlined" required>
+              <InputLabel>Category</InputLabel>
+              <Select
+                value={formData.category}
+                onChange={handleInputChange('category')}
+                label="Category"
+                sx={{ '&:hover .MuiOutlinedInput-root': { borderColor: '#2874F0' } }}
+              >
+                {categories.map((cat) => (
+                  <MenuItem key={cat} value={cat}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Category sx={{ mr: 1, fontSize: 18, color: '#666' }} />
+                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* Tags & Features Section */}
+      <Paper sx={{ p: 3, mb: 3, border: '1px solid #e0e0e0', borderRadius: 2 }}>
+        <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#333' }}>
+          🏷️ Tags & Features
+        </Typography>
+        
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 12 }}>
+            <TextField
+              fullWidth
+              label="Tags"
+              value={formData.tags}
+              onChange={handleInputChange('tags')}
+              variant="outlined"
+              placeholder="e.g., electronics, smartphone, premium"
+              helperText="Separate multiple tags with commas"
+              InputProps={{
+                startAdornment: <LocalOffer sx={{ mr: 1, fontSize: 20, color: '#666' }} />
+              }}
+              sx={{ '& .MuiOutlinedInput-root': { '&:hover fieldset': { borderColor: '#2874F0' } } }}
+            />
+          </Grid>
+          
+          <Grid size={{ xs: 12 }}>
+            <TextField
+              fullWidth
+              label="Features"
+              value={formData.features}
+              onChange={handleInputChange('features')}
+              variant="outlined"
+              placeholder="e.g., 5G enabled, Water resistant, Premium materials"
+              helperText="Separate multiple features with commas"
+              InputProps={{
+                startAdornment: <Star sx={{ mr: 1, fontSize: 20, color: '#666' }} />
+              }}
+              sx={{ '& .MuiOutlinedInput-root': { '&:hover fieldset': { borderColor: '#2874F0' } } }}
+            />
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* Product Images Section */}
+      <Paper sx={{ p: 3, mb: 3, border: '1px solid #e0e0e0', borderRadius: 2 }}>
+        <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#333' }}>
+          📸 Product Images
+        </Typography>
+        
+        <Button
+          variant="outlined"
+          component="label"
+          sx={{ 
+            border: '2px dashed #2874F0', 
+            p: 3, 
+            width: '100%', 
+            color: '#2874F0',
+            '&:hover': { 
+              border: '2px solid #1976D2', 
+              color: '#1976D2',
+              bgcolor: 'rgba(25, 118, 210, 0.04)'
+            }
+          }}
+        >
+          <Box sx={{ textAlign: 'center' }}>
+            <CloudUpload sx={{ fontSize: 40, color: '#2874F0', mb: 1 }} />
+            <Typography variant="body2" sx={{ color: '#2874F0', fontWeight: 500 }}>
+              Click to upload product images
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Supported formats: JPG, PNG, GIF (Max 5MB)
+            </Typography>
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleImageUpload}
+              style={{ display: 'none' }}
+            />
+          </Box>
+        </Button>
+        
+        {formData.images.length > 0 && (
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="subtitle2" sx={{ mb: 2, color: '#666' }}>
+              Uploaded Images ({formData.images.length}/5)
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
               {formData.images.map((image, index) => (
                 <Box key={index} sx={{ position: 'relative' }}>
                   <img
                     src={image}
                     alt={`Product ${index + 1}`}
                     style={{
-                      width: 100,
-                      height: 100,
+                      width: 120,
+                      height: 120,
                       objectFit: 'cover',
-                      borderRadius: 4
+                      borderRadius: 8,
+                      border: '2px solid #e0e0e0'
                     }}
                   />
                   <IconButton
                     size="small"
                     sx={{
                       position: 'absolute',
-                      top: -5,
-                      right: -5,
-                      bgcolor: 'white',
-                      '&:hover': { bgcolor: 'grey.100' }
+                      top: -8,
+                      right: -8,
+                      bgcolor: '#ff4757',
+                      color: 'white',
+                      '&:hover': { bgcolor: '#ff3838' },
+                      boxShadow: 2
                     }}
                     onClick={() => {
                       const newImages = formData.images.filter((_, i) => i !== index);
@@ -434,20 +583,36 @@ const SellerDashboard = () => {
                 </Box>
               ))}
             </Box>
-          )}
-        </Grid>
-      </Grid>
+          </Box>
+        )}
+      </Paper>
       
-      <DialogActions sx={{ p: 2 }}>
-        <Button onClick={() => {
-          setOpenDialog(false);
-          setEditingProduct(null);
-          resetForm();
-        }}>
+      <DialogActions sx={{ p: 3, borderTop: '1px solid #e0e0e0' }}>
+        <Button 
+          onClick={() => {
+            setOpenDialog(false);
+            setEditingProduct(null);
+            resetForm();
+          }}
+          sx={{ 
+            color: '#666',
+            '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
+          }}
+        >
           Cancel
         </Button>
-        <Button type="submit" variant="contained" color="primary">
-          {editingProduct ? 'Update' : 'Add'} Product
+        <Button 
+          type="submit" 
+          variant="contained" 
+          sx={{ 
+            bgcolor: '#2874F0',
+            color: 'white',
+            px: 4,
+            py: 1,
+            '&:hover': { bgcolor: '#1976D2' }
+          }}
+        >
+          {editingProduct ? 'Update Product' : 'Add Product'}
         </Button>
       </DialogActions>
     </Box>
@@ -791,7 +956,7 @@ const SellerDashboard = () => {
     );
   };
 
-  if (loading) {
+  if (productsLoading || ordersLoading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <LinearProgress />
@@ -842,6 +1007,28 @@ const SellerDashboard = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
+      {/* Success Message */}
+      {success && (
+        <Alert 
+          severity="success" 
+          sx={{ mb: 3 }}
+          onClose={() => setSuccess(null)}
+        >
+          {success}
+        </Alert>
+      )}
+      
+      {/* Error Message */}
+      {error && (
+        <Alert 
+          severity="error" 
+          sx={{ mb: 3 }}
+          onClose={() => setError(null)}
+        >
+          {error}
+        </Alert>
+      )}
+
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" gutterBottom fontWeight="bold" color="text.primary">
           Seller Dashboard
@@ -889,14 +1076,58 @@ const SellerDashboard = () => {
           setEditingProduct(null);
           resetForm();
         }}
-        maxWidth="md"
+        maxWidth="lg"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
+          }
+        }}
       >
-        <DialogTitle>
-          {editingProduct ? 'Edit Product' : 'Add New Product'}
+        <DialogTitle sx={{ 
+          bgcolor: 'linear-gradient(135deg, #2874F0 0%, #4B8BF5 100%)',
+          color: 'white',
+          py: 3,
+          px: 4,
+          borderRadius: '16px 16px 0 0',
+          '& .MuiDialogTitle-root': {
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2
+          }
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)' }}>
+              {editingProduct ? <Edit /> : <Add />}
+            </Avatar>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                {editingProduct ? 'Edit Product' : 'Add New Product'}
+              </Typography>
+              <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                Fill in the details below to {editingProduct ? 'update' : 'create'} your product
+              </Typography>
+            </Box>
+          </Box>
+          <IconButton
+            onClick={() => {
+              setOpenDialog(false);
+              setEditingProduct(null);
+              resetForm();
+            }}
+            sx={{ 
+              color: 'white',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }
+            }}
+          >
+            <Close />
+          </IconButton>
         </DialogTitle>
-        <DialogContent>
-          {renderProductForm()}
+        <DialogContent sx={{ p: 0, bgcolor: '#fafafa' }}>
+          <Box sx={{ p: 4 }}>
+            {renderProductForm()}
+          </Box>
         </DialogContent>
       </Dialog>
     </Container>
