@@ -17,7 +17,8 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  Divider
+  Divider,
+  CircularProgress
 } from '@mui/material';
 import {
   Search,
@@ -45,7 +46,7 @@ import AIChatbot from './AIChatbot';
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, logout, loading } = useAuth();
   const { getItemCount } = useCart();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -80,7 +81,8 @@ const Header = () => {
     { text: 'Products', icon: <Category />, path: '/products' },
   ];
 
-  if (isAuthenticated) {
+  // Only add authenticated menu items when not loading and authenticated
+  if (!loading && isAuthenticated) {
     menuItems.push(
       { text: 'Profile', icon: <Person />, path: '/profile' },
       { text: 'AI Assistant', icon: <Chat />, action: () => setChatbotOpen(true) }
@@ -172,9 +174,9 @@ const Header = () => {
             />
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {/* Show Become Seller button only for non-authenticated users or customers */}
-            {(!isAuthenticated || user?.role !== 'seller') && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, justifyContent: 'flex-end' }}>
+            {/* Show Become Seller button only for non-authenticated users or customers, but not during loading */}
+            {!loading && (!isAuthenticated || user?.role !== 'seller') && (
               <Button
                 color="inherit"
                 startIcon={<Star />}
@@ -212,75 +214,127 @@ const Header = () => {
                 <ShoppingCart />
               </Badge>
             </IconButton>
-          </Box>
 
-          {isAuthenticated ? (
-            <>
-              <IconButton
-                color="inherit"
-                onClick={handleMenuClick}
-              >
-                <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
-                  {user?.name?.charAt(0).toUpperCase()}
-                </Avatar>
-              </IconButton>
-              <Menu
-                anchorEl={anchorEl}
-                open={Boolean(anchorEl)}
-                onClose={handleMenuClose}
-              >
-                {user?.role === 'seller' && (
-                  <MenuItem onClick={() => { navigate('/seller-dashboard'); handleMenuClose(); }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <BusinessCenter fontSize="small" />
-                      Seller Dashboard
+            {/* Show loading spinner during authentication verification */}
+            {loading ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
+                <CircularProgress size={24} sx={{ color: 'white' }} />
+              </Box>
+            ) : isAuthenticated ? (
+              <>
+                <IconButton
+                  color="inherit"
+                  onClick={handleMenuClick}
+                  sx={{ 
+                    ml: 1,
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.1)'
+                    }
+                  }}
+                >
+                  <Avatar 
+                    sx={{ 
+                      width: 36, 
+                      height: 36, 
+                      bgcolor: 'secondary.main',
+                      border: '2px solid rgba(255,255,255,0.3)',
+                      fontWeight: 'bold',
+                      fontSize: '1rem'
+                    }}
+                  >
+                    {user?.name?.charAt(0).toUpperCase()}
+                  </Avatar>
+                </IconButton>
+                <Menu
+                  anchorEl={anchorEl}
+                  open={Boolean(anchorEl)}
+                  onClose={handleMenuClose}
+                  anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'right',
+                  }}
+                  transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                  }}
+                  PaperProps={{
+                    sx: {
+                      mt: 1,
+                      minWidth: 200,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                    }
+                  }}
+                >
+                  <MenuItem sx={{ pb: 1, borderBottom: '1px solid #f0f0f0' }}>
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        {user?.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {user?.email}
+                      </Typography>
+                      {user?.role === 'seller' && (
+                        <Typography variant="caption" color="primary" display="block">
+                          Seller
+                        </Typography>
+                      )}
                     </Box>
                   </MenuItem>
-                )}
-                <MenuItem onClick={() => { navigate('/profile'); handleMenuClose(); }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Person fontSize="small" />
-                    Profile
-                  </Box>
-                </MenuItem>
-                <MenuItem onClick={() => { navigate('/orders'); handleMenuClose(); }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Receipt fontSize="small" />
-                    Orders
-                  </Box>
-                </MenuItem>
-                <MenuItem onClick={() => { setChatbotOpen(true); handleMenuClose(); }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <SmartToy fontSize="small" />
-                    AI Assistant
-                  </Box>
-                </MenuItem>
-                <Divider />
-                <MenuItem onClick={handleLogout}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Logout fontSize="small" />
-                    Logout
-                  </Box>
-                </MenuItem>
-              </Menu>
-            </>
-          ) : (
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                color="inherit"
-                onClick={() => navigate('/login')}
-              >
-                Login
-              </Button>
-              <Button
-                color="inherit"
-                variant="outlined"
-                onClick={() => navigate('/register')}
-              >
-                Register
-              </Button>
-            </Box>
-          )}
+                  {user?.role === 'seller' && (
+                    <MenuItem onClick={() => { navigate('/seller-dashboard'); handleMenuClose(); }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <BusinessCenter fontSize="small" />
+                        Seller Dashboard
+                      </Box>
+                    </MenuItem>
+                  )}
+                  <MenuItem onClick={() => { navigate('/profile'); handleMenuClose(); }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Person fontSize="small" />
+                      Profile
+                    </Box>
+                  </MenuItem>
+                  <MenuItem onClick={() => { navigate('/orders'); handleMenuClose(); }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Receipt fontSize="small" />
+                      Orders
+                    </Box>
+                  </MenuItem>
+                  <MenuItem onClick={() => { setChatbotOpen(true); handleMenuClose(); }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <SmartToy fontSize="small" />
+                      AI Assistant
+                    </Box>
+                  </MenuItem>
+                  <Divider />
+                  <MenuItem onClick={handleLogout}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Logout fontSize="small" />
+                      Logout
+                    </Box>
+                  </MenuItem>
+                </Menu>
+              </>
+            ) : (
+              !loading && (
+                <Box sx={{ display: 'flex', gap: 1, ml: 1 }}>
+                  <Button
+                    color="inherit"
+                    onClick={() => navigate('/login')}
+                  >
+                    Login
+                  </Button>
+                  <Button
+                    color="inherit"
+                    variant="outlined"
+                    onClick={() => navigate('/register')}
+                  >
+                    Register
+                  </Button>
+                </Box>
+              )
+            )}
+          </Box>
         </Toolbar>
 
         {/* Mobile Search Bar */}
@@ -353,6 +407,63 @@ const Header = () => {
                 <ListItemText primary={item.text} />
               </ListItem>
             ))}
+            
+            {/* Add user avatar and menu items in mobile drawer only when not loading */}
+            {!loading && isAuthenticated && (
+              <>
+                <Divider />
+                <ListItem>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1 }}>
+                    <Avatar 
+                      sx={{ 
+                        width: 40, 
+                        height: 40, 
+                        bgcolor: 'secondary.main',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      {user?.name?.charAt(0).toUpperCase()}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        {user?.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {user?.email}
+                      </Typography>
+                      {user?.role === 'seller' && (
+                        <Typography variant="caption" color="primary" display="block">
+                          Seller
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                </ListItem>
+                <Divider />
+                {user?.role === 'seller' && (
+                  <ListItem button onClick={() => { navigate('/seller-dashboard'); setMobileMenuOpen(false); }}>
+                    <ListItemIcon><BusinessCenter /></ListItemIcon>
+                    <ListItemText primary="Seller Dashboard" />
+                  </ListItem>
+                )}
+                <ListItem button onClick={() => { navigate('/profile'); setMobileMenuOpen(false); }}>
+                  <ListItemIcon><Person /></ListItemIcon>
+                  <ListItemText primary="Profile" />
+                </ListItem>
+                <ListItem button onClick={() => { navigate('/orders'); setMobileMenuOpen(false); }}>
+                  <ListItemIcon><Receipt /></ListItemIcon>
+                  <ListItemText primary="Orders" />
+                </ListItem>
+                <ListItem button onClick={() => { setChatbotOpen(true); setMobileMenuOpen(false); }}>
+                  <ListItemIcon><SmartToy /></ListItemIcon>
+                  <ListItemText primary="AI Assistant" />
+                </ListItem>
+                <ListItem button onClick={handleLogout}>
+                  <ListItemIcon><Logout /></ListItemIcon>
+                  <ListItemText primary="Logout" />
+                </ListItem>
+              </>
+            )}
           </List>
         </Box>
       </Drawer>
