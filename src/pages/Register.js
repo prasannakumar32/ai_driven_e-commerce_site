@@ -11,7 +11,14 @@ import {
   Link as MuiLink,
   Divider,
   useTheme,
-  IconButton
+  IconButton,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  RadioGroup,
+  FormControlLabel,
+  Radio
 } from '@mui/material';
 import { 
   Store, 
@@ -21,7 +28,8 @@ import {
   ArrowBack,
   Security,
   Verified,
-  HowToReg
+  HowToReg,
+  BusinessCenter
 } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -35,7 +43,12 @@ const Register = () => {
     name: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    role: 'customer', // customer or seller
+    businessName: '', // for sellers
+    businessType: '', // for sellers
+    gstNumber: '', // for sellers
+    phone: ''
   });
 
   const [validationError, setValidationError] = useState('');
@@ -57,6 +70,20 @@ const Register = () => {
       setValidationError('Password must be at least 6 characters long');
       return false;
     }
+    if (formData.role === 'seller') {
+      if (!formData.businessName || !formData.businessType) {
+        setValidationError('Business name and type are required for sellers');
+        return false;
+      }
+      if (!formData.phone || formData.phone.length < 10) {
+        setValidationError('Valid phone number is required');
+        return false;
+      }
+    }
+    if (!formData.email.includes('@')) {
+      setValidationError('Please enter a valid email address');
+      return false;
+    }
     return true;
   };
 
@@ -68,8 +95,12 @@ const Register = () => {
     }
 
     try {
-      await register(formData.name, formData.email, formData.password);
-      navigate('/');
+      await register(formData.name, formData.email, formData.password, formData.role, formData);
+      if (formData.role === 'seller') {
+        navigate('/seller-dashboard');
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       // Error is handled by the auth context
     }
@@ -119,10 +150,13 @@ const Register = () => {
           }}
         >
           <Typography variant="h5" gutterBottom fontWeight="bold" textAlign="center" color="text.primary">
-            Create Account
+            Join PKS {formData.role === 'seller' ? 'as a Seller' : 'as a Customer'}
           </Typography>
           <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mb: 4 }}>
-            Get personalized recommendations and exclusive deals
+            {formData.role === 'seller' 
+              ? 'Start selling to millions of customers across India' 
+              : 'Get personalized recommendations and exclusive deals'
+            }
           </Typography>
 
         {error && (
@@ -138,6 +172,30 @@ const Register = () => {
         )}
 
           <Box component="form" onSubmit={handleSubmit}>
+            <FormControl component="fieldset" sx={{ mb: 3 }}>
+              <Typography variant="body1" fontWeight="medium" gutterBottom>
+                Account Type
+              </Typography>
+              <RadioGroup
+                row
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                sx={{ justifyContent: 'center' }}
+              >
+                <FormControlLabel 
+                  value="customer" 
+                  control={<Radio />} 
+                  label="Customer" 
+                />
+                <FormControlLabel 
+                  value="seller" 
+                  control={<Radio />} 
+                  label="Seller" 
+                />
+              </RadioGroup>
+            </FormControl>
+
             <TextField
               fullWidth
               label="Full Name"
@@ -164,6 +222,61 @@ const Register = () => {
                 startAdornment: <Email sx={{ mr: 1, color: '#FF6B35' }} />
               }}
             />
+
+            {formData.role === 'seller' && (
+              <>
+                <TextField
+                  fullWidth
+                  label="Business Name"
+                  name="businessName"
+                  value={formData.businessName}
+                  onChange={handleChange}
+                  required
+                  sx={{ mb: 3 }}
+                  InputProps={{
+                    startAdornment: <BusinessCenter sx={{ mr: 1, color: '#FF6B35' }} />
+                  }}
+                />
+
+                <FormControl fullWidth sx={{ mb: 3 }}>
+                  <InputLabel>Business Type</InputLabel>
+                  <Select
+                    value={formData.businessType}
+                    label="Business Type"
+                    name="businessType"
+                    onChange={handleChange}
+                    required
+                  >
+                    <MenuItem value="individual">Individual</MenuItem>
+                    <MenuItem value="partnership">Partnership</MenuItem>
+                    <MenuItem value="company">Company</MenuItem>
+                    <MenuItem value="llp">LLP</MenuItem>
+                  </Select>
+                </FormControl>
+
+                <TextField
+                  fullWidth
+                  label="Phone Number"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  required
+                  sx={{ mb: 3 }}
+                  InputProps={{
+                    startAdornment: <Person sx={{ mr: 1, color: '#FF6B35' }} />
+                  }}
+                />
+
+                <TextField
+                  fullWidth
+                  label="GST Number (Optional)"
+                  name="gstNumber"
+                  value={formData.gstNumber}
+                  onChange={handleChange}
+                  sx={{ mb: 3 }}
+                />
+              </>
+            )}
 
             <TextField
               fullWidth

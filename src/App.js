@@ -10,6 +10,8 @@ import Cart from './pages/Cart';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import BecomeSeller from './pages/BecomeSeller';
+import SellerDashboard from './pages/SellerDashboard';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 
@@ -98,6 +100,8 @@ function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/become-seller" element={<BecomeSeller />} />
+              <Route path="/seller-dashboard" element={<SellerDashboard />} />
             </Routes>
           </Router>
         </CartProvider>

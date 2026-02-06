@@ -110,10 +110,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (name, email, password) => {
+  const register = async (name, email, password, role = 'customer', additionalData = {}) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
-      const response = await axios.post('/api/auth/register', { name, email, password });
+      const response = await axios.post('/api/auth/register', { 
+        name, 
+        email, 
+        password, 
+        role,
+        ...additionalData
+      });
       
       axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
       

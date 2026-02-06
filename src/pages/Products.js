@@ -24,7 +24,12 @@ import {
   Drawer,
   Paper,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Avatar
 } from '@mui/material';
 import {
   ShoppingCart,
@@ -37,7 +42,9 @@ import {
   ViewModule,
   LocalOffer,
   FlashOn,
-  Verified
+  Verified,
+  Add,
+  Store
 } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { productAPI, aiAPI } from '../utils/api';
@@ -48,7 +55,7 @@ const Products = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { addToCart } = useCart();
-  const { isAuthenticated, addToHistory } = useAuth();
+  const { isAuthenticated, addToHistory, user } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -59,6 +66,18 @@ const Products = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [addProductOpen, setAddProductOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    price: '',
+    category: '',
+    brand: '',
+    stock: '',
+    images: [],
+    tags: '',
+    features: ''
+  });
   
   // Filters state
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -181,6 +200,214 @@ const Products = () => {
     } catch (error) {
       console.error('Failed to add to cart:', error);
     }
+  };
+
+  // Seller functions
+  const handleInputChange = (field) => (event) => {
+    setFormData({
+      ...formData,
+      [field]: event.target.value
+    });
+  };
+
+  const handleImageUpload = (event) => {
+    const files = Array.from(event.target.files);
+    setFormData({
+      ...formData,
+      images: files.map(file => URL.createObjectURL(file))
+    });
+  };
+
+  const handleAddProduct = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const productData = {
+        ...formData,
+        price: parseFloat(formData.price),
+        stock: parseInt(formData.stock),
+        tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+        features: formData.features.split(',').map(feature => feature.trim()).filter(feature => feature),
+        seller: user._id
+      };
+
+      const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData)
+      });
+
+      if (response.ok) {
+        const newProduct = await response.json();
+        setProducts([newProduct, ...products]);
+        setAddProductOpen(false);
+        resetForm();
+      }
+    } catch (error) {
+      console.error('Error adding product:', error);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      description: '',
+      price: '',
+      category: '',
+      brand: '',
+      stock: '',
+      images: [],
+      tags: '',
+      features: ''
+    });
+  };
+
+  const renderAddProductForm = () => {
+    const categories = ['electronics', 'clothing', 'books', 'home', 'sports', 'beauty', 'toys'];
+    
+    return (
+      <Box component="form" onSubmit={handleAddProduct}>
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Product Name *"
+              value={formData.name}
+              onChange={handleInputChange('name')}
+              required
+              size="small"
+            />
+          </Grid>
+          
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Description *"
+              multiline
+              rows={3}
+              value={formData.description}
+              onChange={handleInputChange('description')}
+              required
+              size="small"
+            />
+          </Grid>
+          
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Price (₹) *"
+              type="number"
+              value={formData.price}
+              onChange={handleInputChange('price')}
+              required
+              size="small"
+            />
+          </Grid>
+          
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Stock *"
+              type="number"
+              value={formData.stock}
+              onChange={handleInputChange('stock')}
+              required
+              size="small"
+            />
+          </Grid>
+          
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Brand *"
+              value={formData.brand}
+              onChange={handleInputChange('brand')}
+              required
+              size="small"
+            />
+          </Grid>
+          
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Category *</InputLabel>
+              <Select
+                value={formData.category}
+                label="Category *"
+                onChange={handleInputChange('category')}
+                required
+              >
+                {categories.map((cat) => (
+                  <MenuItem key={cat} value={cat}>
+                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Product Images *"
+              type="file"
+              inputProps={{ multiple: true, accept: 'image/*' }}
+              onChange={handleImageUpload}
+              helperText="Upload product images"
+              size="small"
+            />
+          </Grid>
+          
+          {formData.images.length > 0 && (
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {formData.images.map((image, index) => (
+                  <Box key={index} sx={{ position: 'relative' }}>
+                    <img
+                      src={image}
+                      alt={`Product ${index + 1}`}
+                      style={{
+                        width: 60,
+                        height: 60,
+                        objectFit: 'cover',
+                        borderRadius: 4
+                      }}
+                    />
+                    <IconButton
+                      size="small"
+                      sx={{
+                        position: 'absolute',
+                        top: -5,
+                        right: -5,
+                        bgcolor: 'white',
+                        '&:hover': { bgcolor: 'grey.100' }
+                      }}
+                      onClick={() => {
+                        const newImages = formData.images.filter((_, i) => i !== index);
+                        setFormData({ ...formData, images: newImages });
+                      }}
+                    >
+                      <Close fontSize="small" />
+                    </IconButton>
+                  </Box>
+                ))}
+              </Box>
+            </Grid>
+          )}
+        </Grid>
+        
+        <DialogActions sx={{ mt: 2 }}>
+          <Button onClick={() => {
+            setAddProductOpen(false);
+            resetForm();
+          }}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="contained" color="primary">
+            Add Product
+          </Button>
+        </DialogActions>
+      </Box>
+    );
   };
 
   const handleProductClick = (product) => {
@@ -564,12 +791,32 @@ const Products = () => {
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Page Header */}
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom fontWeight="bold" color="text.primary">
-          PKS Store
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Discover amazing products at unbeatable prices
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Box>
+            <Typography variant="h4" gutterBottom fontWeight="bold" color="text.primary">
+              PKS Store
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Discover amazing products at unbeatable prices
+            </Typography>
+          </Box>
+          
+          {/* Seller Add Product Button */}
+          {isAuthenticated && user?.role === 'seller' && (
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => setAddProductOpen(true)}
+              sx={{
+                backgroundColor: '#FF6B35',
+                '&:hover': { backgroundColor: '#E55A2B' },
+                fontWeight: 'bold'
+              }}
+            >
+              Add Product
+            </Button>
+          )}
+        </Box>
       </Box>
 
       {/* AI Recommendations */}
@@ -712,6 +959,32 @@ const Products = () => {
       >
         <FiltersPanel />
       </Drawer>
+
+      {/* Add Product Dialog for Sellers */}
+      <Dialog
+        open={addProductOpen}
+        onClose={() => {
+          setAddProductOpen(false);
+          resetForm();
+        }}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2
+          }
+        }}
+      >
+        <DialogTitle sx={{ bgcolor: '#2874F0', color: 'white' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Store sx={{ mr: 2 }} />
+            Add New Product
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3 }}>
+          {renderAddProductForm()}
+        </DialogContent>
+      </Dialog>
     </Container>
   );
 };

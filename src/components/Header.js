@@ -178,6 +178,7 @@ const Header = () => {
                 textTransform: 'none',
                 minWidth: 'auto'
               }}
+              onClick={() => navigate('/become-seller')}
             >
               Become a Seller
             </Button>
