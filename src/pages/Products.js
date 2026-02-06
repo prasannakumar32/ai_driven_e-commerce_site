@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { debounce } from 'lodash';
 import {
   Container,
   Typography,
@@ -20,10 +21,8 @@ import {
   Pagination,
   CircularProgress,
   Slider,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Drawer,
+  Paper,
   useTheme,
   useMediaQuery
 } from '@mui/material';
@@ -31,10 +30,14 @@ import {
   ShoppingCart,
   FavoriteBorder,
   FilterList,
-  ExpandMore,
   Search,
+  Close,
   Sort,
-  Close
+  ViewList,
+  ViewModule,
+  LocalOffer,
+  FlashOn,
+  Verified
 } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { productAPI, aiAPI } from '../utils/api';
@@ -52,6 +55,7 @@ const Products = () => {
   const [products, setProducts] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -60,8 +64,9 @@ const Products = () => {
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [category, setCategory] = useState(searchParams.get('category') || '');
   const [brand, setBrand] = useState(searchParams.get('brand') || '');
-  const [priceRange, setPriceRange] = useState([0, 1000]);
+  const [priceRange, setPriceRange] = useState([0, 100000]);
   const [rating, setRating] = useState(searchParams.get('rating') || '');
+  const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [page, setPage] = useState(1);
@@ -74,31 +79,7 @@ const Products = () => {
     'Apple', 'Samsung', 'Nike', 'Adidas', 'Sony', 'LG', 'Microsoft', 'Dell'
   ];
 
-  useEffect(() => {
-    fetchProducts();
-    if (isAuthenticated) {
-      fetchRecommendations();
-    }
-  }, [searchParams, page, sortBy, sortOrder]);
-
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (search) params.set('search', search);
-    if (category) params.set('category', category);
-    if (brand) params.set('brand', brand);
-    if (rating) params.set('rating', rating);
-    if (priceRange[0] > 0 || priceRange[1] < 1000) {
-      params.set('minPrice', priceRange[0]);
-      params.set('maxPrice', priceRange[1]);
-    }
-    params.set('page', page);
-    params.set('sort', sortBy);
-    params.set('order', sortOrder);
-    
-    setSearchParams(params);
-  }, [search, category, brand, rating, priceRange, page, sortBy, sortOrder]);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
       const params = {
@@ -123,7 +104,7 @@ const Products = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchParams]);
 
   const fetchRecommendations = async () => {
     try {
@@ -132,6 +113,45 @@ const Products = () => {
     } catch (error) {
       console.error('Error fetching recommendations:', error);
     }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+    if (isAuthenticated) {
+      fetchRecommendations();
+    }
+  }, [searchParams, page, sortBy, sortOrder, isAuthenticated, fetchProducts]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (category) params.set('category', category);
+    if (brand) params.set('brand', brand);
+    if (rating) params.set('rating', rating);
+    if (priceRange[0] > 0 || priceRange[1] < 100000) {
+      params.set('minPrice', priceRange[0]);
+      params.set('maxPrice', priceRange[1]);
+    }
+    params.set('page', page);
+    params.set('sort', sortBy);
+    params.set('order', sortOrder);
+    
+    setSearchParams(params);
+  }, [search, category, brand, rating, priceRange, page, sortBy, sortOrder, setSearchParams]);
+
+  // Debounced search with loading state
+  const debouncedSearch = useMemo(
+    () => debounce((value) => {
+      setSearchLoading(true);
+      setSearch(value);
+      setPage(1);
+      setTimeout(() => setSearchLoading(false), 300);
+    }, 500),
+    []
+  );
+
+  const handleSearchChange = (value) => {
+    debouncedSearch(value);
   };
 
   const handleSearch = async () => {
@@ -191,10 +211,11 @@ const Products = () => {
   };
 
   const clearFilters = () => {
+    setSearch('');
     setCategory('');
     setBrand('');
     setRating('');
-    setPriceRange([0, 1000]);
+    setPriceRange([0, 100000]);
     setPage(1);
   };
 
@@ -204,10 +225,12 @@ const Products = () => {
         height: '100%', 
         display: 'flex', 
         flexDirection: 'column',
-        transition: 'transform 0.2s, box-shadow 0.2s',
+        transition: 'all 0.3s ease',
+        border: '1px solid #e0e0e0',
         '&:hover': {
           transform: 'translateY(-4px)',
-          boxShadow: 4
+          boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          borderColor: '#2874F0'
         }
       }}
     >
@@ -215,10 +238,26 @@ const Products = () => {
         <CardMedia
           component="img"
           height="200"
-          image={product.images?.[0] || '/placeholder-product.jpg'}
+          image={product.images?.[0] || 'https://via.placeholder.com/300x200/cccccc/666666?text=No+Image'}
           alt={product.name}
-          sx={{ cursor: 'pointer' }}
+          sx={{ 
+            cursor: 'pointer',
+            objectFit: 'cover'
+          }}
           onClick={() => handleProductClick(product)}
+          onError={(e) => {
+            // Try next image in array or fallback
+            const currentSrc = e.target.src;
+            const imageArray = product.images || [];
+            const currentIndex = imageArray.findIndex(img => img === currentSrc);
+            
+            if (currentIndex < imageArray.length - 1) {
+              e.target.src = imageArray[currentIndex + 1];
+            } else {
+              // Final fallback to placeholder
+              e.target.src = 'https://via.placeholder.com/300x200/cccccc/666666?text=No+Image';
+            }
+          }}
         />
         {showScore && product.aiScore && (
           <Chip
@@ -229,27 +268,67 @@ const Products = () => {
               position: 'absolute',
               top: 8,
               right: 8,
-              fontSize: '0.7rem'
+              fontSize: '0.7rem',
+              backgroundColor: '#2874F0',
+              color: 'white'
+            }}
+          />
+        )}
+        {product.rating >= 4 && (
+          <Chip
+            icon={<Verified fontSize="small" />}
+            label="Verified"
+            size="small"
+            sx={{
+              position: 'absolute',
+              top: 8,
+              left: 8,
+              fontSize: '0.7rem',
+              backgroundColor: '#4CAF50',
+              color: 'white'
+            }}
+          />
+        )}
+        {product.discount > 0 && (
+          <Chip
+            label={`${product.discount}% OFF`}
+            size="small"
+            sx={{
+              position: 'absolute',
+              bottom: 8,
+              left: 8,
+              fontSize: '0.7rem',
+              backgroundColor: '#FF6B35',
+              color: 'white',
+              fontWeight: 'bold'
             }}
           />
         )}
       </Box>
       
-      <CardContent sx={{ flexGrow: 1 }}>
+      <CardContent sx={{ flexGrow: 1, pb: 1 }}>
         <Typography 
           variant="h6" 
           component="h3" 
           gutterBottom
           sx={{ 
             cursor: 'pointer',
-            '&:hover': { color: 'primary.main' }
+            fontSize: '1rem',
+            fontWeight: 500,
+            lineHeight: 1.3,
+            height: '2.6rem',
+            overflow: 'hidden',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            '&:hover': { color: '#2874F0' }
           }}
           onClick={() => handleProductClick(product)}
         >
           {product.name}
         </Typography>
         
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontSize: '0.875rem' }}>
           {product.brand}
         </Typography>
         
@@ -259,27 +338,62 @@ const Products = () => {
             precision={0.1} 
             readOnly 
             size="small"
+            sx={{ color: '#FFB400' }}
           />
-          <Typography variant="caption" sx={{ ml: 1 }}>
+          <Typography variant="caption" sx={{ ml: 1, color: '#757575' }}>
             ({product.numReviews || 0})
           </Typography>
         </Box>
         
-        <Typography variant="h6" color="primary" fontWeight="bold">
-          ${product.price.toFixed(2)}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="h6" color="#2874F0" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
+            ₹{product.price.toLocaleString('en-IN')}
+          </Typography>
+          {product.originalPrice && product.originalPrice > product.price && (
+            <Typography 
+              variant="body2" 
+              color="#757575"
+              sx={{ textDecoration: 'line-through' }}
+            >
+              ₹{product.originalPrice.toLocaleString('en-IN')}
+            </Typography>
+          )}
+        </Box>
       </CardContent>
       
-      <CardActions>
+      <CardActions sx={{ px: 2, pb: 2, pt: 0 }}>
         <Button
           size="small"
           startIcon={<ShoppingCart />}
           onClick={() => handleAddToCart(product)}
           disabled={product.stock === 0}
+          sx={{ 
+            backgroundColor: '#FF6B35',
+            color: 'white',
+            fontWeight: 'bold',
+            px: 2,
+            '&:hover': { 
+              backgroundColor: '#E55A2B',
+              boxShadow: '0 2px 8px rgba(255, 107, 53, 0.3)'
+            },
+            '&:disabled': {
+              backgroundColor: '#e0e0e0',
+              color: '#757575'
+            }
+          }}
         >
           {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
         </Button>
-        <IconButton size="small">
+        <IconButton 
+          size="small" 
+          sx={{ 
+            border: '1px solid #e0e0e0',
+            '&:hover': { 
+              borderColor: '#FF6B35',
+              color: '#FF6B35'
+            }
+          }}
+        >
           <FavoriteBorder />
         </IconButton>
       </CardActions>
@@ -295,14 +409,67 @@ const Products = () => {
         </IconButton>
       </Box>
 
+      {/* Active Filters */}
+      {(search || category || brand || rating || priceRange[0] > 0 || priceRange[1] < 100000) && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" gutterBottom>Active Filters:</Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {search && (
+              <Chip 
+                label={`Search: ${search}`} 
+                size="small" 
+                onDelete={() => handleSearchChange('')}
+                color="primary"
+                variant="outlined"
+              />
+            )}
+            {category && (
+              <Chip 
+                label={`Category: ${category}`} 
+                size="small" 
+                onDelete={() => handleFilterChange('category', '')}
+                color="primary"
+                variant="outlined"
+              />
+            )}
+            {brand && (
+              <Chip 
+                label={`Brand: ${brand}`} 
+                size="small" 
+                onDelete={() => handleFilterChange('brand', '')}
+                color="primary"
+                variant="outlined"
+              />
+            )}
+            {rating && (
+              <Chip 
+                label={`Rating: ${rating}+`} 
+                size="small" 
+                onDelete={() => handleFilterChange('rating', '')}
+                color="primary"
+                variant="outlined"
+              />
+            )}
+            {(priceRange[0] > 0 || priceRange[1] < 100000) && (
+              <Chip 
+                label={`Price: ₹${priceRange[0]} - ₹${priceRange[1]}`} 
+                size="small" 
+                onDelete={() => handleFilterChange('priceRange', [0, 100000])}
+                color="primary"
+                variant="outlined"
+              />
+            )}
+          </Box>
+        </Box>
+      )}
+
       <TextField
         fullWidth
         label="Search"
         value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+        onChange={(e) => handleSearchChange(e.target.value)}
         InputProps={{
-          endAdornment: <Search />
+          endAdornment: searchLoading ? <CircularProgress size={20} /> : <Search />
         }}
         sx={{ mb: 2 }}
       />
@@ -346,13 +513,13 @@ const Products = () => {
           onChange={(e, value) => handleFilterChange('priceRange', value)}
           valueLabelDisplay="auto"
           min={0}
-          max={1000}
+          max={100000}
           marks={[
-            { value: 0, label: '$0' },
-            { value: 250, label: '$250' },
-            { value: 500, label: '$500' },
-            { value: 750, label: '$750' },
-            { value: 1000, label: '$1000' }
+            { value: 0, label: '₹0' },
+            { value: 25000, label: '₹25K' },
+            { value: 50000, label: '₹50K' },
+            { value: 75000, label: '₹75K' },
+            { value: 100000, label: '₹1L' }
           ]}
         />
       </Box>
@@ -395,16 +562,32 @@ const Products = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" gutterBottom fontWeight="bold">
-        Products
-      </Typography>
+      {/* Page Header */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" gutterBottom fontWeight="bold" color="text.primary">
+          PKS Store
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Discover amazing products at unbeatable prices
+        </Typography>
+      </Box>
 
       {/* AI Recommendations */}
       {isAuthenticated && recommendations.length > 0 && (
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" gutterBottom>
-            Recommended for You
-          </Typography>
+        <Paper 
+          sx={{ 
+            p: 3, 
+            mb: 4, 
+            background: 'linear-gradient(135deg, #2874F0 0%, #4B8BF5 100%)',
+            borderRadius: 2
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <LocalOffer sx={{ mr: 2, color: 'white' }} />
+            <Typography variant="h6" fontWeight="bold" color="white">
+              Recommended for You
+            </Typography>
+          </Box>
           <Grid container spacing={2}>
             {recommendations.map((product) => (
               <Grid item xs={12} sm={6} md={3} key={product._id}>
@@ -412,7 +595,7 @@ const Products = () => {
               </Grid>
             ))}
           </Grid>
-        </Box>
+        </Paper>
       )}
 
       <Box sx={{ display: 'flex', gap: 2 }}>
@@ -442,19 +625,46 @@ const Products = () => {
           )}
 
           {/* Results Header */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="body1">
-              {totalProducts} products found
-            </Typography>
-            <Button
-              variant="outlined"
-              startIcon={<Search />}
-              onClick={handleSearch}
-              disabled={!search.trim()}
-            >
-              AI Search
-            </Button>
-          </Box>
+          <Paper sx={{ p: 2, mb: 2, backgroundColor: '#f8f9fa' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+              <Box>
+                <Typography variant="h6" fontWeight="bold" color="text.primary">
+                  {totalProducts} Products Found
+                </Typography>
+                {(search || category || brand) && (
+                  <Typography variant="body2" color="text.secondary">
+                    {search && `Search: "${search}"`}
+                    {category && ` • Category: ${category}`}
+                    {brand && ` • Brand: ${brand}`}
+                  </Typography>
+                )}
+              </Box>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Button
+                  variant="contained"
+                  startIcon={<FlashOn />}
+                  onClick={handleSearch}
+                  disabled={!search.trim()}
+                  sx={{ 
+                    backgroundColor: '#FF6B35',
+                    '&:hover': { backgroundColor: '#E55A2B' }
+                  }}
+                >
+                  AI Search
+                </Button>
+                
+                <Button
+                  variant="outlined"
+                  startIcon={viewMode === 'grid' ? <ViewList /> : <ViewModule />}
+                  onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                  sx={{ ml: 1 }}
+                >
+                  {viewMode === 'grid' ? 'List' : 'Grid'}
+                </Button>
+              </Box>
+            </Box>
+          </Paper>
 
           {/* Products */}
           {loading ? (
@@ -463,9 +673,16 @@ const Products = () => {
             </Box>
           ) : (
             <>
-              <Grid container spacing={3}>
+              <Grid container spacing={viewMode === 'grid' ? 3 : 2}>
                 {products.map((product) => (
-                  <Grid item xs={12} sm={6} md={4} lg={3} key={product._id}>
+                  <Grid 
+                    item 
+                    xs={12} 
+                    sm={viewMode === 'grid' ? 6 : 12} 
+                    md={viewMode === 'grid' ? 4 : 12} 
+                    lg={viewMode === 'grid' ? 3 : 12} 
+                    key={product._id}
+                  >
                     <ProductCard product={product} />
                   </Grid>
                 ))}

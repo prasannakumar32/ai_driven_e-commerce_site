@@ -28,7 +28,10 @@ import {
   Category,
   Person,
   Chat,
-  Close
+  Close,
+  Store,
+  Star,
+  LocalOffer
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -82,7 +85,7 @@ const Header = () => {
 
   return (
     <>
-      <AppBar position="sticky" sx={{ backgroundColor: '#1976d2' }}>
+      <AppBar position="sticky" sx={{ backgroundColor: '#2874F0', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
         <Toolbar>
           <IconButton
             edge="start"
@@ -93,18 +96,32 @@ const Header = () => {
             <MenuIcon />
           </IconButton>
 
-          <Typography
-            variant="h6"
-            component="div"
-            sx={{ 
-              flexGrow: 1, 
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
-            onClick={() => navigate('/')}
-          >
-            AI Shop
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => navigate('/')}>
+            <Store sx={{ mr: 1, fontSize: 28, color: '#FF6B35' }} />
+            <Typography
+              variant="h5"
+              component="div"
+              sx={{ 
+                fontWeight: 'bold',
+                color: 'white',
+                letterSpacing: 0.5
+              }}
+            >
+              PKS
+            </Typography>
+            <Typography
+              variant="caption"
+              component="div"
+              sx={{ 
+                ml: 1,
+                color: '#FFE500',
+                fontWeight: 'bold',
+                fontSize: '0.7rem'
+              }}
+            >
+              STORE
+            </Typography>
+          </Box>
 
           <Box
             component="form"
@@ -130,8 +147,8 @@ const Header = () => {
                 ),
               }}
               sx={{
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                borderRadius: 1,
+                backgroundColor: 'white',
+                borderRadius: 2,
                 '& .MuiOutlinedInput-root': {
                   '& fieldset': {
                     border: 'none',
@@ -140,22 +157,54 @@ const Header = () => {
                     border: 'none',
                   },
                   '&.Mui-focused fieldset': {
-                    border: 'none',
+                    border: '1px solid #2874F0',
                   },
+                },
+                '& .MuiInputBase-input': {
+                  color: '#212121',
+                  padding: '8px 12px',
                 },
               }}
             />
           </Box>
 
-          <IconButton
-            color="inherit"
-            onClick={() => navigate('/cart')}
-            sx={{ mx: 1 }}
-          >
-            <Badge badgeContent={getItemCount()} color="error">
-              <ShoppingCart />
-            </Badge>
-          </IconButton>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Button
+              color="inherit"
+              startIcon={<Star />}
+              sx={{ 
+                color: 'white',
+                fontSize: '0.8rem',
+                textTransform: 'none',
+                minWidth: 'auto'
+              }}
+            >
+              Become a Seller
+            </Button>
+            <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.3)', mx: 1 }} />
+            <Button
+              color="inherit"
+              startIcon={<LocalOffer />}
+              sx={{ 
+                color: 'white',
+                fontSize: '0.8rem',
+                textTransform: 'none',
+                minWidth: 'auto'
+              }}
+            >
+              Offers
+            </Button>
+            <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.3)', mx: 1 }} />
+            <IconButton
+              color="inherit"
+              onClick={() => navigate('/cart')}
+              sx={{ mx: 1 }}
+            >
+              <Badge badgeContent={getItemCount()} color="error">
+                <ShoppingCart />
+              </Badge>
+            </IconButton>
+          </Box>
 
           {isAuthenticated ? (
             <>
@@ -222,8 +271,8 @@ const Header = () => {
               ),
             }}
             sx={{
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: 1,
+              backgroundColor: 'white',
+              borderRadius: 2,
               '& .MuiOutlinedInput-root': {
                 '& fieldset': {
                   border: 'none',
@@ -232,8 +281,12 @@ const Header = () => {
                   border: 'none',
                 },
                 '&.Mui-focused fieldset': {
-                  border: 'none',
+                  border: '1px solid #2874F0',
                 },
+              },
+              '& .MuiInputBase-input': {
+                color: '#212121',
+                padding: '8px 12px',
               },
             }}
           />

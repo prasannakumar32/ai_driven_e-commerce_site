@@ -16,10 +16,68 @@ import { CartProvider } from './contexts/CartContext';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#1976d2',
+      main: '#FF6B35', // PKS Orange - vibrant and professional like Flipkart
+      light: '#FF8A5B',
+      dark: '#E55A2B',
+      contrastText: '#ffffff',
     },
     secondary: {
-      main: '#dc004e',
+      main: '#2874F0', // PKS Blue - complementary professional blue
+      light: '#4B8BF5',
+      dark: '#1A5BC4',
+      contrastText: '#ffffff',
+    },
+    background: {
+      default: '#F5F5F5',
+      paper: '#ffffff',
+    },
+    text: {
+      primary: '#212121',
+      secondary: '#757575',
+    },
+  },
+  typography: {
+    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    h1: {
+      fontWeight: 700,
+    },
+    h2: {
+      fontWeight: 600,
+    },
+    h3: {
+      fontWeight: 600,
+    },
+    h4: {
+      fontWeight: 600,
+    },
+    button: {
+      textTransform: 'none',
+      fontWeight: 500,
+    },
+  },
+  shape: {
+    borderRadius: 8,
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          boxShadow: 'none',
+          '&:hover': {
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          },
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          '&:hover': {
+            boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+          },
+        },
+      },
     },
   },
 });

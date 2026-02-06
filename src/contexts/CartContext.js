@@ -99,7 +99,21 @@ export const CartProvider = ({ children }) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       const response = await axios.get('/api/cart');
-      dispatch({ type: 'SET_CART', payload: response.data });
+      
+      // Transform the response to match our frontend structure
+      const cartData = response.data;
+      const transformedItems = cartData.items.map(item => ({
+        product: {
+          _id: item.product,
+          name: item.name,
+          price: item.price,
+          images: [item.image],
+          stock: item.stock
+        },
+        quantity: item.quantity
+      }));
+      
+      dispatch({ type: 'SET_CART', payload: { items: transformedItems, total: cartData.total } });
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error.response?.data?.message || 'Failed to fetch cart' });
     }
@@ -112,7 +126,20 @@ export const CartProvider = ({ children }) => {
         quantity
       });
       
-      dispatch({ type: 'ADD_TO_CART', payload: response.data.cart });
+      // Transform the response to match our frontend structure
+      const cartData = response.data.cart;
+      const transformedItems = cartData.items.map(item => ({
+        product: {
+          _id: item.product,
+          name: item.name,
+          price: item.price,
+          images: [item.image],
+          stock: item.stock
+        },
+        quantity: item.quantity
+      }));
+      
+      dispatch({ type: 'SET_CART', payload: { items: transformedItems, total: cartData.total } });
       return response.data;
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error.response?.data?.message || 'Failed to add to cart' });
@@ -127,7 +154,20 @@ export const CartProvider = ({ children }) => {
         quantity
       });
       
-      dispatch({ type: 'UPDATE_QUANTITY', payload: { productId, quantity } });
+      // Transform the response to match our frontend structure
+      const cartData = response.data.cart;
+      const transformedItems = cartData.items.map(item => ({
+        product: {
+          _id: item.product,
+          name: item.name,
+          price: item.price,
+          images: [item.image],
+          stock: item.stock
+        },
+        quantity: item.quantity
+      }));
+      
+      dispatch({ type: 'SET_CART', payload: { items: transformedItems, total: cartData.total } });
       return response.data;
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error.response?.data?.message || 'Failed to update cart' });
@@ -139,7 +179,20 @@ export const CartProvider = ({ children }) => {
     try {
       const response = await axios.delete(`/api/cart/remove/${productId}`);
       
-      dispatch({ type: 'REMOVE_FROM_CART', payload: { productId } });
+      // Transform the response to match our frontend structure
+      const cartData = response.data.cart;
+      const transformedItems = cartData.items.map(item => ({
+        product: {
+          _id: item.product,
+          name: item.name,
+          price: item.price,
+          images: [item.image],
+          stock: item.stock
+        },
+        quantity: item.quantity
+      }));
+      
+      dispatch({ type: 'SET_CART', payload: { items: transformedItems, total: cartData.total } });
       return response.data;
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error.response?.data?.message || 'Failed to remove from cart' });
