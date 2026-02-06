@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import axios from 'axios';
+import api from '../utils/api';
 
 const AuthContext = createContext();
 
@@ -64,7 +65,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       // Verify token and get user data
       verifyToken();
     } else {
@@ -74,7 +75,7 @@ export const AuthProvider = ({ children }) => {
 
   const verifyToken = async () => {
     try {
-      const response = await axios.get('/api/auth/profile');
+      const response = await api.get('/auth/profile');
       dispatch({
         type: 'LOGIN_SUCCESS',
         payload: {
@@ -91,9 +92,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
-      const response = await axios.post('/api/auth/login', { email, password });
-      
-      axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+      const response = await api.post('/auth/login', { email, password });
       
       dispatch({
         type: 'LOGIN_SUCCESS',
@@ -113,15 +112,13 @@ export const AuthProvider = ({ children }) => {
   const register = async (name, email, password, role = 'customer', additionalData = {}) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
-      const response = await axios.post('/api/auth/register', { 
+      const response = await api.post('/auth/register', { 
         name, 
         email, 
         password, 
         role,
         ...additionalData
       });
-      
-      axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
       
       dispatch({
         type: 'LOGIN_SUCCESS',
@@ -139,13 +136,13 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    delete axios.defaults.headers.common['Authorization'];
-    dispatch({ type: 'LOGOUT' });
-  };
+  delete api.defaults.headers.common['Authorization'];
+  dispatch({ type: 'LOGOUT' });
+};
 
   const updateUser = async (userData) => {
     try {
-      const response = await axios.put('/api/auth/profile', userData);
+      const response = await api.put('/auth/profile', userData);
       dispatch({
         type: 'UPDATE_USER',
         payload: response.data
@@ -158,7 +155,7 @@ export const AuthProvider = ({ children }) => {
 
   const updatePreferences = async (preferences) => {
     try {
-      const response = await axios.put('/api/auth/preferences', { preferences });
+      const response = await api.put('/auth/preferences', { preferences });
       dispatch({
         type: 'UPDATE_USER',
         payload: { preferences: response.data }
@@ -171,7 +168,7 @@ export const AuthProvider = ({ children }) => {
 
   const addToHistory = async (productId, duration = 0) => {
     try {
-      await axios.post('/api/auth/history', { productId, duration });
+      await api.post('/auth/history', { productId, duration });
     } catch (error) {
       console.error('Failed to update browsing history:', error);
     }

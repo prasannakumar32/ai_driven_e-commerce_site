@@ -268,7 +268,7 @@ const Products = () => {
     return (
       <Box component="form" onSubmit={handleAddProduct}>
         <Grid container spacing={2}>
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <TextField
               fullWidth
               label="Product Name *"
@@ -279,7 +279,7 @@ const Products = () => {
             />
           </Grid>
           
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <TextField
               fullWidth
               label="Description *"
@@ -292,7 +292,7 @@ const Products = () => {
             />
           </Grid>
           
-          <Grid item xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
               fullWidth
               label="Price (₹) *"
@@ -304,7 +304,7 @@ const Products = () => {
             />
           </Grid>
           
-          <Grid item xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
               fullWidth
               label="Stock *"
@@ -316,7 +316,7 @@ const Products = () => {
             />
           </Grid>
           
-          <Grid item xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
               fullWidth
               label="Brand *"
@@ -327,7 +327,7 @@ const Products = () => {
             />
           </Grid>
           
-          <Grid item xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Category *</InputLabel>
               <Select
@@ -345,7 +345,7 @@ const Products = () => {
             </FormControl>
           </Grid>
           
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <TextField
               fullWidth
               label="Product Images *"
@@ -358,7 +358,7 @@ const Products = () => {
           </Grid>
           
           {formData.images.length > 0 && (
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                 {formData.images.map((image, index) => (
                   <Box key={index} sx={{ position: 'relative' }}>
@@ -837,7 +837,7 @@ const Products = () => {
           </Box>
           <Grid container spacing={2}>
             {recommendations.map((product) => (
-              <Grid item xs={12} sm={6} md={3} key={product._id}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={product._id}>
                 <ProductCard product={product} showScore />
               </Grid>
             ))}

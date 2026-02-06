@@ -153,7 +153,7 @@ const ProductDetail = () => {
 
       <Grid container spacing={4}>
         {/* Product Images */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Box>
             <Paper sx={{ p: 2, borderRadius: 2, mb: 2 }}>
               <CardMedia
@@ -207,7 +207,7 @@ const ProductDetail = () => {
         </Grid>
 
         {/* Product Details */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Box>
             {/* Product Title and Brand */}
             <Box sx={{ mb: 2 }}>
@@ -542,7 +542,7 @@ const ProductDetail = () => {
           </Typography>
           <Grid container spacing={3}>
             {recommendations.slice(0, 4).map((product) => (
-              <Grid item xs={12} sm={6} md={3} key={product._id}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={product._id}>
                 <Card
                   sx={{
                     cursor: 'pointer',
@@ -585,7 +585,7 @@ const ProductDetail = () => {
           </Typography>
           <Grid container spacing={3}>
             {similarProducts.map((product) => (
-              <Grid item xs={12} sm={6} md={3} key={product._id}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={product._id}>
                 <Card
                   sx={{
                     cursor: 'pointer',

@@ -160,7 +160,7 @@ const Cart = () => {
 
       <Grid container spacing={4}>
         {/* Cart Items */}
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           {items.length === 0 ? (
             <Paper sx={{ p: 6, textAlign: 'center', background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)' }}>
               <ShoppingCart sx={{ fontSize: 80, color: '#2874F0', mb: 3 }} />
@@ -191,7 +191,7 @@ const Cart = () => {
                 <Card key={item.product._id} sx={{ mb: 2, border: '1px solid #e0e0e0', '&:hover': { boxShadow: '0 4px 12px rgba(0,0,0,0.1)' } }}>
                   <CardContent sx={{ p: 3 }}>
                     <Grid container spacing={2} alignItems="center">
-                      <Grid item xs={12} sm={2}>
+                      <Grid size={{ xs: 12, sm: 2 }}>
                         <CardMedia
                           component="img"
                           height="80"
@@ -207,7 +207,7 @@ const Cart = () => {
                         />
                       </Grid>
                       
-                      <Grid item xs={12} sm={4}>
+                      <Grid size={{ xs: 12, sm: 4 }}>
                         <Typography
                           variant="h6"
                           sx={{ 
@@ -239,7 +239,7 @@ const Cart = () => {
                         </Box>
                       </Grid>
 
-                      <Grid item xs={12} sm={2}>
+                      <Grid size={{ xs: 12, sm: 2 }}>
                         <Typography variant="h6" color="#2874F0" fontWeight="bold">
                           ₹{item.product.price.toLocaleString('en-IN')}
                         </Typography>
@@ -254,7 +254,7 @@ const Cart = () => {
                         )}
                       </Grid>
 
-                      <Grid item xs={12} sm={3}>
+                      <Grid size={{ xs: 12, sm: 3 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <IconButton
                             size="small"
@@ -302,7 +302,7 @@ const Cart = () => {
                         </Box>
                       </Grid>
 
-                      <Grid item xs={12} sm={1}>
+                      <Grid size={{ xs: 12, sm: 1 }}>
                         <Box sx={{ textAlign: 'right' }}>
                           <Typography variant="h6" color="#2874F0" fontWeight="bold">
                             ₹{(item.product.price * item.quantity).toLocaleString('en-IN')}
@@ -364,7 +364,7 @@ const Cart = () => {
         </Grid>
 
         {/* Order Summary */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper sx={{ p: 3, position: 'sticky', top: 20, border: '1px solid #e0e0e0' }}>
             <Typography variant="h6" gutterBottom fontWeight="bold" color="text.primary">
               Order Summary
@@ -483,7 +483,7 @@ const Cart = () => {
           ) : (
             <Grid container spacing={3}>
               {cartRecommendations.slice(0, 4).map((product) => (
-                <Grid item xs={12} sm={6} md={3} key={product._id}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={product._id}>
                   <Card
                     sx={{
                       cursor: 'pointer',

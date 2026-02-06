@@ -250,7 +250,7 @@ const Home = () => {
         <Container maxWidth="lg" sx={{ height: '100%' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', py: 4 }}>
             <Grid container spacing={4} alignItems="center">
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Slide in={true} direction="right" timeout={800}>
                   <Box>
                     <Typography 
@@ -292,7 +292,7 @@ const Home = () => {
                   </Box>
                 </Slide>
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Box sx={{ textAlign: 'center' }}>
                   <Typography 
                     variant="h2" 
@@ -327,7 +327,7 @@ const Home = () => {
         </Box>
         <Grid container spacing={2}>
           {categories.map((category) => (
-            <Grid item xs={6} sm={4} md={2} key={category.name}>
+            <Grid size={{ xs: 6, sm: 4, md: 2 }} key={category.name}>
               <Card
                 sx={{
                   textAlign: 'center',
@@ -413,12 +413,12 @@ const Home = () => {
         <Grid container spacing={3}>
           {loading
             ? Array.from({ length: 4 }).map((_, index) => (
-                <Grid item xs={12} sm={6} md={3} key={index}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
                   <SkeletonCard />
                 </Grid>
               ))
             : trendingProducts.slice(0, 4).map((product) => (
-                <Grid item xs={12} sm={6} md={3} key={product._id}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={product._id}>
                   <ProductCard product={product} />
                 </Grid>
               ))}
@@ -452,12 +452,12 @@ const Home = () => {
         <Grid container spacing={3}>
           {loading
             ? Array.from({ length: 8 }).map((_, index) => (
-                <Grid item xs={12} sm={6} md={3} key={index}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
                   <SkeletonCard />
                 </Grid>
               ))
             : trendingProducts.map((product) => (
-                <Grid item xs={12} sm={6} md={3} key={product._id}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={product._id}>
                   <ProductCard product={product} />
                 </Grid>
               ))}

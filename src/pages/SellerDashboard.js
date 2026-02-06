@@ -63,6 +63,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../utils/api';
 
 const SellerDashboard = () => {
   const navigate = useNavigate();
@@ -109,6 +110,13 @@ const SellerDashboard = () => {
       navigate('/');
       return;
     }
+
+    // Validate seller has complete business information
+    if (!user.businessName || !user.businessType || !user.phone) {
+      setError('Please complete your business profile to access the seller dashboard.');
+      setLoading(false);
+      return;
+    }
     
     fetchProducts();
     fetchOrders();
@@ -117,12 +125,18 @@ const SellerDashboard = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/products/seller');
-      const data = await response.json();
-      setProducts(data);
+      setError(null);
+      const response = await api.get('/products/seller');
+      setProducts(response.data);
     } catch (error) {
-      setError('Failed to fetch products');
       console.error('Error fetching products:', error);
+      if (error.response?.status === 403) {
+        setError('Access denied. Only sellers can view products.');
+      } else if (error.response?.status === 401) {
+        setError('Please login to continue.');
+      } else {
+        setError('Failed to fetch products. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -201,17 +215,9 @@ const SellerDashboard = () => {
       };
 
       if (editingProduct) {
-        await fetch(`/api/products/${editingProduct._id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(productData)
-        });
+        await api.put(`/products/${editingProduct._id}`, productData);
       } else {
-        await fetch('/api/products', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(productData)
-        });
+        await api.post('/products', productData);
       }
 
       setOpenDialog(false);
@@ -243,9 +249,7 @@ const SellerDashboard = () => {
   const handleDelete = async (productId) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
-        await fetch(`/api/products/${productId}`, {
-          method: 'DELETE'
-        });
+        await api.delete(`/products/${productId}`);
         fetchProducts();
       } catch (error) {
         setError('Failed to delete product');
@@ -285,7 +289,7 @@ const SellerDashboard = () => {
   const renderProductForm = () => (
     <Box component="form" onSubmit={handleSubmit}>
       <Grid container spacing={3}>
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <TextField
             fullWidth
             label="Product Name"
@@ -295,7 +299,7 @@ const SellerDashboard = () => {
           />
         </Grid>
         
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <TextField
             fullWidth
             label="Description"
@@ -307,7 +311,7 @@ const SellerDashboard = () => {
           />
         </Grid>
         
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <TextField
             fullWidth
             label="Price (₹)"
@@ -318,7 +322,7 @@ const SellerDashboard = () => {
           />
         </Grid>
         
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <TextField
             fullWidth
             label="Stock Quantity"
@@ -329,7 +333,7 @@ const SellerDashboard = () => {
           />
         </Grid>
         
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <TextField
             fullWidth
             label="Brand"
@@ -339,7 +343,7 @@ const SellerDashboard = () => {
           />
         </Grid>
         
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <TextField
             fullWidth
             select
@@ -356,7 +360,7 @@ const SellerDashboard = () => {
           </TextField>
         </Grid>
         
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <TextField
             fullWidth
             label="Tags (comma separated)"
@@ -366,7 +370,7 @@ const SellerDashboard = () => {
           />
         </Grid>
         
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <TextField
             fullWidth
             label="Features (comma separated)"
@@ -376,7 +380,7 @@ const SellerDashboard = () => {
           />
         </Grid>
         
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Button
             variant="outlined"
             component="label"
@@ -457,7 +461,7 @@ const SellerDashboard = () => {
 
     return (
       <Grid container spacing={3}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -473,7 +477,7 @@ const SellerDashboard = () => {
           </Card>
         </Grid>
         
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -489,7 +493,7 @@ const SellerDashboard = () => {
           </Card>
         </Grid>
         
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -505,7 +509,7 @@ const SellerDashboard = () => {
           </Card>
         </Grid>
         
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -521,7 +525,7 @@ const SellerDashboard = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -537,7 +541,7 @@ const SellerDashboard = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -798,7 +802,40 @@ const SellerDashboard = () => {
   if (error) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Alert severity="error">{error}</Alert>
+        <Alert 
+          severity="error" 
+          sx={{ mb: 3 }}
+          action={
+            error.includes('complete your business profile') && (
+              <Button 
+                color="inherit" 
+                size="small"
+                onClick={() => navigate('/profile')}
+              >
+                Complete Profile
+              </Button>
+            )
+          }
+        >
+          {error}
+        </Alert>
+        {error.includes('complete your business profile') && (
+          <Paper sx={{ p: 3, mt: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Business Profile Requirements
+            </Typography>
+            <Typography variant="body2" color="text.secondary" component="div">
+              <ul>
+                <li>Business Name</li>
+                <li>Business Type</li>
+                <li>Phone Number</li>
+              </ul>
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 2 }}>
+              Please complete your business registration to access seller features.
+            </Typography>
+          </Paper>
+        )}
       </Container>
     );
   }
