@@ -1,5 +1,5 @@
 services:
-  # Web Service
+  # Web Service - Updated build command to fix react-scripts issue
   - type: web
     name: ai-ecommerce
     env: node
