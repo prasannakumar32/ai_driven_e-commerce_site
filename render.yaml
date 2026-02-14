@@ -1,0 +1,29 @@
+services:
+  # Web Service
+  - type: web
+    name: ai-ecommerce
+    env: node
+    plan: free
+    buildCommand: cd client && npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+  # Static Site for React App (if you want to deploy separately)
+  # - type: web
+  #   name: ai-ecommerce-client
+  #   env: static
+  #   plan: free
+  #   buildCommand: cd client && npm install && npm run build
+  #   staticPublishPath: client/build
