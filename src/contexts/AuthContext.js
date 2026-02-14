@@ -111,10 +111,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (name, email, password, role = 'customer', additionalData = {}) => {
+  const register = async (username, name, email, password, role = 'customer', additionalData = {}) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       const response = await api.post('/auth/register', { 
+        username,
         name, 
         email, 
         password, 

@@ -40,6 +40,7 @@ const Register = () => {
   const theme = useTheme();
   
   const [formData, setFormData] = useState({
+    username: '',
     name: '',
     email: '',
     password: '',
@@ -62,6 +63,19 @@ const Register = () => {
   };
 
   const validateForm = () => {
+    if (!formData.username || formData.username.length < 3 || formData.username.length > 30) {
+      setValidationError('Username must be between 3 and 30 characters long');
+      return false;
+    }
+    const usernameRegex = /^[a-zA-Z0-9_]+$/;
+    if (!usernameRegex.test(formData.username)) {
+      setValidationError('Username can only contain letters, numbers, and underscores');
+      return false;
+    }
+    if (!formData.name || formData.name.length < 2 || formData.name.length > 50) {
+      setValidationError('Name must be between 2 and 50 characters long');
+      return false;
+    }
     if (formData.password !== formData.confirmPassword) {
       setValidationError('Passwords do not match');
       return false;
@@ -95,7 +109,7 @@ const Register = () => {
     }
 
     try {
-      await register(formData.name, formData.email, formData.password, formData.role, formData);
+      await register(formData.username, formData.name, formData.email, formData.password, formData.role, formData);
       if (formData.role === 'seller') {
         navigate('/seller-dashboard');
       } else {
@@ -198,6 +212,20 @@ const Register = () => {
 
             <TextField
               fullWidth
+              label="Username"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              required
+              sx={{ mb: 3 }}
+              helperText="3-30 characters, letters, numbers, and underscores only"
+              InputProps={{
+                startAdornment: <Person sx={{ mr: 1, color: '#FF6B35' }} />
+              }}
+            />
+
+            <TextField
+              fullWidth
               label="Full Name"
               name="name"
               value={formData.name}
@@ -205,7 +233,7 @@ const Register = () => {
               required
               sx={{ mb: 3 }}
               InputProps={{
-                startAdornment: <Person sx={{ mr: 1, color: '#FF6B35' }} />
+                startAdornment: <HowToReg sx={{ mr: 1, color: '#FF6B35' }} />
               }}
             />
 
