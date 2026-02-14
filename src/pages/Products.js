@@ -2,34 +2,35 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { debounce } from 'lodash';
 import {
   Container,
-  Typography,
   Box,
   Grid,
+  Paper,
   Card,
-  CardMedia,
   CardContent,
-  CardActions,
+  CardMedia,
+  Typography,
   Button,
+  Chip,
+  IconButton,
   TextField,
-  Select,
-  MenuItem,
   FormControl,
   InputLabel,
-  Chip,
-  Rating,
-  IconButton,
-  Pagination,
-  CircularProgress,
+  Select,
+  MenuItem,
   Slider,
+  CircularProgress,
   Drawer,
-  Paper,
-  useTheme,
   useMediaQuery,
+  Breadcrumbs,
+  Link,
+  Rating,
+  Tooltip,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Avatar
+  CardActions,
+  Pagination
 } from '@mui/material';
 import {
   ShoppingCart,
@@ -37,7 +38,6 @@ import {
   FilterList,
   Search,
   Close,
-  Sort,
   ViewList,
   ViewModule,
   LocalOffer,
@@ -47,6 +47,7 @@ import {
   Store
 } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTheme } from '@mui/material/styles';
 import { productAPI, aiAPI } from '../utils/api';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -61,12 +62,21 @@ const Products = () => {
 
   const [products, setProducts] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [aiSearchResults, setAiSearchResults] = useState([]);
+  const [isAiSearch, setIsAiSearch] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [relatedLoading, setRelatedLoading] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [addProductOpen, setAddProductOpen] = useState(false);
+  
+  // Dynamic filter options based on current products
+  const [availableCategories, setAvailableCategories] = useState([]);
+  const [availableBrands, setAvailableBrands] = useState([]);
+  const [availablePriceRange, setAvailablePriceRange] = useState([0, 100000]);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -78,17 +88,60 @@ const Products = () => {
     tags: '',
     features: ''
   });
-  
-  // Filters state
-  const [search, setSearch] = useState(searchParams.get('search') || '');
-  const [category, setCategory] = useState(searchParams.get('category') || '');
-  const [brand, setBrand] = useState(searchParams.get('brand') || '');
-  const [priceRange, setPriceRange] = useState([0, 100000]);
-  const [rating, setRating] = useState(searchParams.get('rating') || '');
+
+  // Initialize state from URL params
+  const [search, setSearch] = useState(() => searchParams.get('search') || '');
+  const [category, setCategory] = useState(() => searchParams.get('category') || '');
+  const [brand, setBrand] = useState(() => searchParams.get('brand') || '');
+  const [priceRange, setPriceRange] = useState(() => [
+    searchParams.get('minPrice') ? parseInt(searchParams.get('minPrice')) : 0,
+    searchParams.get('maxPrice') ? parseInt(searchParams.get('maxPrice')) : 100000
+  ]);
+  const [rating, setRating] = useState(() => searchParams.get('rating') || '');
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(() => searchParams.get('page') ? parseInt(searchParams.get('page')) : 1);
+
+  // Update URL params when search state changes
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (category) params.set('category', category);
+    if (brand) params.set('brand', brand);
+    if (priceRange[0] > 0) params.set('minPrice', priceRange[0]);
+    if (priceRange[1] < 100000) params.set('maxPrice', priceRange[1]);
+    if (rating) params.set('rating', rating);
+    if (page > 1) params.set('page', page);
+    if (sortBy !== 'createdAt') params.set('sort', sortBy);
+    if (sortOrder !== 'desc') params.set('order', sortOrder);
+    
+    const newParams = params.toString();
+    setSearchParams(newParams ? `?${newParams}` : '');
+  }, [search, category, brand, priceRange, rating, page, sortBy, sortOrder]);
+
+  // Update dynamic filter options when products change
+  useEffect(() => {
+    if (products && products.length > 0) {
+      const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
+      const brands = [...new Set(products.map(p => p.brand).filter(Boolean))];
+      const prices = products.map(p => p.price).filter(p => p > 0);
+      
+      setAvailableCategories(categories.sort());
+      setAvailableBrands(brands.sort());
+      
+      if (prices.length > 0) {
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+        setAvailablePriceRange([minPrice, maxPrice]);
+      }
+    } else {
+      // Reset to default options when no products
+      setAvailableCategories(['electronics', 'clothing', 'books', 'home', 'sports', 'beauty', 'toys']);
+      setAvailableBrands(['Apple', 'Samsung', 'Nike', 'Adidas', 'Sony', 'LG', 'Microsoft', 'Dell']);
+      setAvailablePriceRange([0, 100000]);
+    }
+  }, [products]);
 
   const categories = [
     'electronics', 'clothing', 'books', 'home', 'sports', 'beauty', 'toys'
@@ -102,28 +155,27 @@ const Products = () => {
     try {
       setLoading(true);
       const params = {
-        search: searchParams.get('search'),
-        category: searchParams.get('category'),
-        brand: searchParams.get('brand'),
-        minPrice: searchParams.get('minPrice'),
-        maxPrice: searchParams.get('maxPrice'),
-        rating: searchParams.get('rating'),
-        page: searchParams.get('page') || 1,
-        sort: searchParams.get('sort') || 'createdAt',
-        order: searchParams.get('order') || 'desc'
+        search,
+        category,
+        brand,
+        minPrice: priceRange[0] > 0 ? priceRange[0] : undefined,
+        maxPrice: priceRange[1] < 100000 ? priceRange[1] : undefined,
+        rating,
+        page,
+        sort: sortBy,
+        order: sortOrder
       };
 
       const response = await productAPI.getProducts(params);
       setProducts(response.data.products);
       setTotalPages(response.data.totalPages);
       setTotalProducts(response.data.totalProducts);
-      setPage(response.data.currentPage);
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
       setLoading(false);
     }
-  }, [searchParams]);
+  }, []); // Remove all dependencies to prevent recreation
 
   const fetchRecommendations = async () => {
     try {
@@ -134,63 +186,178 @@ const Products = () => {
     }
   };
 
+  const fetchRelatedProducts = async (searchQuery, productCategory = '', productBrand = '') => {
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      setRelatedProducts([]);
+      return [];
+    }
+
+    try {
+      setRelatedLoading(true);
+
+      const cacheKey = `related_${searchQuery}_${productCategory}_${productBrand}`;
+
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        const age = Date.now() - timestamp;
+        if (age < 300000) {
+          const relatedProducts = data.slice(0, 6);
+          setRelatedProducts(relatedProducts);
+          return relatedProducts;
+        }
+      }
+
+      const response = await fetch('/api/products/related', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          searchQuery,
+          category: productCategory,
+          brand: productBrand,
+          limit: 8
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const relatedProducts = data.products.slice(0, 6);
+        setRelatedProducts(relatedProducts);
+
+        localStorage.setItem(cacheKey, JSON.stringify({
+          data: relatedProducts,
+          timestamp: Date.now()
+        }));
+
+        return relatedProducts;
+      }
+      return [];
+    } catch (error) {
+      console.error('Error fetching related products:', error);
+      return [];
+    } finally {
+      setRelatedLoading(false);
+    }
+  };
+
+  // Debounced effect for search API calls
   useEffect(() => {
-    fetchProducts();
+    const timeoutId = setTimeout(() => {
+      if (search && search.trim().length >= 2) {
+        setSearchLoading(true);
+        fetchProducts()
+          .then(() => {
+            return fetchRelatedProducts(search, category, brand);
+          })
+          .finally(() => {
+            setSearchLoading(false);
+          });
+      } else if (search.trim().length === 0) {
+        fetchProducts();
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [search, category, brand]); // Remove function dependencies to prevent loops
+
+  useEffect(() => {
+    // Only fetch on initial load or when page/sort changes
+    if (!search || search.length === 0) {
+      fetchProducts();
+    }
     if (isAuthenticated) {
       fetchRecommendations();
     }
-  }, [searchParams, page, sortBy, sortOrder, isAuthenticated, fetchProducts]);
+  }, [page, sortBy, sortOrder, isAuthenticated]); // Remove fetchProducts dependency
 
+  // Track search state changes for debugging
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (search) params.set('search', search);
-    if (category) params.set('category', category);
-    if (brand) params.set('brand', brand);
-    if (rating) params.set('rating', rating);
-    if (priceRange[0] > 0 || priceRange[1] < 100000) {
-      params.set('minPrice', priceRange[0]);
-      params.set('maxPrice', priceRange[1]);
-    }
-    params.set('page', page);
-    params.set('sort', sortBy);
-    params.set('order', sortOrder);
-    
-    setSearchParams(params);
-  }, [search, category, brand, rating, priceRange, page, sortBy, sortOrder, setSearchParams]);
-
-  // Debounced search with loading state
-  const debouncedSearch = useMemo(
-    () => debounce((value) => {
-      setSearchLoading(true);
-      setSearch(value);
-      setPage(1);
-      setTimeout(() => setSearchLoading(false), 300);
-    }, 500),
-    []
-  );
-
-  const handleSearchChange = (value) => {
-    debouncedSearch(value);
-  };
+    console.log('Search state changed to:', search);
+  }, [search]);
 
   const handleSearch = async () => {
     try {
-      const response = await aiAPI.smartSearch({
-        query: search,
-        userId: isAuthenticated ? 'current' : null,
-        filters: {
-          category,
-          brand,
-          priceRange: { min: priceRange[0], max: priceRange[1] }
-        }
+      // Clear previous AI search state and related products
+      setIsAiSearch(true);
+      setAiSearchResults([]);
+      setRelatedProducts([]);
+      
+      const startTime = Date.now();
+      
+      // Early return for empty queries
+      if (!search || search.trim().length < 2) {
+        setIsAiSearch(false);
+        setAiSearchResults([]);
+        setRelatedProducts([]);
+        await fetchProducts();
+        return;
+      }
+      
+      // Fetch related products and AI search results in parallel with timeout
+      const searchPromise = Promise.all([
+        fetchRelatedProducts(search, category, brand),
+        aiAPI.smartSearch({
+          query: search,
+          userId: isAuthenticated ? 'current' : null,
+          filters: {
+            category,
+            brand,
+            priceRange: { min: priceRange[0], max: priceRange[1] }
+          }
+        })
+      ]);
+      
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Search timeout')), 5000)
+      );
+      
+      const [relatedProductsData, aiResponse] = await Promise.race([searchPromise, timeoutPromise]);
+      
+      // Handle the new standardized response format
+      const aiProducts = aiResponse.data?.data?.products || aiResponse.data?.products || [];
+      
+      // Log the search type for debugging
+      console.log('AI Search Response:', {
+        searchType: aiResponse.data?.searchType,
+        totalResults: aiProducts.length,
+        hasVectorScores: aiProducts.some(p => p.vectorScore || p.hybridScore)
       });
       
-      setProducts(response.data.products);
-      setTotalProducts(response.data.products.length);
+      // Combine related products first, then AI search results
+      const combinedResults = [
+        ...relatedProductsData.map(product => ({ ...product, isRelated: true })),
+        ...aiProducts.map(product => ({ 
+          ...product, 
+          isRelated: false,
+          // Ensure we have the right score field
+          aiScore: product.aiScore || product.hybridScore || product.vectorScore || 0
+        }))
+      ];
+      
+      setAiSearchResults(combinedResults);
+      setProducts(combinedResults);
+      setTotalProducts(combinedResults.length);
       setTotalPages(1);
+      
+      const searchTime = Date.now() - startTime;
+      console.log(`AI search completed in ${searchTime}ms`);
+      
     } catch (error) {
       console.error('Error in smart search:', error);
-      fetchProducts(); // Fallback to regular search
+      setIsAiSearch(false);
+      setAiSearchResults([]);
+      setRelatedProducts([]);
+      
+      // Fallback to regular search
+      try {
+        await fetchProducts();
+        if (search && search.trim().length >= 2) {
+          await fetchRelatedProducts(search, category, brand);
+        }
+      } catch (fallbackError) {
+        console.error('Fallback search also failed:', fallbackError);
+      }
     }
   };
 
@@ -435,18 +602,57 @@ const Products = () => {
         break;
     }
     setPage(1);
+    
+    // Clear AI search state when filters change
+    if (isAiSearch) {
+      setIsAiSearch(false);
+      setAiSearchResults([]);
+      setRelatedProducts([]);
+    }
+    
+    // Clear search cache when filters change
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('related_')) {
+        localStorage.removeItem(key);
+      }
+    });
   };
 
   const clearFilters = () => {
+    // Clear all search and filter states immediately
     setSearch('');
     setCategory('');
     setBrand('');
     setRating('');
     setPriceRange([0, 100000]);
     setPage(1);
+    
+    // Clear all product and search results
+    setProducts([]);
+    setAiSearchResults([]);
+    setRelatedProducts([]);
+    setRecommendations([]);
+    
+    // Clear AI search state
+    setIsAiSearch(false);
+    
+    // Clear all search cache
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('related_')) {
+        localStorage.removeItem(key);
+      }
+    });
+    
+    // Clear URL params
+    setSearchParams('');
+    
+    // Fetch fresh products after clearing
+    setTimeout(() => {
+      fetchProducts();
+    }, 100);
   };
 
-  const ProductCard = ({ product, showScore = false }) => (
+  const ProductCard = ({ product, showScore = false, isRelated = false }) => (
     <Card 
       sx={{ 
         height: '100%', 
@@ -486,7 +692,23 @@ const Products = () => {
             }
           }}
         />
-        {showScore && product.aiScore && (
+        {isRelated && (
+          <Chip
+            icon={<LocalOffer fontSize="small" />}
+            label="Related"
+            size="small"
+            sx={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              fontSize: '0.7rem',
+              backgroundColor: '#FF6B35',
+              color: 'white',
+              fontWeight: 'bold'
+            }}
+          />
+        )}
+        {!isRelated && showScore && product.aiScore && (
           <Chip
             label={`${Math.round(product.aiScore * 100)}% Match`}
             size="small"
@@ -497,6 +719,21 @@ const Products = () => {
               right: 8,
               fontSize: '0.7rem',
               backgroundColor: '#2874F0',
+              color: 'white'
+            }}
+          />
+        )}
+        {!isRelated && showScore && product.vectorScore && !product.aiScore && (
+          <Chip
+            label={`${Math.round(product.vectorScore * 100)}% Vector`}
+            size="small"
+            color="secondary"
+            sx={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              fontSize: '0.7rem',
+              backgroundColor: '#FF6B35',
               color: 'white'
             }}
           />
@@ -516,9 +753,9 @@ const Products = () => {
             }}
           />
         )}
-        {product.discount > 0 && (
+        {product.discountPercentage > 0 && (
           <Chip
-            label={`${product.discount}% OFF`}
+            label={`${product.discountPercentage}% OFF`}
             size="small"
             sx={{
               position: 'absolute',
@@ -576,13 +813,13 @@ const Products = () => {
           <Typography variant="h6" color="#2874F0" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
             ₹{product.price.toLocaleString('en-IN')}
           </Typography>
-          {product.originalPrice && product.originalPrice > product.price && (
+          {product.initialPrice && product.initialPrice > product.price && (
             <Typography 
               variant="body2" 
               color="#757575"
               sx={{ textDecoration: 'line-through' }}
             >
-              ₹{product.originalPrice.toLocaleString('en-IN')}
+              ₹{product.initialPrice.toLocaleString('en-IN')}
             </Typography>
           )}
         </Box>
@@ -628,26 +865,64 @@ const Products = () => {
   );
 
   const FiltersPanel = () => (
-    <Box sx={{ width: 250, p: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6">Filters</Typography>
-        <IconButton onClick={clearFilters} size="small">
-          <Close />
-        </IconButton>
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        mb: 3,
+        pb: 2,
+        borderBottom: '2px solid #f0f0f0'
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <FilterList sx={{ mr: 1, color: '#2874F0', fontSize: '1.2rem' }} />
+          <Typography variant="h6" fontWeight="bold" color="#2874F0">
+            Filters
+          </Typography>
+        </Box>
+        <Button 
+          onClick={clearFilters} 
+          size="small"
+          sx={{ 
+            textTransform: 'none',
+            color: '#FF6B35',
+            borderColor: '#FF6B35',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 107, 53, 0.08)',
+              borderColor: '#FF6B35'
+            }
+          }}
+          variant="outlined"
+        >
+          Clear All
+        </Button>
       </Box>
 
       {/* Active Filters */}
       {(search || category || brand || rating || priceRange[0] > 0 || priceRange[1] < 100000) && (
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" gutterBottom>Active Filters:</Typography>
+        <Box sx={{ 
+          mb: 3, 
+          p: 2, 
+          backgroundColor: 'rgba(40, 116, 240, 0.05)',
+          borderRadius: 1.5,
+          border: '1px solid rgba(40, 116, 240, 0.1)'
+        }}>
+          <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="#2874F0">
+            Active Filters
+          </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
             {search && (
               <Chip 
                 label={`Search: ${search}`} 
                 size="small" 
-                onDelete={() => handleSearchChange('')}
-                color="primary"
-                variant="outlined"
+                onDelete={() => setSearch('')}
+                sx={{
+                  backgroundColor: '#2874F0',
+                  color: 'white',
+                  '& .MuiChip-deleteIcon': {
+                    color: 'white'
+                  }
+                }}
               />
             )}
             {category && (
@@ -655,8 +930,13 @@ const Products = () => {
                 label={`Category: ${category}`} 
                 size="small" 
                 onDelete={() => handleFilterChange('category', '')}
-                color="primary"
-                variant="outlined"
+                sx={{
+                  backgroundColor: '#2874F0',
+                  color: 'white',
+                  '& .MuiChip-deleteIcon': {
+                    color: 'white'
+                  }
+                }}
               />
             )}
             {brand && (
@@ -664,8 +944,13 @@ const Products = () => {
                 label={`Brand: ${brand}`} 
                 size="small" 
                 onDelete={() => handleFilterChange('brand', '')}
-                color="primary"
-                variant="outlined"
+                sx={{
+                  backgroundColor: '#2874F0',
+                  color: 'white',
+                  '& .MuiChip-deleteIcon': {
+                    color: 'white'
+                  }
+                }}
               />
             )}
             {rating && (
@@ -673,8 +958,13 @@ const Products = () => {
                 label={`Rating: ${rating}+`} 
                 size="small" 
                 onDelete={() => handleFilterChange('rating', '')}
-                color="primary"
-                variant="outlined"
+                sx={{
+                  backgroundColor: '#2874F0',
+                  color: 'white',
+                  '& .MuiChip-deleteIcon': {
+                    color: 'white'
+                  }
+                }}
               />
             )}
             {(priceRange[0] > 0 || priceRange[1] < 100000) && (
@@ -682,8 +972,13 @@ const Products = () => {
                 label={`Price: ₹${priceRange[0]} - ₹${priceRange[1]}`} 
                 size="small" 
                 onDelete={() => handleFilterChange('priceRange', [0, 100000])}
-                color="primary"
-                variant="outlined"
+                sx={{
+                  backgroundColor: '#2874F0',
+                  color: 'white',
+                  '& .MuiChip-deleteIcon': {
+                    color: 'white'
+                  }
+                }}
               />
             )}
           </Box>
@@ -692,24 +987,84 @@ const Products = () => {
 
       <TextField
         fullWidth
-        label="Search"
+        label="Search Products"
         value={search}
-        onChange={(e) => handleSearchChange(e.target.value)}
-        InputProps={{
-          endAdornment: searchLoading ? <CircularProgress size={20} /> : <Search />
+        onChange={(e) => {
+          const value = e.target.value;
+          // Update search state immediately for smooth typing
+          setSearch(value);
+          setPage(1);
+          
+          // Clear AI search state if active
+          if (isAiSearch) {
+            setIsAiSearch(false);
+            setAiSearchResults([]);
+            setRelatedProducts([]);
+          }
+          
+          // Clear search cache for new searches
+          if (value.length === 0) {
+            Object.keys(localStorage).forEach(key => {
+              if (key.startsWith('related_')) {
+                localStorage.removeItem(key);
+              }
+            });
+          }
         }}
-        sx={{ mb: 2 }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSearch();
+          }
+        }}
+        InputProps={{
+          startAdornment: <Search sx={{ mr: 1, color: '#2874F0' }} />,
+          endAdornment: searchLoading ? <CircularProgress size={20} /> : null
+        }}
+        sx={{ 
+          mb: 3,
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 2,
+            backgroundColor: 'white',
+            '&:hover fieldset': {
+              borderColor: '#2874F0',
+            },
+            '&.Mui-focused fieldset': {
+              borderColor: '#2874F0',
+              borderWidth: 2,
+            },
+          },
+          '& .MuiInputLabel-root': {
+            color: '#666',
+            '&.Mui-focused': {
+              color: '#2874F0'
+            }
+          }
+        }}
       />
 
-      <FormControl fullWidth sx={{ mb: 2 }}>
-        <InputLabel>Category</InputLabel>
+      <FormControl fullWidth sx={{ mb: 3 }}>
+        <InputLabel sx={{ color: '#666', '&.Mui-focused': { color: '#2874F0' } }}>Category</InputLabel>
         <Select
           value={category}
           label="Category"
           onChange={(e) => handleFilterChange('category', e.target.value)}
+          sx={{
+            borderRadius: 2,
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#e0e0e0'
+            },
+            '&:hover .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#2874F0'
+            },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#2874F0',
+              borderWidth: 2
+            }
+          }}
         >
           <MenuItem value="">All Categories</MenuItem>
-          {categories.map((cat) => (
+          {availableCategories.map((cat) => (
             <MenuItem key={cat} value={cat}>
               {cat.charAt(0).toUpperCase() + cat.slice(1)}
             </MenuItem>
@@ -717,15 +1072,28 @@ const Products = () => {
         </Select>
       </FormControl>
 
-      <FormControl fullWidth sx={{ mb: 2 }}>
-        <InputLabel>Brand</InputLabel>
+      <FormControl fullWidth sx={{ mb: 3 }}>
+        <InputLabel sx={{ color: '#666', '&.Mui-focused': { color: '#2874F0' } }}>Brand</InputLabel>
         <Select
           value={brand}
           label="Brand"
           onChange={(e) => handleFilterChange('brand', e.target.value)}
+          sx={{
+            borderRadius: 2,
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#e0e0e0'
+            },
+            '&:hover .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#2874F0'
+            },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#2874F0',
+              borderWidth: 2
+            }
+          }}
         >
           <MenuItem value="">All Brands</MenuItem>
-          {brands.map((br) => (
+          {availableBrands.map((br) => (
             <MenuItem key={br} value={br}>
               {br}
             </MenuItem>
@@ -733,30 +1101,61 @@ const Products = () => {
         </Select>
       </FormControl>
 
-      <Box sx={{ mb: 2 }}>
-        <Typography gutterBottom>Price Range</Typography>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="subtitle1" fontWeight="bold" gutterBottom color="#333">
+          Price Range
+        </Typography>
+        <Typography variant="caption" color="#666" gutterBottom>
+          ₹{availablePriceRange[0].toLocaleString('en-IN')} - ₹{availablePriceRange[1].toLocaleString('en-IN')}
+        </Typography>
         <Slider
           value={priceRange}
-          onChange={(e, value) => handleFilterChange('priceRange', value)}
+          onChange={(e, newValue) => handleFilterChange('priceRange', newValue)}
           valueLabelDisplay="auto"
-          min={0}
-          max={100000}
-          marks={[
-            { value: 0, label: '₹0' },
-            { value: 25000, label: '₹25K' },
-            { value: 50000, label: '₹50K' },
-            { value: 75000, label: '₹75K' },
-            { value: 100000, label: '₹1L' }
-          ]}
+          min={availablePriceRange[0]}
+          max={availablePriceRange[1]}
+          sx={{
+            color: '#2874F0',
+            '& .MuiSlider-thumb': {
+              backgroundColor: '#2874F0',
+            },
+            '& .MuiSlider-track': {
+              backgroundColor: '#2874F0',
+            },
+            '& .MuiSlider-rail': {
+              backgroundColor: '#e0e0e0',
+            },
+          }}
         />
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+          <Typography variant="caption" color="#666">
+            ₹{priceRange[0].toLocaleString('en-IN')}
+          </Typography>
+          <Typography variant="caption" color="#666">
+            ₹{priceRange[1].toLocaleString('en-IN')}
+          </Typography>
+        </Box>
       </Box>
 
-      <FormControl fullWidth sx={{ mb: 2 }}>
-        <InputLabel>Minimum Rating</InputLabel>
+      <FormControl fullWidth sx={{ mb: 3 }}>
+        <InputLabel sx={{ color: '#666', '&.Mui-focused': { color: '#2874F0' } }}>Minimum Rating</InputLabel>
         <Select
           value={rating}
           label="Minimum Rating"
           onChange={(e) => handleFilterChange('rating', e.target.value)}
+          sx={{
+            borderRadius: 2,
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#e0e0e0'
+            },
+            '&:hover .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#2874F0'
+            },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#2874F0',
+              borderWidth: 2
+            }
+          }}
         >
           <MenuItem value="">All Ratings</MenuItem>
           <MenuItem value="4">4+ Stars</MenuItem>
@@ -766,7 +1165,7 @@ const Products = () => {
       </FormControl>
 
       <FormControl fullWidth>
-        <InputLabel>Sort By</InputLabel>
+        <InputLabel sx={{ color: '#666', '&.Mui-focused': { color: '#2874F0' } }}>Sort By</InputLabel>
         <Select
           value={`${sortBy}-${sortOrder}`}
           label="Sort By"
@@ -774,6 +1173,19 @@ const Products = () => {
             const [sort, order] = e.target.value.split('-');
             setSortBy(sort);
             setSortOrder(order);
+          }}
+          sx={{
+            borderRadius: 2,
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#e0e0e0'
+            },
+            '&:hover .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#2874F0'
+            },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#2874F0',
+              borderWidth: 2
+            }
           }}
         >
           <MenuItem value="createdAt-desc">Newest First</MenuItem>
@@ -845,16 +1257,36 @@ const Products = () => {
         </Paper>
       )}
 
-      <Box sx={{ display: 'flex', gap: 2 }}>
-        {/* Filters - Desktop */}
-        {!isMobile && (
-          <Box sx={{ width: 250, flexShrink: 0 }}>
-            <Paper elevation={1}>
-              <FiltersPanel />
-            </Paper>
+      {/* AI Search Results - Combined Related + Search Results */}
+      {isAiSearch && aiSearchResults.length > 0 && (
+        <Paper 
+          sx={{ 
+            p: 3, 
+            mb: 4, 
+            background: 'linear-gradient(135deg, #2874F0 0%, #4B8BF5 100%)',
+            borderRadius: 2
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+            <FlashOn sx={{ mr: 2, color: 'white' }} />
+            <Typography variant="h6" fontWeight="bold" color="white">
+              AI Search Results
+            </Typography>
+            <Typography variant="body2" color="rgba(255,255,255,0.9)" sx={{ ml: 2 }}>
+              For "{search}" - {aiSearchResults.some(p => p.vectorScore) ? 'Vector Search' : 'Smart Search'} - Showing related items first
+            </Typography>
           </Box>
-        )}
+          <Grid container spacing={2}>
+            {aiSearchResults.map((product) => (
+              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={product._id}>
+                <ProductCard product={product} isRelated={product.isRelated} showScore={!product.isRelated} />
+              </Grid>
+            ))}
+          </Grid>
+        </Paper>
+      )}
 
+      <Box sx={{ display: 'flex', gap: 3 }}>
         {/* Products Grid */}
         <Box sx={{ flexGrow: 1 }}>
           {/* Mobile Filter Button */}
@@ -876,7 +1308,7 @@ const Products = () => {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
               <Box>
                 <Typography variant="h6" fontWeight="bold" color="text.primary">
-                  {totalProducts} Products Found
+                  {isAiSearch ? `${aiSearchResults.length} AI Results` : `${totalProducts} Products Found`}
                 </Typography>
                 {(search || category || brand) && (
                   <Typography variant="body2" color="text.secondary">
@@ -888,18 +1320,41 @@ const Products = () => {
               </Box>
               
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Button
-                  variant="contained"
-                  startIcon={<FlashOn />}
-                  onClick={handleSearch}
-                  disabled={!search.trim()}
-                  sx={{ 
-                    backgroundColor: '#FF6B35',
-                    '&:hover': { backgroundColor: '#E55A2B' }
-                  }}
-                >
-                  AI Search
-                </Button>
+                {!isAiSearch && (
+                  <Button
+                    variant="contained"
+                    startIcon={<FlashOn />}
+                    onClick={handleSearch}
+                    disabled={!search.trim()}
+                    sx={{ 
+                      backgroundColor: '#FF6B35',
+                      '&:hover': { backgroundColor: '#E55A2B' }
+                    }}
+                  >
+                    AI Search
+                  </Button>
+                )}
+                {isAiSearch && (
+                  <Button
+                    variant="outlined"
+                    startIcon={<Close />}
+                    onClick={() => {
+                      setIsAiSearch(false);
+                      setAiSearchResults([]);
+                      fetchProducts();
+                    }}
+                    sx={{ 
+                      borderColor: '#FF6B35',
+                      color: '#FF6B35',
+                      '&:hover': { 
+                        backgroundColor: 'rgba(255, 107, 53, 0.08)',
+                        borderColor: '#FF6B35'
+                      }
+                    }}
+                  >
+                    Clear AI Search
+                  </Button>
+                )}
                 
                 <Button
                   variant="outlined"
@@ -913,12 +1368,14 @@ const Products = () => {
             </Box>
           </Paper>
 
-          {/* Products */}
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
+          {/* Products - Hide when AI search is active since results are shown above */}
+          {!isAiSearch && (
+            <>
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
             <>
               <Grid container spacing={viewMode === 'grid' ? 3 : 2}>
                 {products.map((product) => (
@@ -935,8 +1392,8 @@ const Products = () => {
                 ))}
               </Grid>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
+            {/* Pagination - Hide when AI search is active */}
+            {!isAiSearch && totalPages > 1 && (
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
                   <Pagination
                     count={totalPages}
@@ -947,8 +1404,29 @@ const Products = () => {
                 </Box>
               )}
             </>
+            )}
+          </>
           )}
         </Box>
+
+        {/* Filters - Desktop */}
+        {!isMobile && (
+          <Box sx={{ width: 280, flexShrink: 0 }}>
+            <Paper 
+              elevation={2}
+              sx={{ 
+                borderRadius: 2,
+                overflow: 'hidden',
+                border: '1px solid #e0e0e0',
+                '&:hover': {
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
+                }
+              }}
+            >
+              <FiltersPanel />
+            </Paper>
+          </Box>
+        )}
       </Box>
 
       {/* Mobile Filters Drawer */}
