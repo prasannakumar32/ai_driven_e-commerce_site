@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import axios from 'axios';
+import { cartAPI } from '../utils/api';
 
 const CartContext = createContext();
 
@@ -98,7 +98,7 @@ export const CartProvider = ({ children }) => {
   const fetchCart = async () => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
-      const response = await axios.get('/api/cart');
+      const response = await cartAPI.getCart();
       
       // Transform the response to match our frontend structure
       const cartData = response.data;

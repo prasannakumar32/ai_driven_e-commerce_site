@@ -195,6 +195,14 @@ router.get('/trending', async (req, res) => {
   try {
     const { category, limit = 10 } = req.query;
     
+    // Check database connection
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ 
+        message: 'Database connection unavailable. Please try again later.',
+        products: []
+      });
+    }
+    
     let query = {};
     if (category) query.category = category;
 
@@ -204,7 +212,11 @@ router.get('/trending', async (req, res) => {
 
     res.json(trendingProducts);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error fetching trending products:', error);
+    res.status(500).json({ 
+      message: 'Failed to fetch trending products',
+      products: []
+    });
   }
 });
 
