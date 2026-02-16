@@ -10,10 +10,7 @@
     "test-db": "node scripts/test-nosql-connection.js",
     "setup-atlas": "node scripts/setup-atlas-helper.js",
     "client": "cd client && npm start",
-    "server": "nodemon server.js",
-    "build": "cd client && npm install && npm run build",
-    "build:client": "cd client && npm install && npm run build",
-    "heroku-postbuild": "cd client && npm install && npm run build"
+    "server": "nodemon server.js"
   },
   "dependencies": {
     "axios": "^1.13.4",
@@ -42,9 +39,5 @@
     "express"
   ],
   "author": "",
-  "license": "MIT",
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
-  }
+  "license": "MIT"
 }
