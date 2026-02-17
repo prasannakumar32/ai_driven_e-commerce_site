@@ -37,7 +37,7 @@ const getRecommendations = async (product, userId = null) => {
   }
 };
 
-// Get related products using AI search engine
+// Get related products using enhanced AI search engine
 const getRelatedProducts = async (searchQuery, category = '', brand = '', limit = 8) => {
   try {
     console.log('Getting related products for:', searchQuery);
@@ -48,7 +48,7 @@ const getRelatedProducts = async (searchQuery, category = '', brand = '', limit 
       await aiSearchEngine.initialize();
     }
     
-    // Use AI search engine with timeout
+    // Use enhanced AI search engine with timeout
     const results = await Promise.race([
       aiSearchEngine.search(searchQuery, { category, brand, limit }),
       new Promise((_, reject) => 
@@ -56,16 +56,48 @@ const getRelatedProducts = async (searchQuery, category = '', brand = '', limit 
       )
     ]);
     
-    console.log('AI search engine found', results.length, 'products');
-    return results;
-  } catch (error) {
-    console.error('Error in AI search engine, using fallback:', error);
+    console.log('Enhanced AI search engine found', results.length, 'products');
     
-    // Fallback to simple database search
+    // Apply additional category-based filtering if needed
+    const queryLower = searchQuery.toLowerCase();
+    let enhancedResults = results;
+    
+    // Special handling for phone searches to ensure proper categorization
+    if (queryLower.includes('iphone') || queryLower.includes('phone') || queryLower.includes('smartphone')) {
+      enhancedResults = results.filter(product => {
+        const productCategory = (product.category || '').toLowerCase();
+        const productName = (product.name || '').toLowerCase();
+        
+        // Prioritize phone-related products
+        return productCategory.includes('phone') || 
+               productCategory.includes('smartphone') || 
+               productCategory.includes('mobile') ||
+               productName.includes('iphone') ||
+               productName.includes('phone') ||
+               (product.brand || '').toLowerCase() === 'apple';
+      });
+    }
+    
+    // If no specific category results, fallback to general search but prioritize relevant items
+    if (enhancedResults.length === 0) {
+      enhancedResults = results.sort((a, b) => {
+        const aScore = calculateRelevanceScore(a, searchQuery);
+        const bScore = calculateRelevanceScore(b, searchQuery);
+        return bScore - aScore;
+      });
+    }
+    
+    return enhancedResults.slice(0, limit);
+  } catch (error) {
+    console.error('Error in AI search engine, using enhanced fallback:', error);
+    
+    // Enhanced fallback with proper categorization
     try {
       const Product = require('../models/Product');
       let query = {};
+      const queryLower = searchQuery.toLowerCase();
       
+      // Enhanced query building with category prioritization
       if (searchQuery) {
         query.$or = [
           { name: { $regex: searchQuery, $options: 'i' } },
@@ -75,6 +107,14 @@ const getRelatedProducts = async (searchQuery, category = '', brand = '', limit 
           { brand: { $regex: searchQuery, $options: 'i' } },
           { category: { $regex: searchQuery, $options: 'i' } }
         ];
+        
+        // Add category-specific filters for better results
+        if (queryLower.includes('iphone') || queryLower.includes('phone')) {
+          query.$or.push(
+            { category: { $regex: 'phone|smartphone|mobile', $options: 'i' } },
+            { brand: 'Apple' }
+          );
+        }
       }
       
       if (category) query.category = category;
@@ -82,16 +122,101 @@ const getRelatedProducts = async (searchQuery, category = '', brand = '', limit 
       
       const products = await Product.find(query)
         .sort({ rating: -1, popularity: -1 })
-        .limit(limit)
+        .limit(limit * 2) // Get more to filter better
         .populate('reviews.user', 'name');
       
-      console.log('Fallback search found', products.length, 'products');
-      return products.map(p => p.toObject());
+      // Apply enhanced scoring
+      const scoredProducts = products.map(p => {
+        let score = calculateRelevanceScore(p.toObject(), searchQuery);
+        return { ...p.toObject(), relevanceScore: score };
+      });
+      
+      // Sort by relevance and return top results
+      const finalResults = scoredProducts
+        .sort((a, b) => b.relevanceScore - a.relevanceScore)
+        .slice(0, limit);
+      
+      console.log('Enhanced fallback search found', finalResults.length, 'products');
+      return finalResults;
     } catch (fallbackError) {
-      console.error('Fallback search also failed:', fallbackError);
+      console.error('Enhanced fallback search also failed:', fallbackError);
       return [];
     }
   }
+};
+
+// Helper function to calculate relevance score with aggressive iPhone prioritization
+const calculateRelevanceScore = (product, searchQuery) => {
+  let score = 0;
+  const queryLower = searchQuery.toLowerCase();
+  const isIPhoneSearch = queryLower.includes('iphone') || queryLower.includes('phone') || queryLower.includes('apple');
+  const isTVSearch = queryLower.includes('tv') || queryLower.includes('television');
+  
+  const productName = (product.name || '').toLowerCase();
+  const productCategory = (product.category || '').toLowerCase();
+  const productBrand = (product.brand || '').toLowerCase();
+  const productDescription = (product.description || '').toLowerCase();
+  
+  // AGGRESSIVE iPhone prioritization
+  if (isIPhoneSearch) {
+    // MASSIVE boost for iPhone/Apple products
+    if (productName.includes('iphone') || productName.includes('apple')) {
+      score += 20.0; // Huge boost
+    }
+    
+    if (productBrand === 'apple') {
+      score += 15.0; // Big boost for Apple brand
+    }
+    
+    if (productCategory.includes('phone') || productCategory.includes('smartphone') || productCategory.includes('mobile')) {
+      score += 10.0; // Boost for phone category
+    }
+    
+    // HEAVY penalty for TV products when searching iPhone
+    if (productCategory.includes('tv') || productCategory.includes('television') || 
+        productName.includes('tv') || productName.includes('television')) {
+      score -= 25.0; // Massive penalty for TVs
+    }
+    
+    // Penalty for LG/Samsung TV products
+    if ((productBrand === 'lg' || productBrand === 'samsung') && 
+        (productCategory.includes('tv') || productCategory.includes('electronics'))) {
+      score -= 20.0;
+    }
+  }
+  
+  // TV search prioritization
+  if (isTVSearch) {
+    if (productCategory.includes('tv') || productCategory.includes('television')) {
+      score += 12.0;
+    }
+    
+    // Penalty for phone products when searching TV
+    if (productCategory.includes('phone') || productCategory.includes('smartphone')) {
+      score -= 10.0;
+    }
+  }
+  
+  // Exact name match gets highest score (for non-iPhone searches)
+  if (!isIPhoneSearch && productName.includes(queryLower)) {
+    score += 15.0;
+  }
+  
+  // Brand match (for non-iPhone searches)
+  if (!isIPhoneSearch && productBrand.includes(queryLower)) {
+    score += 8.0;
+  }
+  
+  // Description match (minimal weight)
+  if (productDescription.includes(queryLower)) {
+    score += 2.0;
+  }
+  
+  // Quality indicators (minimal weight)
+  score += (product.rating || 0) * 0.5;
+  score += (product.popularity || 0) * 0.01;
+  
+  return score;
 };
 
 // AI-powered category detection

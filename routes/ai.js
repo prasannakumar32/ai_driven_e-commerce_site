@@ -92,19 +92,60 @@ router.post('/smart-search', async (req, res) => {
     }
 
     try {
-      // Use hybrid search combining text and vector search
+      // Use enhanced hybrid search combining text and vector search
       const products = await hybridSearch(query, filters, 20);
       
-      // Apply AI-based reranking based on user preferences
+      // Apply enhanced AI-based reranking with aggressive iPhone prioritization
       const rankedProducts = products.map(product => {
         let score = product.hybridScore || product.vectorScore || 0;
+        const queryLower = query.toLowerCase();
+        const isIPhoneSearch = queryLower.includes('iphone') || queryLower.includes('phone') || queryLower.includes('apple');
+        
+        // AGGRESSIVE category-specific prioritization
+        if (isIPhoneSearch) {
+          const productCategory = (product.category || '').toLowerCase();
+          const productBrand = (product.brand || '').toLowerCase();
+          const productName = (product.name || '').toLowerCase();
+          
+          // MASSIVE boost for iPhone/Apple products
+          if (productName.includes('iphone') || productName.includes('apple')) {
+            score += 5.0; // Huge boost
+          }
+          
+          if (productBrand === 'apple') {
+            score += 3.0; // Big boost for Apple brand
+          }
+          
+          if (productCategory.includes('phone') || productCategory.includes('smartphone') || productCategory.includes('mobile')) {
+            score += 2.0; // Boost for phone category
+          }
+          
+          // HEAVY penalty for TV products when searching iPhone
+          if (productCategory.includes('tv') || productCategory.includes('television') || 
+              productName.includes('tv') || productName.includes('television')) {
+            score -= 10.0; // Massive penalty for TVs
+          }
+          
+          // Penalty for LG/Samsung TV products
+          if ((productBrand === 'lg' || productBrand === 'samsung') && 
+              (productCategory.includes('tv') || productCategory.includes('electronics'))) {
+            score -= 8.0;
+          }
+        }
+        
+        if (queryLower.includes('tv') || queryLower.includes('television')) {
+          const productCategory = (product.category || '').toLowerCase();
+          if (productCategory.includes('tv') || productCategory.includes('television')) {
+            score += 2.0;
+          }
+        }
         
         // Boost score based on user preferences with null checks
         if (userPreferences.categories && userPreferences.categories.includes(product.category)) {
-          score += 0.3;
+          score += 0.4;
         }
         if (userPreferences.brands && userPreferences.brands.includes(product.brand)) {
-          score += 0.2;
+          score += 0.3;
         }
         if (product.price >= userPreferences.priceRange.min && 
             product.price <= userPreferences.priceRange.max) {
@@ -113,7 +154,7 @@ router.post('/smart-search', async (req, res) => {
         
         return { 
           ...product, 
-          aiScore: Math.min(score, 1.0) // Cap score for consistency
+          aiScore: Math.min(score, 10.0) // Cap score for consistency
         };
       }).sort((a, b) => b.aiScore - a.aiScore);
 
@@ -125,14 +166,16 @@ router.post('/smart-search', async (req, res) => {
           searchQuery: query,
           appliedFilters: Object.keys(filters),
           totalCount: rankedProducts.length,
-          searchType: 'hybrid'
+          searchType: 'enhanced-hybrid'
         }
       });
     } catch (dbError) {
-      console.error('Database search error, using fallback:', dbError);
+      console.error('Database search error, using enhanced fallback:', dbError);
       
-      // Fallback to simple search
+      // Enhanced fallback to simple search with category prioritization
       let fallbackQuery = {};
+      const queryLower = query.toLowerCase();
+      
       if (query) {
         fallbackQuery.$or = [
           { name: { $regex: query, $options: 'i' } },
@@ -142,6 +185,14 @@ router.post('/smart-search', async (req, res) => {
           { brand: { $regex: query, $options: 'i' } },
           { category: { $regex: query, $options: 'i' } }
         ];
+        
+        // Add category-specific boosts for phone searches
+        if (queryLower.includes('iphone') || queryLower.includes('phone')) {
+          fallbackQuery.$or.push(
+            { category: { $regex: 'phone|smartphone|mobile', $options: 'i' } },
+            { brand: 'Apple' }
+          );
+        }
       }
       
       if (filters.category) fallbackQuery.category = filters.category;
@@ -155,13 +206,61 @@ router.post('/smart-search', async (req, res) => {
       
       const fallbackProducts = await Product.find(fallbackQuery)
         .sort({ rating: -1, popularity: -1 })
-        .limit(20)
+        .limit(30) // Get more to filter better
         .populate('reviews.user', 'name');
 
-      const scoredFallbackProducts = fallbackProducts.map(product => ({
-        ...product.toObject(),
-        aiScore: Math.min((product.rating || 0) / 5, 1.0) // Normalize rating to 0-1
-      }));
+      // Apply enhanced scoring to fallback results with aggressive iPhone prioritization
+      const scoredFallbackProducts = fallbackProducts.map(product => {
+        let score = Math.min((product.rating || 0) / 5, 1.0); // Base score from rating
+        const productCategory = (product.category || '').toLowerCase();
+        const productBrand = (product.brand || '').toLowerCase();
+        const productName = (product.name || '').toLowerCase();
+        const isIPhoneSearch = queryLower.includes('iphone') || queryLower.includes('phone') || queryLower.includes('apple');
+        
+        // AGGRESSIVE iPhone-specific scoring
+        if (isIPhoneSearch) {
+          // MASSIVE boost for iPhone/Apple products
+          if (productName.includes('iphone') || productName.includes('apple')) {
+            score += 8.0; // Huge boost
+          }
+          
+          if (productBrand === 'apple') {
+            score += 5.0; // Big boost for Apple brand
+          }
+          
+          if (productCategory.includes('phone') || productCategory.includes('smartphone') || productCategory.includes('mobile')) {
+            score += 3.0; // Boost for phone category
+          }
+          
+          // HEAVY penalty for TV products when searching iPhone
+          if (productCategory.includes('tv') || productCategory.includes('television') || 
+              productName.includes('tv') || productName.includes('television')) {
+            score -= 15.0; // Massive penalty for TVs
+          }
+          
+          // Penalty for LG/Samsung TV products
+          if ((productBrand === 'lg' || productBrand === 'samsung') && 
+              (productCategory.includes('tv') || productCategory.includes('electronics'))) {
+            score -= 12.0;
+          }
+        }
+        
+        if (queryLower.includes('tv') || queryLower.includes('television')) {
+          if (productCategory.includes('tv') || productCategory.includes('television')) {
+            score += 3.0;
+          }
+        }
+        
+        // Exact name match bonus (for non-iPhone searches)
+        if (!isIPhoneSearch && productName.includes(queryLower)) {
+          score += 2.0;
+        }
+        
+        return {
+          ...product.toObject(),
+          aiScore: Math.min(score, 10.0)
+        };
+      }).sort((a, b) => b.aiScore - a.aiScore);
 
       // Standardize fallback response format
       res.json({
