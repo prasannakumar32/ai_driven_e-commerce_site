@@ -228,11 +228,11 @@ const Checkout = () => {
         email: shippingAddress.email || user?.email || 'N/A'
       };
 
-      // Calculate order totals
-      const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      const taxPrice = subtotal * 0.08; // 8% tax
+      // Calculate order totals - use product.price from cart items
+      const subtotal = items.reduce((sum, item) => sum + ((item.product?.price || item.price || 0) * item.quantity), 0);
+      const taxPrice = Number((subtotal * 0.08).toFixed(2)); // 8% tax
       const shippingPrice = subtotal > 100 ? 0 : 10; // Free shipping for orders over ₹100
-      const total = subtotal + taxPrice + shippingPrice; // Calculate total properly
+      const total = Number((subtotal + taxPrice + shippingPrice).toFixed(2)); // Calculate total properly
       
       const orderPayload = {
         orderItems: orderItems,
@@ -260,11 +260,13 @@ const Checkout = () => {
       setLoading(false);
     } catch (err) {
       console.error('COD checkout failed', err);
+      console.error('Error response:', err.response?.data);
       setLoading(false);
       
       // Handle different error types
       if (err.response?.status === 500) {
-        alert('Server error occurred while placing your order. Please try again in a few minutes.');
+        const errorMsg = err.response?.data?.message || 'Server error occurred';
+        alert(`Server error: ${errorMsg}. Please try again in a few minutes.`);
       } else if (err.response?.status === 400) {
         const errorMessage = err.response?.data?.message || 'Invalid order data';
         alert(`Order failed: ${errorMessage}. Please check your order details and try again.`);

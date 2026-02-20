@@ -12,7 +12,11 @@ router.post('/', auth, async (req, res) => {
     const {
       orderItems,
       shippingAddress,
-      paymentMethod
+      paymentMethod,
+      subtotal,
+      taxPrice,
+      shippingPrice,
+      total
     } = req.body;
 
     const userId = new mongoose.Types.ObjectId(req.user.id);
@@ -24,76 +28,119 @@ router.post('/', auth, async (req, res) => {
       shippingAddress: shippingAddress ? 'provided' : 'missing'
     });
 
+    // Validate required fields
     if (!orderItems || orderItems.length === 0) {
       return res.status(400).json({ message: 'No order items' });
     }
 
+    if (!shippingAddress) {
+      return res.status(400).json({ message: 'Shipping address is required' });
+    }
+
+    // Validate shipping address has all required fields
+    const requiredAddressFields = ['name', 'phone', 'email', 'address', 'city', 'state', 'postalCode', 'country'];
+    for (const field of requiredAddressFields) {
+      if (!shippingAddress[field]) {
+        return res.status(400).json({ message: `Shipping address field "${field}" is required` });
+      }
+    }
+
     // Verify products and calculate prices
-    let totalPrice = 0;
+    let calculatedTotal = 0;
     const verifiedOrderItems = [];
 
     for (const item of orderItems) {
-      const product = await Product.findById(item.product);
+      // Handle both string ID and ObjectId
+      const productId = typeof item.product === 'string' ? item.product : item.product._id;
+      
+      const product = await Product.findById(productId);
       if (!product) {
-        return res.status(404).json({ message: `Product ${item.product} not found` });
+        return res.status(404).json({ message: `Product not found` });
       }
 
       if (product.stock < item.quantity) {
-        return res.status(400).json({ message: `Insufficient stock for ${product.name}` });
+        return res.status(400).json({ message: `Insufficient stock for ${product.name}. Available: ${product.stock}` });
       }
 
       verifiedOrderItems.push({
         name: product.name,
         quantity: item.quantity,
-        image: product.images[0],
+        image: product.images?.[0] || '',
         price: product.price,
         product: product._id
       });
 
-      totalPrice += product.price * item.quantity;
+      calculatedTotal += product.price * item.quantity;
     }
 
-    // Calculate additional costs
-    const taxPrice = totalPrice * 0.08; // 8% tax
-    const shippingPrice = totalPrice > 100 ? 0 : 10; // Free shipping over $100
-    const finalTotal = totalPrice + taxPrice + shippingPrice;
+    // Use provided totals if available, otherwise calculate
+    let finalTotal, finalTaxPrice, finalShippingPrice;
+    
+    if (total !== undefined && taxPrice !== undefined && shippingPrice !== undefined) {
+      finalTotal = total;
+      finalTaxPrice = taxPrice;
+      finalShippingPrice = shippingPrice;
+    } else {
+      // Calculate if not provided
+      finalTaxPrice = calculatedTotal * 0.08; // 8% tax
+      finalShippingPrice = calculatedTotal > 100 ? 0 : 10; // Free shipping over ₹100
+      finalTotal = calculatedTotal + finalTaxPrice + finalShippingPrice;
+    }
 
     // Create order
     const orderData = {
       user: userId,
       orderItems: verifiedOrderItems,
-      shippingAddress,
-      paymentMethod,
-      taxPrice,
-      shippingPrice,
+      shippingAddress: {
+        name: shippingAddress.name || '',
+        phone: shippingAddress.phone || '',
+        email: shippingAddress.email || '',
+        address: shippingAddress.address || '',
+        city: shippingAddress.city || '',
+        state: shippingAddress.state || '',
+        postalCode: shippingAddress.postalCode || '',
+        country: shippingAddress.country || 'India'
+      },
+      paymentMethod: paymentMethod || 'COD',
+      taxPrice: finalTaxPrice,
+      shippingPrice: finalShippingPrice,
       totalPrice: finalTotal,
-      isPaid: false,
+      isPaid: paymentMethod !== 'COD',
       isDelivered: false,
-      status: paymentMethod === 'COD' ? 'pending' : 'processing',
-      createdAt: new Date(),
-      paidAt: paymentMethod === 'COD' ? null : new Date()
+      status: paymentMethod === 'COD' ? 'pending' : 'processing'
     };
     
+    // Ensure orderId exists before saving
+    if (!orderData.orderId) {
+      const currentYear = new Date().getFullYear();
+      const timestamp = Date.now();
+      const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
+      orderData.orderId = `PKS_${currentYear}_${timestamp}_${randomSuffix}`;
+    }
+    
     console.log('📦 Creating order with data:', {
-      ...orderData,
-      user: typeof orderData.user,
-      paymentMethod: orderData.paymentMethod
+      itemCount: orderData.orderItems.length,
+      totalPrice: orderData.totalPrice,
+      paymentMethod: orderData.paymentMethod,
+      status: orderData.status,
+      orderId: orderData.orderId
     });
-
+    
     const order = new Order(orderData);
+    const createdOrder = await order.save();
 
     // Update product stock
     for (const item of verifiedOrderItems) {
       await Product.findByIdAndUpdate(item.product, {
         $inc: { stock: -item.quantity, popularity: item.quantity }
-      });
+      }, { runValidators: false });
     }
 
-    const createdOrder = await order.save();
-
+    console.log('✅ Order created successfully:', createdOrder._id);
     res.status(201).json(createdOrder);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('❌ Order creation error:', error);
+    res.status(500).json({ message: error.message || 'Error creating order' });
   }
 });
 

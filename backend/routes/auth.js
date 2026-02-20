@@ -363,23 +363,23 @@ router.post('/addresses', auth, async (req, res) => {
     // Frontend sends the entire address object directly in req.body
     const addressData = req.body;
     
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    
-    if (!user.addresses || !Array.isArray(user.addresses)) {
-      user.addresses = [];
-    }
-    
-    user.addresses.push({
+    const newAddress = {
       ...addressData,
       _id: new Date().getTime().toString(),
       createdAt: new Date(),
       updatedAt: new Date()
-    });
+    };
     
-    await user.save();
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $push: { addresses: newAddress } },
+      { new: true, runValidators: false }
+    );
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
     res.json(user.addresses);
   } catch (error) {
     console.error('Error adding address:', error);
@@ -394,28 +394,36 @@ router.put('/addresses/:addressId', auth, async (req, res) => {
     // Frontend sends the entire address object directly in req.body
     const addressData = req.body;
     
-    const user = await User.findById(req.user.id);
-    if (!user) {
+    // Check if address exists first
+    const userCheck = await User.findById(req.user.id);
+    if (!userCheck) {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    if (!user.addresses || !Array.isArray(user.addresses)) {
-      user.addresses = [];
-    }
-    
-    const addressIndex = user.addresses.findIndex(addr => addr._id.toString() === addressId);
-    
-    if (addressIndex === -1) {
+    const addressExists = userCheck.addresses?.some(addr => addr._id.toString() === addressId);
+    if (!addressExists) {
       return res.status(404).json({ message: 'Address not found' });
     }
     
-    user.addresses[addressIndex] = {
-      ...user.addresses[addressIndex],
-      ...addressData,
-      updatedAt: new Date()
-    };
+    // Update the specific address using array filters
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      {
+        $set: {
+          'addresses.$[addr]': {
+            ...addressData,
+            _id: addressId,
+            updatedAt: new Date()
+          }
+        }
+      },
+      {
+        arrayFilters: [{ 'addr._id': addressId }],
+        new: true,
+        runValidators: false
+      }
+    );
     
-    await user.save();
     res.json(user.addresses);
   } catch (error) {
     console.error('Error updating address:', error);
@@ -428,33 +436,31 @@ router.put('/addresses/:addressId/set-default', auth, async (req, res) => {
   try {
     const { addressId } = req.params;
     
-    const user = await User.findById(req.user.id);
+    // First, set all addresses to isDefault: false
+    await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: { 'addresses[].isDefault': false } },
+      { runValidators: false }
+    );
+    
+    // Then set the specific address to isDefault: true
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: { 'addresses.$[addr].isDefault': true } },
+      {
+        arrayFilters: [{ 'addr._id': addressId }],
+        new: true,
+        runValidators: false
+      }
+    );
+    
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    if (!user.addresses) {
-      user.addresses = [];
-    }
-    
-    // Find the address to set as default
-    const addressIndex = user.addresses.findIndex(addr => addr._id.toString() === addressId);
-    
-    if (addressIndex === -1) {
-      return res.status(404).json({ message: 'Address not found' });
-    }
-    
-    // Set all addresses to non-default first
-    user.addresses.forEach(addr => {
-      addr.isDefault = false;
-    });
-    
-    // Set the selected address as default
-    user.addresses[addressIndex].isDefault = true;
-    
-    await user.save();
     res.json(user.addresses);
   } catch (error) {
+    console.error('Error setting default address:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -464,20 +470,19 @@ router.delete('/addresses/:addressId', auth, async (req, res) => {
   try {
     const { addressId } = req.params;
     
-    const user = await User.findById(req.user.id);
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $pull: { addresses: { _id: addressId } } },
+      { new: true, runValidators: false }
+    );
+    
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    if (!user.addresses) {
-      return res.status(404).json({ message: 'No addresses found' });
-    }
-    
-    user.addresses = user.addresses.filter(addr => addr._id.toString() !== addressId);
-    
-    await user.save();
     res.json(user.addresses);
   } catch (error) {
+    console.error('Error deleting address:', error);
     res.status(500).json({ message: error.message });
   }
 });

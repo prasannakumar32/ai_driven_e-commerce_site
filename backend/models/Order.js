@@ -4,7 +4,7 @@ const orderSchema = new mongoose.Schema({
   orderId: {
     type: String,
     unique: true,
-    required: true
+    sparse: true
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -131,13 +131,24 @@ const orderSchema = new mongoose.Schema({
 });
 
 // Pre-save hook to generate order ID
-orderSchema.pre('save', function(next) {
-  if (this.isNew && !this.orderId) {
-    const currentYear = new Date().getFullYear();
-    const uniqueId = this._id.toString().slice(-8).toUpperCase();
-    this.orderId = `PKS_${currentYear}_${uniqueId}`;
+orderSchema.pre('save', async function(next) {
+  try {
+    if (!this.orderId) {
+      // Ensure _id exists before using it
+      if (!this._id) {
+        this._id = new mongoose.Types.ObjectId();
+      }
+      
+      const currentYear = new Date().getFullYear();
+      const timestamp = Date.now();
+      const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
+      
+      this.orderId = `PKS_${currentYear}_${timestamp}_${randomSuffix}`;
+    }
+    next();
+  } catch (error) {
+    next(error);
   }
-  next();
 });
 
 module.exports = mongoose.model('Order', orderSchema);
