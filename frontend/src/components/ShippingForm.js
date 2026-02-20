@@ -63,19 +63,22 @@ const ShippingForm = ({
 
   // Initialize default selected address
   useEffect(() => {
-    setUserAddresses(savedAddresses || []);
-    if (savedAddresses && savedAddresses.length > 0) {
-      // Set first address as default, or the marked default address
-      const defaultAddr = savedAddresses.find(addr => addr.isDefault);
-      if (defaultAddr) {
-        setSelectedAddressId(defaultAddr._id);
-        // Auto-submit default address after a short delay
-        setTimeout(() => {
-          handleSubmitSelectedAddressWithId(defaultAddr._id);
-        }, 100);
-      } else {
-        setSelectedAddressId(savedAddresses[0]._id);
-      }
+    const addresses = savedAddresses || [];
+    setUserAddresses(addresses);
+    
+    if (addresses.length > 0) {
+      // Find default address
+      const defaultAddr = addresses.find(addr => addr.isDefault);
+      const addressToUse = defaultAddr || addresses[0];
+      
+      setSelectedAddressId(addressToUse._id);
+      
+      // Auto-submit with a slight delay to ensure state is updated
+      const timer = setTimeout(() => {
+        handleSubmitSelectedAddressWithId(addressToUse._id);
+      }, 50);
+      
+      return () => clearTimeout(timer);
     }
   }, [savedAddresses]);
 
@@ -287,22 +290,112 @@ const ShippingForm = ({
     <Box>
       {/* LIST VIEW: Show saved addresses (Amazon Style) */}
       {viewMode === 'list' && userAddresses.length > 0 && (
-        <Paper sx={{ p: 3, borderRadius: 2, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-            <LocationOn sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="h5" fontWeight="bold" color="primary.main">
-                Select Delivery Address
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                Choose where you'd like your items delivered
-              </Typography>
-            </Box>
-          </Box>
+        <Box>
+          {/* Default Address Summary Banner - Like Amazon */}
+          {userAddresses.find(a => a.isDefault) && (
+            <Paper sx={{ 
+              p: 3, 
+              mb: 3, 
+              borderRadius: 2, 
+              bgcolor: '#f0f7ff',
+              border: '2px solid primary.main'
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                <Box sx={{ flex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Typography variant="subtitle2" fontWeight="700" color="primary.main">
+                      ✓ DELIVERY ADDRESS
+                    </Typography>
+                    <Box sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      bgcolor: '#FFB81C',
+                      color: '#232F3E',
+                      px: 1,
+                      py: 0.5,
+                      borderRadius: 1,
+                      fontSize: '0.7rem',
+                      fontWeight: 700
+                    }}>
+                      <Star sx={{ fontSize: 12 }} />
+                      DEFAULT
+                    </Box>
+                  </Box>
+                  
+                  {userAddresses.find(a => a.isDefault) && (
+                    <Box>
+                      <Typography variant="h6" fontWeight="700" color="text.primary" sx={{ mb: 0.5 }}>
+                        {userAddresses.find(a => a.isDefault).name}
+                      </Typography>
+                      <Typography variant="body2" color="text.primary" sx={{ mb: 0.5 }}>
+                        {userAddresses.find(a => a.isDefault).address}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                        {userAddresses.find(a => a.isDefault).city}, {userAddresses.find(a => a.isDefault).state} {userAddresses.find(a => a.isDefault).postalCode}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        📞 {userAddresses.find(a => a.isDefault).phone}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+                
+                <Button
+                  variant="text"
+                  size="small"
+                  onClick={() => setViewMode('list-all')}
+                  sx={{ color: 'primary.main', fontWeight: 600, whiteSpace: 'nowrap' }}
+                >
+                  Change
+                </Button>
+              </Box>
+            </Paper>
+          )}
 
-          {/* Saved Addresses Grid - Sort with default first */}
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            {userAddresses.sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0)).map((address) => (
+          {/* Continue Button (appears with default address) */}
+          {userAddresses.find(a => a.isDefault) && (
+            <Button
+              onClick={() => {
+                const defaultAddr = userAddresses.find(a => a.isDefault);
+                handleSubmitSelectedAddressWithId(defaultAddr._id);
+              }}
+              variant="contained"
+              color="success"
+              fullWidth
+              size="large"
+              sx={{
+                py: 1.5,
+                mb: 2,
+                fontSize: '1rem',
+                fontWeight: 700,
+                textTransform: 'none'
+              }}
+            >
+              Continue with this address
+            </Button>
+          )}
+
+          {/* All Addresses List (shown when changing address) */}
+          {viewMode === 'list-all' && (
+            <Paper sx={{ p: 3, borderRadius: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <Button
+                  startIcon={<ArrowBack />}
+                  onClick={() => setViewMode('list')}
+                  variant="text"
+                  size="small"
+                  sx={{ mr: 1 }}
+                >
+                  Back
+                </Button>
+                <Typography variant="h6" fontWeight="bold" sx={{ flex: 1 }}>
+                  Select a Different Address
+                </Typography>
+              </Box>
+
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                {userAddresses.sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0)).map((address) => (
               <Grid item xs={12} key={address._id}>
                 <Card
                   sx={{
@@ -506,7 +599,9 @@ const ShippingForm = ({
             {isLoading ? <CircularProgress size={24} sx={{ mr: 1 }} /> : null}
             {isLoading ? 'Processing...' : '→ Continue to Payment'}
           </Button>
-        </Paper>
+            </Paper>
+          )}
+        </Box>
       )}
 
       {/* ADD/EDIT ADDRESS FORM VIEW */}

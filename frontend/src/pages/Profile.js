@@ -14,38 +14,32 @@ import {
   CardMedia,
   Divider,
   List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Chip,
-  CircularProgress,
-  Alert,
-  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Tabs,
-  Tab
+  Tab,
+  Chip,
+  CircularProgress,
+  Alert
 } from '@mui/material';
-import { 
-  Person, 
-  ShoppingBag, 
-  History, 
-  Settings, 
-  LocalShipping, 
-  Payment, 
-  CheckCircle, 
+import {
+  Person,
+  ShoppingBag,
+  Settings,
+  LocalShipping,
+  Payment,
+  CheckCircle,
   Schedule,
   Edit,
   Add,
   Delete,
   LocationOn,
-  Phone,
-  Email,
   Home as HomeIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext';
 import { orderAPI, authAPI } from '../utils/api';
 
 // Helper function to get status color
@@ -66,6 +60,7 @@ const getStatusColor = (status) => {
 
 const Profile = () => {
   const { user, updateUser, updatePreferences, loading } = useAuth();
+  const { addToCart } = useCart();
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
@@ -156,16 +151,17 @@ const Profile = () => {
           break;
         case 'reorder':
           // Handle reorder logic
-          const order = orders.find(o => o._id === orderId);
-          if (order) {
-            // Add items back to cart (you'd need to implement this)
-            const cartItems = order.orderItems.map(item => ({
-              product: item.product,
-              quantity: item.quantity
-            }));
-            // This would need cart context integration
+          const orderToReorder = orders.find(o => o._id === orderId);
+          if (orderToReorder && orderToReorder.orderItems) {
+            // Add items back to cart
+            orderToReorder.orderItems.forEach(item => {
+              addToCart({
+                product: item.product || { _id: item._id, name: item.name, price: item.price },
+                quantity: item.quantity
+              });
+            });
             setMessage('Items added to cart for reorder');
-            navigate('/checkout');
+            setTimeout(() => navigate('/cart'), 1500);
           }
           break;
         default:
@@ -211,9 +207,10 @@ const Profile = () => {
     e.preventDefault();
     try {
       setError('');
-      // Only send name and preferences, exclude username since it's not editable
+      // Send name, phone, and preferences
       const updateData = {
         name: formData.name,
+        phone: formData.phone,
         preferences: user.preferences
       };
       console.log('Submitting profile data:', updateData);
@@ -775,7 +772,7 @@ const Profile = () => {
             </Box>
           ) : orders && orders.length > 0 ? (
             <List>
-              {orders.map((order) => (
+              {sortOrders(filterOrders(filterStatus)).map((order) => (
                 <Card key={order._id} sx={{ mb: 3 }}>
                   <CardContent>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -844,21 +841,45 @@ const Profile = () => {
                     
                     <Divider sx={{ my: 2 }} />
                     
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
                       <Typography variant="h6" fontWeight="bold">
                         Total: ₹{order.totalPrice?.toLocaleString('en-IN')}
                       </Typography>
                       
-                      {order.deliveryInfo?.trackingNumber && (
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        {order.status?.toUpperCase() !== 'DELIVERED' && order.status?.toUpperCase() !== 'CANCELLED' && (
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            color="error"
+                            onClick={() => handleOrderAction(order._id, 'cancel')}
+                            sx={{ borderRadius: 1 }}
+                          >
+                            Cancel Order
+                          </Button>
+                        )}
+                        
                         <Button
                           variant="outlined"
                           size="small"
-                          startIcon={<LocalShipping />}
-                          onClick={() => window.open(`https://track.delhivery.com/${order.deliveryInfo.trackingNumber}`, '_blank')}
+                          onClick={() => handleOrderAction(order._id, 'reorder')}
+                          sx={{ borderRadius: 1 }}
                         >
-                          Track Order
+                          Reorder
                         </Button>
-                      )}
+                        
+                        {order.deliveryInfo?.trackingNumber && (
+                          <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={<LocalShipping />}
+                            onClick={() => window.open(`https://track.delhivery.com/${order.deliveryInfo.trackingNumber}`, '_blank')}
+                            sx={{ borderRadius: 1 }}
+                          >
+                            Track
+                          </Button>
+                        )}
+                      </Box>
                     </Box>
                   </CardContent>
                 </Card>
