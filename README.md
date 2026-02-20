@@ -44,6 +44,34 @@ A modern, intelligent e-commerce platform powered by artificial intelligence, fe
 - **Content-Based Filtering** for product similarity
 - **Behavioral Analytics** for user profiling
 
+## Project Structure
+
+```
+ai-ecommerce/
+├── backend/              # Node.js/Express API server
+│   ├── routes/          # API route handlers
+│   ├── models/          # MongoDB schemas
+│   ├── middleware/      # Express middleware
+│   ├── database/        # Database configuration
+│   ├── utils/           # Utility functions
+│   ├── server/          # Server utilities
+│   ├── scripts/         # Utility scripts
+│   ├── public/          # Static files
+│   ├── server.js        # Express server entry point
+│   └── package.json     # Backend dependencies
+├── frontend/            # React application
+│   ├── src/            # React source code
+│   │   ├── components/ # React components
+│   │   ├── pages/      # Page components
+│   │   ├── contexts/   # Context API providers
+│   │   ├── utils/      # Frontend utilities
+│   │   └── App.js      # Main App component
+│   ├── public/         # Static assets
+│   ├── build/          # Production build (generated)
+│   └── package.json    # Frontend dependencies
+└── package.json        # Root orchestration file
+```
+
 ## Installation
 
 ### Prerequisites
@@ -59,18 +87,17 @@ git clone <repository-url>
 cd ai-ecommerce
 ```
 
-2. **Install backend dependencies**
+2. **Install all dependencies**
 ```bash
-npm install
+npm run install:all
 ```
 
-3. **Install frontend dependencies**
-```bash
-cd client
-npm install
-```
+This installs dependencies for:
+- Root (orchestration packages like concurrently)
+- Backend (`backend/` folder)
+- Frontend (`frontend/` folder)
 
-4. **Set up environment variables**
+3. **Set up environment variables**
 ```bash
 cp .env.example .env
 ```
@@ -80,22 +107,42 @@ Edit the `.env` file with your configuration:
 - Stripe keys (for payments)
 - Other optional services
 
-5. **Start MongoDB**
+4. **Start MongoDB**
 ```bash
 # Make sure MongoDB is running on your system
 mongod
 ```
 
-6. **Start the development servers**
+5. **Start the development servers**
 
-Backend server:
+Run both backend and frontend concurrently:
 ```bash
 npm run dev
 ```
 
+Or run them separately in different terminals:
+
+Backend server:
+```bash
+npm run dev:backend
+```
+
 Frontend server (in a new terminal):
 ```bash
-cd client
+npm run dev:frontend
+```
+
+Or navigate to each folder individually:
+
+Backend:
+```bash
+cd backend
+npm run dev
+```
+
+Frontend:
+```bash
+cd frontend
 npm start
 ```
 
