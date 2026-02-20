@@ -142,8 +142,9 @@ const Checkout = () => {
       return;
     }
     
-    // Validate email
-    if (!addressData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addressData.email)) {
+    // Validate email - make it optional if user is logged in
+    const emailToValidate = addressData.email || user?.email;
+    if (emailToValidate && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailToValidate)) {
       alert('Please enter a valid email address');
       return;
     }
@@ -154,8 +155,14 @@ const Checkout = () => {
       return;
     }
     
-    setShippingAddress(addressData);
-    calculateDeliveryEstimates(addressData);
+    // Ensure email is included in the address data
+    const completeAddressData = {
+      ...addressData,
+      email: emailToValidate || 'N/A'
+    };
+    
+    setShippingAddress(completeAddressData);
+    calculateDeliveryEstimates(completeAddressData);
     setCurrentStep(1); // Move to payment step
   };
 

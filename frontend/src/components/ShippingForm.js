@@ -31,6 +31,7 @@ import {
   Place
 } from '@mui/icons-material';
 import api from '../utils/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const ShippingForm = ({ 
   onSubmit, 
@@ -39,6 +40,7 @@ const ShippingForm = ({
   savedAddresses = [],
   onAddressesUpdate = null
 }) => {
+  const { user } = useAuth();
   // State for address list and selection
   const [userAddresses, setUserAddresses] = useState(savedAddresses || []);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
@@ -78,6 +80,16 @@ const ShippingForm = ({
     }
   }, [savedAddresses]);
 
+  // Initialize form data with user's email if available
+  useEffect(() => {
+    if (user?.email && !formData.email) {
+      setFormData(prev => ({
+        ...prev,
+        email: user.email
+      }));
+    }
+  }, [user?.email]);
+
   const validateForm = () => {
     const newErrors = {};
 
@@ -89,9 +101,8 @@ const ShippingForm = ({
     } else if (!/^[0-9]{10}$/.test(formData.phone.replace(/\D/g, ''))) {
       newErrors.phone = 'Phone number must be 10 digits';
     }
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    // Email is optional - only validate if provided
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email';
     }
     if (!formData.address.trim()) {
@@ -285,10 +296,10 @@ const ShippingForm = ({
   return (
     <Box>
       {/* LIST VIEW: Show saved addresses (Amazon Style) */}
-      {viewMode === 'list' && userAddresses.length > 0 && (
+      {viewMode === 'list' && (
         <Box>
           {/* Default Address Summary Banner - Like Amazon */}
-          {userAddresses.find(a => a.isDefault) && (
+          {userAddresses.length > 0 && userAddresses.find(a => a.isDefault) && (
             <Paper sx={{ 
               p: 3, 
               mb: 3, 
@@ -349,8 +360,165 @@ const ShippingForm = ({
             </Paper>
           )}
 
+          {/* No Addresses - Show Add Form */}
+          {userAddresses.length === 0 && (
+            <Paper sx={{ p: 3, borderRadius: 2, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <LocationOn sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
+                <Typography variant="h5" fontWeight="bold" color="primary.main">
+                  Add Your Delivery Address
+                </Typography>
+              </Box>
+
+              <Box component="form" onSubmit={handleSubmitNewAddress}>
+                <Grid container spacing={2}>
+                  {/* Name */}
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Full Name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      error={!!errors.name}
+                      helperText={errors.name}
+                      placeholder="John Doe"
+                      variant="outlined"
+                      size="medium"
+                    />
+                  </Grid>
+
+                  {/* Phone */}
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Phone Number"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      error={!!errors.phone}
+                      helperText={errors.phone}
+                      placeholder="9876543210"
+                      variant="outlined"
+                      size="medium"
+                    />
+                  </Grid>
+
+                  {/* Email */}
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Email (Optional)"
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      error={!!errors.email}
+                      helperText={errors.email || 'Will be used for order confirmation'}
+                      placeholder="john@example.com"
+                      variant="outlined"
+                      size="medium"
+                    />
+                  </Grid>
+
+                  {/* Country (read-only) */}
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Country"
+                      name="country"
+                      value={formData.country}
+                      onChange={handleChange}
+                      disabled
+                      variant="outlined"
+                      size="medium"
+                    />
+                  </Grid>
+
+                  {/* Address */}
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Street Address"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleChange}
+                      error={!!errors.address}
+                      helperText={errors.address}
+                      placeholder="123 Main Street, Apt 4B"
+                      multiline
+                      rows={2}
+                      variant="outlined"
+                      size="medium"
+                    />
+                  </Grid>
+
+                  {/* City */}
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="City"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleChange}
+                      error={!!errors.city}
+                      helperText={errors.city}
+                      placeholder="Mumbai"
+                      variant="outlined"
+                      size="medium"
+                    />
+                  </Grid>
+
+                  {/* State */}
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="State/Province"
+                      name="state"
+                      value={formData.state}
+                      onChange={handleChange}
+                      error={!!errors.state}
+                      helperText={errors.state}
+                      placeholder="Maharashtra"
+                      variant="outlined"
+                      size="medium"
+                    />
+                  </Grid>
+
+                  {/* PIN Code */}
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="PIN Code"
+                      name="postalCode"
+                      value={formData.postalCode}
+                      onChange={handleChange}
+                      error={!!errors.postalCode}
+                      helperText={errors.postalCode}
+                      placeholder="400001"
+                      variant="outlined"
+                      size="medium"
+                    />
+                  </Grid>
+                </Grid>
+
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                  disabled={isLoading}
+                  fullWidth
+                  sx={{ py: 1.75, mt: 3, fontWeight: 700 }}
+                >
+                  {isLoading ? <CircularProgress size={24} sx={{ mr: 1 }} /> : null}
+                  {isLoading ? 'Processing...' : '✓ Continue with This Address'}
+                </Button>
+              </Box>
+            </Paper>
+          )}
+
           {/* Continue Button (appears with default address) */}
-          {userAddresses.find(a => a.isDefault) && (
+          {userAddresses.length > 0 && userAddresses.find(a => a.isDefault) && (
             <Button
               onClick={() => {
                 const defaultAddr = userAddresses.find(a => a.isDefault);
@@ -376,6 +544,25 @@ const ShippingForm = ({
               }}
             >
               Continue with this address
+            </Button>
+          )}
+
+          {/* Add New Address Button (when user has addresses but no default) */}
+          {userAddresses.length > 0 && !userAddresses.find(a => a.isDefault) && (
+            <Button
+              startIcon={<Add />}
+              onClick={handleAddNewAddress}
+              variant="contained"
+              color="primary"
+              fullWidth
+              sx={{
+                py: 1.5,
+                mb: 2,
+                fontSize: '1rem',
+                fontWeight: 600
+              }}
+            >
+              + Add New Address
             </Button>
           )}
 
@@ -505,7 +692,7 @@ const ShippingForm = ({
                       </Grid>
 
                       {/* Action Buttons */}
-                      <Grid item xs={12} sm="auto" sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
+                      <Grid item xs={12} sm="auto" sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                         <Tooltip title="Edit Address">
                           <IconButton
                             size="small"
@@ -515,9 +702,13 @@ const ShippingForm = ({
                               handleEditAddress(address);
                             }}
                             sx={{
-                              bgcolor: 'transparent',
+                              bgcolor: 'rgba(25, 118, 210, 0.04)',
                               color: 'primary.main',
-                              '&:hover': { bgcolor: 'primary.lighter' }
+                              border: '1px solid rgba(25, 118, 210, 0.3)',
+                              '&:hover': { 
+                                bgcolor: 'rgba(25, 118, 210, 0.08)',
+                                border: '1px solid rgba(25, 118, 210, 0.6)'
+                              }
                             }}
                           >
                             <Edit fontSize="small" />
@@ -527,13 +718,19 @@ const ShippingForm = ({
                           <Tooltip title="Set as Default">
                             <IconButton
                               size="small"
-                              color="default"
+                              color="warning"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleSetDefault(address._id);
                               }}
                               sx={{
-                                '&:hover': { bgcolor: 'warning.lighter', color: 'warning.main' }
+                                bgcolor: 'rgba(255, 152, 0, 0.04)',
+                                color: 'warning.main',
+                                border: '1px solid rgba(255, 152, 0, 0.3)',
+                                '&:hover': { 
+                                  bgcolor: 'rgba(255, 152, 0, 0.08)',
+                                  border: '1px solid rgba(255, 152, 0, 0.6)'
+                                }
                               }}
                             >
                               <StarOutline fontSize="small" />
@@ -549,7 +746,13 @@ const ShippingForm = ({
                               setDeleteConfirmDialog({ open: true, addressId: address._id });
                             }}
                             sx={{
-                              '&:hover': { bgcolor: 'error.lighter' }
+                              bgcolor: 'rgba(211, 47, 47, 0.04)',
+                              color: 'error.main',
+                              border: '1px solid rgba(211, 47, 47, 0.3)',
+                              '&:hover': { 
+                                bgcolor: 'rgba(211, 47, 47, 0.08)',
+                                border: '1px solid rgba(211, 47, 47, 0.6)'
+                              }
                             }}
                           >
                             <Delete fontSize="small" />
@@ -667,13 +870,13 @@ const ShippingForm = ({
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Email"
+                  label="Email (Optional)"
                   name="email"
                   type="email"
                   value={formData.email}
                   onChange={handleChange}
                   error={!!errors.email}
-                  helperText={errors.email}
+                  helperText={errors.email || 'Will be used for order confirmation'}
                   placeholder="john@example.com"
                   variant="outlined"
                   size="medium"
@@ -811,164 +1014,7 @@ const ShippingForm = ({
         </Paper>
       )}
 
-      {/* NO ADDRESSES VIEW: Show form only */}
-      {viewMode === 'list' && userAddresses.length === 0 && (
-        <Paper sx={{ p: 3, borderRadius: 2, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-            <LocationOn sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
-            <Typography variant="h5" fontWeight="bold" color="primary.main">
-              Add Your Delivery Address
-            </Typography>
-          </Box>
-
-          <Box component="form" onSubmit={handleSubmitNewAddress}>
-            <Grid container spacing={2}>
-              {/* Name */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Full Name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  error={!!errors.name}
-                  helperText={errors.name}
-                  placeholder="John Doe"
-                  variant="outlined"
-                  size="medium"
-                />
-              </Grid>
-
-              {/* Phone */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Phone Number"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  error={!!errors.phone}
-                  helperText={errors.phone}
-                  placeholder="9876543210"
-                  variant="outlined"
-                  size="medium"
-                />
-              </Grid>
-
-              {/* Email */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  error={!!errors.email}
-                  helperText={errors.email}
-                  placeholder="john@example.com"
-                  variant="outlined"
-                  size="medium"
-                />
-              </Grid>
-
-              {/* Country (read-only) */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Country"
-                  name="country"
-                  value={formData.country}
-                  onChange={handleChange}
-                  disabled
-                  variant="outlined"
-                  size="medium"
-                />
-              </Grid>
-
-              {/* Address */}
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Street Address"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  error={!!errors.address}
-                  helperText={errors.address}
-                  placeholder="123 Main Street, Apt 4B"
-                  multiline
-                  rows={2}
-                  variant="outlined"
-                  size="medium"
-                />
-              </Grid>
-
-              {/* City */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="City"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleChange}
-                  error={!!errors.city}
-                  helperText={errors.city}
-                  placeholder="Mumbai"
-                  variant="outlined"
-                  size="medium"
-                />
-              </Grid>
-
-              {/* State */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="State/Province"
-                  name="state"
-                  value={formData.state}
-                  onChange={handleChange}
-                  error={!!errors.state}
-                  helperText={errors.state}
-                  placeholder="Maharashtra"
-                  variant="outlined"
-                  size="medium"
-                />
-              </Grid>
-
-              {/* PIN Code */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="PIN Code"
-                  name="postalCode"
-                  value={formData.postalCode}
-                  onChange={handleChange}
-                  error={!!errors.postalCode}
-                  helperText={errors.postalCode}
-                  placeholder="400001"
-                  variant="outlined"
-                  size="medium"
-                />
-              </Grid>
-            </Grid>
-
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              disabled={isLoading}
-              fullWidth
-              sx={{ py: 1.75, mt: 3, fontWeight: 700 }}
-            >
-              {isLoading ? <CircularProgress size={24} sx={{ mr: 1 }} /> : null}
-              {isLoading ? 'Processing...' : '✓ Continue with This Address'}
-            </Button>
-          </Box>
-        </Paper>
-      )}
-
-      {/* Delete Confirmation Dialog */}
+      {/* DELETE CONFIRM DIALOG */}
       <Dialog
         open={deleteConfirmDialog.open}
         onClose={() => setDeleteConfirmDialog({ open: false, addressId: null })}

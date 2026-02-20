@@ -145,6 +145,40 @@ const Login = () => {
           <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mb: 4 }}>
             Access your personalized shopping experience
           </Typography>
+          
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+            <Button
+              variant={isGuestLogin ? "outlined" : "contained"}
+              size="small"
+              onClick={() => {
+                setIsGuestLogin(false);
+                setFormData({ loginIdentifier: '', password: '' });
+              }}
+              sx={{ 
+                mr: 1,
+                backgroundColor: isGuestLogin ? 'transparent' : '#2874F0',
+                color: isGuestLogin ? '#2874F0' : 'white',
+                border: isGuestLogin ? '1px solid #2874F0' : 'none'
+              }}
+            >
+              Sign In
+            </Button>
+            <Button
+              variant={isGuestLogin ? "contained" : "outlined"}
+              size="small"
+              onClick={() => {
+                setIsGuestLogin(true);
+                setFormData({ loginIdentifier: '', password: '' });
+              }}
+              sx={{ 
+                backgroundColor: isGuestLogin ? '#FF6B35' : 'transparent',
+                color: isGuestLogin ? 'white' : '#FF6B35',
+                border: isGuestLogin ? 'none' : '1px solid #FF6B35'
+              }}
+            >
+              Guest Checkout
+            </Button>
+          </Box>
 
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
@@ -155,7 +189,7 @@ const Login = () => {
           <Box component="form" onSubmit={handleSubmit}>
             <TextField
               fullWidth
-              label="Username or Email"
+              label={isGuestLogin ? "Email or Phone Number" : "Username or Email"}
               name="loginIdentifier"
               type="text"
               value={formData.loginIdentifier}
@@ -163,81 +197,26 @@ const Login = () => {
               required
               sx={{ mb: 3 }}
               InputProps={{
-                startAdornment: <Person sx={{ mr: 1, color: '#2874F0' }} />
+                startAdornment: isGuestLogin ? <Email sx={{ mr: 1, color: '#2874F0' }} /> : <Person sx={{ mr: 1, color: '#2874F0' }} />
               }}
-              placeholder="Enter username or email"
+              placeholder={isGuestLogin ? "Enter your email or phone number" : "Enter username or email"}
             />
 
-            <TextField
-              fullWidth
-              label="Password"
-              name="password"
-              type="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              sx={{ mb: 3 }}
-              InputProps={{
-                startAdornment: <Lock sx={{ mr: 1, color: '#2874F0' }} />
-              }}
-            />
-            
-            {isGuestLogin ? (
-              // Guest login form
-              <>
-                <TextField
-                  label="Email or Phone Number"
-                  variant="outlined"
-                  name="loginIdentifier"
-                  value={formData.loginIdentifier}
-                  onChange={handleChange}
-                  placeholder="Enter your email or phone number"
-                  required
-                  fullWidth
-                  sx={{ mb: 2 }}
-                />
-                
-                <Button 
-                  variant="outlined"
-                  onClick={() => {
-                    setFormData({ loginIdentifier: '', password: '' });
-                    setIsGuestLogin(false);
-                  }}
-                  sx={{ minWidth: 120, mr: 2 }}
-                >
-                  Back to Sign In
-                </Button>
-              </>
-            ) : (
-              // Regular login form
-              <>
-                <TextField
-                  label="Email Address"
-                  variant="outlined"
-                  name="loginIdentifier"
-                  value={formData.loginIdentifier}
-                  onChange={handleChange}
-                  placeholder="Enter your email"
-                  required
-                  fullWidth
-                  sx={{ mb: 2 }}
-                />
-                
-                <TextField
-                  label="Password"
-                  variant="outlined"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  fullWidth
-                  sx={{ mb: 3 }}
-                  InputProps={{
-                    startAdornment: <Lock sx={{ mr: 1, color: '#2874F0' }} />
-                  }}
-                />
-              </>
+            {!isGuestLogin && (
+              <TextField
+                fullWidth
+                label="Password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                sx={{ mb: 3 }}
+                InputProps={{
+                  startAdornment: <Lock sx={{ mr: 1, color: '#2874F0' }} />
+                }}
+                placeholder="Enter your password"
+              />
             )}
             
             <Button
@@ -252,9 +231,8 @@ const Login = () => {
                 fontWeight: 'bold',
                 color: 'white'
               }}
-              onClick={handleSubmit}
             >
-              {isGuestLogin ? 'Continue as Guest' : 'Sign In'}
+              {loading ? <CircularProgress size={24} sx={{ color: 'white' }} /> : (isGuestLogin ? 'Continue as Guest' : 'Sign In')}
             </Button>
 
             <Box sx={{ textAlign: 'center' }}>

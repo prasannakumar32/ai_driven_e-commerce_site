@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../utils/api';
+import { generatePDFInvoice } from '../utils/invoiceGenerator';
 import {
   Container,
   Typography,
@@ -23,7 +24,7 @@ import {
   ListItemIcon,
   ListItemText,
   Breadcrumbs,
-  Link,totals
+  Link
 } from '@mui/material';
 import {
   CheckCircle,
@@ -207,9 +208,13 @@ const OrderConfirmation = () => {
     return { subtotal, tax, shipping, total };
   };
 
-  const handleDownloadInvoice = () => {
-    // Simulate invoice download
-    alert('Invoice download would start here');
+  const handleDownloadInvoice = async () => {
+    try {
+      await generatePDFInvoice(orderData);
+    } catch (error) {
+      console.error('Error generating invoice:', error);
+      alert('Failed to generate invoice. Please try again.');
+    }
   };
 
   const handleReorder = () => {

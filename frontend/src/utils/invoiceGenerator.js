@@ -125,7 +125,7 @@ const safeGet = (obj, path, defaultValue = 'N/A') => {
  * @param {Object} orderData - Order data object
  * @returns {void}
  */
-export const generatePDFInvoice = (orderData) => {
+export const generatePDFInvoice = async (orderData) => {
   if (!orderData) {
     console.error('No order data provided for PDF generation');
     return;
@@ -149,11 +149,39 @@ export const generatePDFInvoice = (orderData) => {
     doc.setFillColor(102, 126, 234);
     doc.rect(0, 0, pageWidth, 35, 'F');
 
-    // Company Logo/Title
+    // Brand Logo - try to load it
+    let logoLoaded = false;
+    try {
+      const response = await fetch('/logo/brand_logo.png');
+      if (response.ok) {
+        const blob = await response.blob();
+        const reader = new FileReader();
+        await new Promise((resolve, reject) => {
+          reader.onload = resolve;
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        const dataUrl = reader.result;
+        doc.addImage(dataUrl, 'PNG', 15, 8, 20, 20);
+        logoLoaded = true;
+      }
+    } catch (error) {
+      console.log('Brand logo not available, using text fallback');
+    }
+
+    if (!logoLoaded) {
+      // Company Logo/Title fallback
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(20);
+      doc.setFont(undefined, 'bold');
+      doc.text('PKS', 15, 18);
+    }
+
+    // Invoice Title
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
     doc.setFont(undefined, 'bold');
-    doc.text('INVOICE', 15, 18);
+    doc.text('INVOICE', logoLoaded ? 45 : 45, 18);
 
     // Order ID and Date
     doc.setFontSize(10);

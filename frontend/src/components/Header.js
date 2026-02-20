@@ -32,7 +32,6 @@ import {
   Close,
   Store,
   Star,
-  LocalOffer,
   BusinessCenter,
   Receipt,
   Logout,
@@ -103,13 +102,31 @@ const Header = () => {
           </IconButton>
 
           <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => navigate('/')}>
-            <Store sx={{ mr: 1, fontSize: 28, color: '#FF6B35' }} />
+            <Box
+              component="img"
+              src="/logo/brand_logo.png"
+              alt="PKS Store"
+              sx={{
+                width: 32,
+                height: 32,
+                mr: 1,
+                objectFit: 'contain'
+              }}
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'flex';
+              }}
+            />
+            <Box sx={{ display: 'none', alignItems: 'center' }}>
+              <Store sx={{ mr: 1, fontSize: 28, color: '#FF6B35' }} />
+            </Box>
             <Typography
               variant="h5"
               component="div"
               sx={{ 
                 fontWeight: 'bold',
-                color: 'white',
+                color: '#FFFFFF',
                 letterSpacing: 0.5
               }}
             >
@@ -120,7 +137,7 @@ const Header = () => {
               component="div"
               sx={{ 
                 ml: 1,
-                color: '#FFE500',
+                color: '#FF6B35',
                 fontWeight: 'bold',
                 fontSize: '0.7rem'
               }}
@@ -187,30 +204,23 @@ const Header = () => {
                 color="inherit"
                 startIcon={<Star />}
                 sx={{ 
-                  color: 'white',
+                  color: '#FFD700',
                   fontSize: '0.8rem',
                   textTransform: 'none',
-                  minWidth: 'auto'
+                  minWidth: 'auto',
+                  border: '1px solid #FFD700',
+                  borderRadius: 1,
+                  px: 1,
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                    color: '#FFC700'
+                  }
                 }}
                 onClick={() => navigate('/become-seller')}
               >
                 Become a Seller
               </Button>
             )}
-            <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.3)', mx: 1 }} />
-            <Button
-              color="inherit"
-              startIcon={<LocalOffer />}
-              sx={{ 
-                color: 'white',
-                fontSize: '0.8rem',
-                textTransform: 'none',
-                minWidth: 'auto'
-              }}
-            >
-              Offers
-            </Button>
-            <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.3)', mx: 1 }} />
             <IconButton
               color="inherit"
               onClick={() => navigate('/cart')}
@@ -224,7 +234,7 @@ const Header = () => {
             {/* Show loading spinner during authentication verification */}
             {loading ? (
               <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
-                <CircularProgress size={24} sx={{ color: 'white' }} />
+                <CircularProgress size={24} sx={{ color: '#FFFFFF' }} />
               </Box>
             ) : isAuthenticated ? (
               <>
