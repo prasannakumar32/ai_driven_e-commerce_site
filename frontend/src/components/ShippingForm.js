@@ -69,6 +69,10 @@ const ShippingForm = ({
       const defaultAddr = savedAddresses.find(addr => addr.isDefault);
       if (defaultAddr) {
         setSelectedAddressId(defaultAddr._id);
+        // Auto-submit default address after a short delay
+        setTimeout(() => {
+          handleSubmitSelectedAddressWithId(defaultAddr._id);
+        }, 100);
       } else {
         setSelectedAddressId(savedAddresses[0]._id);
       }
@@ -239,16 +243,11 @@ const ShippingForm = ({
     }
   };
 
-  // Submit selected address (Amazon style)
-  const handleSubmitSelectedAddress = (e) => {
-    e?.preventDefault?.();
+  // Submit selected address with specific ID (for auto-submit of default)
+  const handleSubmitSelectedAddressWithId = (addressId) => {
+    if (!addressId) return;
 
-    if (!selectedAddressId) {
-      alert('Please select an address');
-      return;
-    }
-
-    const selectedAddress = userAddresses.find(addr => addr._id === selectedAddressId);
+    const selectedAddress = userAddresses.find(addr => addr._id === addressId);
     if (selectedAddress) {
       const submitData = {
         name: selectedAddress.name,
@@ -262,6 +261,18 @@ const ShippingForm = ({
       };
       onSubmit(submitData);
     }
+  };
+
+  // Submit selected address (Amazon style)
+  const handleSubmitSelectedAddress = (e) => {
+    e?.preventDefault?.();
+
+    if (!selectedAddressId) {
+      alert('Please select an address');
+      return;
+    }
+
+    handleSubmitSelectedAddressWithId(selectedAddressId);
   };
 
   // Submit new address form
@@ -289,77 +300,116 @@ const ShippingForm = ({
             </Box>
           </Box>
 
-          {/* Saved Addresses Grid */}
+          {/* Saved Addresses Grid - Sort with default first */}
           <Grid container spacing={2} sx={{ mb: 3 }}>
-            {userAddresses.map((address) => (
+            {userAddresses.sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0)).map((address) => (
               <Grid item xs={12} key={address._id}>
                 <Card
                   sx={{
                     cursor: 'pointer',
-                    border: selectedAddressId === address._id ? '3px solid' : '2px solid',
-                    borderColor: selectedAddressId === address._id ? 'primary.main' : 'divider',
+                    border: selectedAddressId === address._id ? '2.5px solid' : '1.5px solid',
+                    borderColor: selectedAddressId === address._id ? 'primary.main' : '#e0e0e0',
                     borderRadius: 2,
                     transition: 'all 0.3s ease',
-                    backgroundColor: selectedAddressId === address._id ? '#f0f7ff' : 'white',
+                    backgroundColor: selectedAddressId === address._id ? '#fff' : '#fafafa',
+                    boxShadow: selectedAddressId === address._id 
+                      ? '0 4px 12px rgba(33, 150, 243, 0.15)' 
+                      : '0 1px 3px rgba(0,0,0,0.08)',
                     '&:hover': {
                       boxShadow: '0 6px 16px rgba(0,0,0,0.12)',
-                      borderColor: selectedAddressId === address._id ? 'primary.main' : 'primary.light'
-                    }
+                      borderColor: selectedAddressId === address._id ? 'primary.main' : '#bdbdbd',
+                      backgroundColor: selectedAddressId === address._id ? '#fff' : '#f5f5f5'
+                    },
+                    position: 'relative',
+                    overflow: 'visible'
                   }}
                   onClick={() => setSelectedAddressId(address._id)}
                 >
-                  <CardContent sx={{ p: 2.5 }}>
+                  {/* Default Address Badge */}
+                  {address.isDefault && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: -12,
+                        right: 20,
+                        backgroundColor: '#FFB81C',
+                        color: '#232F3E',
+                        padding: '4px 12px',
+                        borderRadius: '12px',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.5,
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      }}
+                    >
+                      <Star sx={{ fontSize: 14 }} />
+                      DEFAULT
+                    </Box>
+                  )}
+
+                  <CardContent sx={{ p: 3 }}>
                     <Grid container spacing={2} alignItems="flex-start">
-                      {/* Radio Button / Checkbox */}
+                      {/* Radio Button */}
                       <Grid item xs="auto">
                         <Radio
                           checked={selectedAddressId === address._id}
                           onChange={() => setSelectedAddressId(address._id)}
-                          sx={{ mt: 0.5 }}
+                          sx={{
+                            '&.Mui-checked': {
+                              color: 'primary.main'
+                            }
+                          }}
                         />
                       </Grid>
 
                       {/* Address Details */}
                       <Grid item xs={12} sm="auto" sx={{ flex: 1 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                          <Typography variant="h6" fontWeight="700" color="text.primary">
-                            {address.name}
-                          </Typography>
-                          {address.isDefault && (
-                            <Tooltip title="Default Address">
-                              <Box
-                                sx={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: 0.5,
-                                  bgcolor: 'warning.lighter',
-                                  color: 'warning.main',
-                                  px: 1,
-                                  py: 0.5,
-                                  borderRadius: 1,
-                                  fontSize: '0.75rem',
-                                  fontWeight: 600
-                                }}
-                              >
-                                <Star sx={{ fontSize: 14 }} /> Default
-                              </Box>
-                            </Tooltip>
-                          )}
+                        <Typography 
+                          variant="h6" 
+                          fontWeight="700" 
+                          color="text.primary"
+                          sx={{ mb: 1, fontSize: '1rem' }}
+                        >
+                          {address.name}
+                        </Typography>
+
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5, mb: 0.75 }}>
+                          <LocationOn sx={{ fontSize: 18, color: 'text.secondary', mt: 0.25, flexShrink: 0 }} />
+                          <Box>
+                            <Typography variant="body2" color="text.primary" sx={{ fontWeight: 600 }}>
+                              {address.address}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {address.city}, {address.state} {address.postalCode}
+                            </Typography>
+                          </Box>
                         </Box>
 
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>
-                          📍 {address.address}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>
-                          {address.city}, {address.state} {address.postalCode}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          📞 {address.phone}
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.75 }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                            Phone:
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {address.phone}
+                          </Typography>
+                        </Box>
+
+                        {address.email && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                              Email:
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {address.email}
+                            </Typography>
+                          </Box>
+                        )}
                       </Grid>
 
                       {/* Action Buttons */}
-                      <Grid item xs={12} sm="auto" sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                      <Grid item xs={12} sm="auto" sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
                         <Tooltip title="Edit Address">
                           <IconButton
                             size="small"
@@ -369,34 +419,31 @@ const ShippingForm = ({
                               handleEditAddress(address);
                             }}
                             sx={{
-                              bgcolor: 'primary.lighter',
-                              '&:hover': { bgcolor: 'primary.light' }
+                              bgcolor: 'transparent',
+                              color: 'primary.main',
+                              '&:hover': { bgcolor: 'primary.lighter' }
                             }}
                           >
                             <Edit fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title={address.isDefault ? 'Default Address' : 'Set as Default'}>
-                          <span>
+                        {!address.isDefault && (
+                          <Tooltip title="Set as Default">
                             <IconButton
                               size="small"
-                              color="warning"
+                              color="default"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (!address.isDefault) {
-                                  handleSetDefault(address._id);
-                                }
+                                handleSetDefault(address._id);
                               }}
-                              disabled={address.isDefault}
                               sx={{
-                                bgcolor: address.isDefault ? 'warning.lighter' : 'transparent',
-                                '&:hover': { bgcolor: 'warning.lighter' }
+                                '&:hover': { bgcolor: 'warning.lighter', color: 'warning.main' }
                               }}
                             >
-                              {address.isDefault ? <Star fontSize="small" /> : <StarOutline fontSize="small" />}
+                              <StarOutline fontSize="small" />
                             </IconButton>
-                          </span>
-                        </Tooltip>
+                          </Tooltip>
+                        )}
                         <Tooltip title="Delete Address">
                           <IconButton
                             size="small"

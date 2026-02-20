@@ -208,7 +208,39 @@ const Checkout = () => {
     setLoading(true);
 
     try {
+      // Step 1: Load Stripe script
       await loadStripeScript();
+
+      // Step 2: Get Stripe public key from backend
+      let stripePublicKey = null;
+      let stripeMode = 'production';
+      
+      try {
+        const keyResponse = await stripeAPI.getPublicKey();
+        stripePublicKey = keyResponse.data?.publicKey;
+        stripeMode = keyResponse.data?.mode || 'production';
+        
+        if (!stripePublicKey && stripeMode !== 'mock') {
+          console.warn('⚠️  Stripe public key not configured');
+        } else if (!stripePublicKey && stripeMode === 'mock') {
+          console.log('ℹ️  Running in Stripe mock mode');
+        } else {
+          console.log('✅ Stripe public key loaded');
+        }
+      } catch (keyError) {
+        console.warn('⚠️  Could not fetch Stripe public key:', keyError.message);
+        stripeMode = 'mock';
+      }
+
+      // Step 3: Initialize Stripe if public key available
+      let stripe = null;
+      if (stripePublicKey && window.Stripe) {
+        stripe = window.Stripe(stripePublicKey);
+      }
+
+      if (!stripe && stripeMode !== 'mock') {
+        throw new Error('Stripe failed to initialize. Please use Cash on Delivery or try again later.');
+      }
 
       // Prepare order items with seller information
       const orderItems = items.map((i, index) => {
@@ -242,18 +274,24 @@ const Checkout = () => {
         cancel_url: `${window.location.origin}/checkout`
       };
 
+      console.log('📡 Creating Stripe checkout session...');
       const response = await stripeAPI.createCheckoutSession(checkoutPayload);
 
       if (response.data && response.data.url) {
+        console.log('✅ Redirecting to Stripe checkout...');
+        window.location.href = response.data.url;
+      } else if (response.data && response.data.sessionId) {
+        // Mock mode response
+        console.log('ℹ️  Mock Stripe session created:', response.data.sessionId);
         window.location.href = response.data.url;
       } else {
-        throw new Error('Failed to create Stripe checkout session');
+        throw new Error('Failed to create checkout session');
       }
       setLoading(false);
     } catch (err) {
-      console.error('Stripe checkout failed', err);
+      console.error('❌ Stripe checkout failed', err);
       const errorMessage = err.response?.data?.message || err.message;
-      alert(`Payment setup failed: ${errorMessage}. Please try again or use Cash on Delivery.`);
+      alert(`Payment setup failed: ${errorMessage}. Please try Cash on Delivery instead.`);
       setLoading(false);
     }
   };

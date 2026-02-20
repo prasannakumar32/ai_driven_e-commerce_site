@@ -2,7 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -24,6 +24,10 @@ const mongoOptions = {
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
 };
+
+console.log('📡 MongoDB Connection Attempt:');
+console.log('   URI:', mongoURI.includes('mongodb+srv') ? 'MongoDB Atlas (Cloud)' : 'Local MongoDB');
+console.log('   Host:', mongoURI.includes('mongodb+srv') ? 'Cloud' : 'localhost:27017');
 
 mongoose.connect(mongoURI, mongoOptions)
   .then(() => {

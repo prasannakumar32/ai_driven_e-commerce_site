@@ -109,6 +109,7 @@ export const orderAPI = {
 
 // Stripe API
 export const stripeAPI = {
+  getPublicKey: () => api.get('/stripe/public-key'),
   createCheckoutSession: (data) => api.post('/stripe/create-checkout-session', data),
   getSession: (sessionId) => api.get(`/stripe/session/${sessionId}`),
   createPaymentIntent: (data) => api.post('/stripe/create-payment-intent', data),
