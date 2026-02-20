@@ -378,7 +378,22 @@ router.put('/:id/cancel', auth, async (req, res) => {
     }
 
     order.status = 'cancelled';
-    const updatedOrder = await order.save();
+    
+    // Ensure shipping address has all required fields before saving
+    if (!order.shippingAddress.email) {
+      order.shippingAddress.email = order.shippingAddress.email || '';
+    }
+    if (!order.shippingAddress.name) {
+      order.shippingAddress.name = order.shippingAddress.name || '';
+    }
+    if (!order.shippingAddress.phone) {
+      order.shippingAddress.phone = order.shippingAddress.phone || '';
+    }
+    if (!order.shippingAddress.state) {
+      order.shippingAddress.state = order.shippingAddress.state || '';
+    }
+    
+    const updatedOrder = await order.save({ validateBeforeSave: false });
 
     console.log(`✅ Order ${order._id} successfully cancelled by user ${requestUserId}`);
     res.json(updatedOrder);
