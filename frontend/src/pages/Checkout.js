@@ -167,6 +167,7 @@ const Checkout = () => {
   };
 
   const handleBackToAddress = () => {
+    setShippingAddress(null);
     setCurrentStep(0);
   };
 
@@ -188,7 +189,7 @@ const Checkout = () => {
       navigate('/login', { 
         state: { 
           from: '/checkout',
-          message: 'Please login to place your order. You can continue as a guest or create an account.'
+          message: 'Please login to place your order.'
         } 
       });
       return;
@@ -231,6 +232,7 @@ const Checkout = () => {
       const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       const taxPrice = subtotal * 0.08; // 8% tax
       const shippingPrice = subtotal > 100 ? 0 : 10; // Free shipping for orders over ₹100
+      const total = subtotal + taxPrice + shippingPrice; // Calculate total properly
       
       const orderPayload = {
         orderItems: orderItems,
@@ -258,9 +260,23 @@ const Checkout = () => {
       setLoading(false);
     } catch (err) {
       console.error('COD checkout failed', err);
-      const errorMessage = err.response?.data?.message || err.message;
-      alert(`Order placement failed: ${errorMessage}. Please try again.`);
       setLoading(false);
+      
+      // Handle different error types
+      if (err.response?.status === 500) {
+        alert('Server error occurred while placing your order. Please try again in a few minutes.');
+      } else if (err.response?.status === 400) {
+        const errorMessage = err.response?.data?.message || 'Invalid order data';
+        alert(`Order failed: ${errorMessage}. Please check your order details and try again.`);
+      } else if (err.response?.status === 401) {
+        alert('Please log in to place an order.');
+        navigate('/login');
+      } else if (err.code === 'ERR_NETWORK') {
+        alert('Network error. Please check your internet connection and try again.');
+      } else {
+        const errorMessage = err.response?.data?.message || err.message;
+        alert(`Order placement failed: ${errorMessage}. Please try again.`);
+      }
     }
   };
 
@@ -429,6 +445,7 @@ const Checkout = () => {
                 initialData={shippingAddress}
                 savedAddresses={savedAddresses}
                 isLoading={loading}
+                forceShowAllAddresses={true}
               />
             </Paper>
           )}

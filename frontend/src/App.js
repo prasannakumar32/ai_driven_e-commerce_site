@@ -16,6 +16,7 @@ import Checkout from './pages/Checkout';
 import CheckoutSuccess from './pages/CheckoutSuccess';
 import PaymentSuccess from './pages/PaymentSuccess';
 import OrderConfirmation from './pages/OrderConfirmation';
+import Orders from './pages/Orders';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
@@ -120,6 +121,11 @@ function App() {
               <Route path="/order-confirmation" element={
                 <ProtectedRoute>
                   <OrderConfirmation />
+                </ProtectedRoute>
+              } />
+              <Route path="/orders" element={
+                <ProtectedRoute>
+                  <Orders />
                 </ProtectedRoute>
               } />
               <Route path="/login" element={<Login />} />

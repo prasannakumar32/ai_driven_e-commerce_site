@@ -16,7 +16,6 @@ import {
 } from '@mui/material';
 import { 
   Store, 
-  Email, 
   Lock, 
   Person, 
   ArrowBack,
@@ -39,7 +38,6 @@ const Login = () => {
     loginIdentifier: '',
     password: ''
   });
-  const [isGuestLogin, setIsGuestLogin] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -53,43 +51,11 @@ const Login = () => {
     try {
       console.log('[Login] Form submitted:', { loginIdentifier: formData.loginIdentifier });
       
-      // Check if it's a guest login (email or phone)
-      const isGuestLogin = !formData.loginIdentifier.includes('@') && (formData.loginIdentifier.includes('phone') || formData.loginIdentifier.includes('email'));
-      
-      if (isGuestLogin) {
-        // Generate a guest ID and proceed as guest
-        const guestId = `guest_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-        
-        // Store guest ID in localStorage for checkout
-        localStorage.setItem('guestId', guestId);
-        localStorage.setItem('guestName', formData.loginIdentifier);
-        
-        // Create a temporary guest user session
-        const guestUser = {
-          id: null,
-          isGuest: true,
-          guestId: guestId,
-          name: formData.loginIdentifier,
-          email: formData.loginIdentifier.includes('@') ? formData.loginIdentifier : ''
-        };
-        
-        // Set guest user in context
-        login(formData.loginIdentifier, '', true, guestId);
-        
-        // Redirect to checkout with guest access
-        navigate('/checkout', { 
-          state: { 
-            from: '/login',
-            message: 'Logged in as guest. You can now proceed to checkout.'
-          }
-        });
-      } else {
-        // Regular user login
-        console.log('[Login] Regular user login attempt');
-        await login(formData.loginIdentifier, formData.password);
-        console.log('[Login] Success, redirecting to:', from);
-        navigate(from, { replace: true });
-      }
+      // Regular user login
+      console.log('[Login] User login attempt');
+      await login(formData.loginIdentifier, formData.password);
+      console.log('[Login] Success, redirecting to:', from);
+      navigate(from, { replace: true });
     } catch (error) {
       console.error('[Login] Submit failed:', error.message);
       // Error is handled by the auth context and displayed via the error state
@@ -146,50 +112,16 @@ const Login = () => {
             Access your personalized shopping experience
           </Typography>
           
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-            <Button
-              variant={isGuestLogin ? "outlined" : "contained"}
-              size="small"
-              onClick={() => {
-                setIsGuestLogin(false);
-                setFormData({ loginIdentifier: '', password: '' });
-              }}
-              sx={{ 
-                mr: 1,
-                backgroundColor: isGuestLogin ? 'transparent' : '#2874F0',
-                color: isGuestLogin ? '#2874F0' : 'white',
-                border: isGuestLogin ? '1px solid #2874F0' : 'none'
-              }}
-            >
-              Sign In
-            </Button>
-            <Button
-              variant={isGuestLogin ? "contained" : "outlined"}
-              size="small"
-              onClick={() => {
-                setIsGuestLogin(true);
-                setFormData({ loginIdentifier: '', password: '' });
-              }}
-              sx={{ 
-                backgroundColor: isGuestLogin ? '#FF6B35' : 'transparent',
-                color: isGuestLogin ? 'white' : '#FF6B35',
-                border: isGuestLogin ? 'none' : '1px solid #FF6B35'
-              }}
-            >
-              Guest Checkout
-            </Button>
-          </Box>
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
 
           <Box component="form" onSubmit={handleSubmit}>
             <TextField
               fullWidth
-              label={isGuestLogin ? "Email or Phone Number" : "Username or Email"}
+              label="Username or Email"
               name="loginIdentifier"
               type="text"
               value={formData.loginIdentifier}
@@ -197,27 +129,25 @@ const Login = () => {
               required
               sx={{ mb: 3 }}
               InputProps={{
-                startAdornment: isGuestLogin ? <Email sx={{ mr: 1, color: '#2874F0' }} /> : <Person sx={{ mr: 1, color: '#2874F0' }} />
+                startAdornment: <Person sx={{ mr: 1, color: '#2874F0' }} />
               }}
-              placeholder={isGuestLogin ? "Enter your email or phone number" : "Enter username or email"}
+              placeholder="Enter username or email"
             />
 
-            {!isGuestLogin && (
-              <TextField
-                fullWidth
-                label="Password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                sx={{ mb: 3 }}
-                InputProps={{
-                  startAdornment: <Lock sx={{ mr: 1, color: '#2874F0' }} />
-                }}
-                placeholder="Enter your password"
-              />
-            )}
+            <TextField
+              fullWidth
+              label="Password"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              sx={{ mb: 3 }}
+              InputProps={{
+                startAdornment: <Lock sx={{ mr: 1, color: '#2874F0' }} />
+              }}
+              placeholder="Enter your password"
+            />
             
             <Button
               type="submit"
@@ -232,7 +162,7 @@ const Login = () => {
                 color: 'white'
               }}
             >
-              {loading ? <CircularProgress size={24} sx={{ color: 'white' }} /> : (isGuestLogin ? 'Continue as Guest' : 'Sign In')}
+              {loading ? <CircularProgress size={24} sx={{ color: 'white' }} /> : 'Sign In'}
             </Button>
 
             <Box sx={{ textAlign: 'center' }}>

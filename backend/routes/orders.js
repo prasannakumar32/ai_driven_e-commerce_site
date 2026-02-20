@@ -1,44 +1,13 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const { getRecommendations } = require('../utils/aiRecommendations');
 const auth = require('../middleware/auth');
 
-// Guest authentication middleware (for COD orders)
-const guestAuth = (req, res, next) => {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
-  const guestId = req.headers['x-guest-id'];
-  
-  console.log('Guest auth - Token:', token);
-  console.log('Guest auth - Guest ID:', guestId);
-  
-  if (token) {
-    // If token is provided, use regular auth
-    try {
-      const jwt = require('jsonwebtoken');
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
-      req.user = decoded;
-      req.isGuest = false;
-      return next();
-    } catch (error) {
-      console.error('Token verification failed:', error);
-    }
-  }
-  
-  // If no valid token but guest ID is provided, allow guest access
-  if (guestId) {
-    req.user = { id: null, isGuest: true, guestId: guestId };
-    req.isGuest = true;
-    return next();
-  }
-  
-  // If neither token nor guest ID, deny access
-  return res.status(401).json({ message: 'Authentication required' });
-};
-
-// Create new order (supports both authenticated and guest users)
-router.post('/', guestAuth, async (req, res) => {
+// Create new order (authenticated users only)
+router.post('/', auth, async (req, res) => {
   try {
     const {
       orderItems,
@@ -46,12 +15,10 @@ router.post('/', guestAuth, async (req, res) => {
       paymentMethod
     } = req.body;
 
-    const userId = req.user?.id || null;
-    const isGuest = req.user?.isGuest || false;
+    const userId = new mongoose.Types.ObjectId(req.user.id);
     
     console.log('📦 Order creation request:', {
       userId,
-      isGuest,
       paymentMethod,
       orderItemsCount: orderItems?.length,
       shippingAddress: shippingAddress ? 'provided' : 'missing'
@@ -107,17 +74,10 @@ router.post('/', guestAuth, async (req, res) => {
       paidAt: paymentMethod === 'COD' ? null : new Date()
     };
     
-    // Add guest ID if applicable
-    if (isGuest && req.user?.guestId) {
-      orderData.guestId = req.user.guestId;
-    }
-    
     console.log('📦 Creating order with data:', {
       ...orderData,
       user: typeof orderData.user,
-      paymentMethod: orderData.paymentMethod,
-      isGuest: isGuest,
-      guestId: orderData.guestId
+      paymentMethod: orderData.paymentMethod
     });
 
     const order = new Order(orderData);
@@ -140,7 +100,7 @@ router.post('/', guestAuth, async (req, res) => {
 // Get user's orders
 router.get('/myorders', auth, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = new mongoose.Types.ObjectId(req.user.id);
 
     const orders = await Order.find({ user: userId })
       .sort({ createdAt: -1 })
@@ -155,7 +115,7 @@ router.get('/myorders', auth, async (req, res) => {
 // Get seller's orders (MUST come before /:id route)
 router.get('/seller', auth, async (req, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = new mongoose.Types.ObjectId(req.user?.id);
     
     if (!userId) {
       return res.status(401).json({ message: 'User not authenticated' });
@@ -202,7 +162,7 @@ router.get('/seller', auth, async (req, res) => {
 });
 
 // Get order by ID (MUST come after /seller route)
-router.get('/:id', async (req, res) => {
+router.get('/:id', auth, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
       .populate('user', 'name email')
@@ -213,19 +173,11 @@ router.get('/:id', async (req, res) => {
     }
 
     // Check if user owns the order or is admin
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    const guestId = req.headers['x-guest-id'];
-    
     let isAuthorized = false;
     
-    if (token && req.user?.isAdmin) {
+    if (req.user?.isAdmin) {
       isAuthorized = true;
     } else if (order.user && req.user?.id && order.user._id.toString() === req.user.id) {
-      isAuthorized = true;
-    } else if (order.guestId && guestId && order.guestId === guestId) {
-      isAuthorized = true;
-    } else if (!order.user && !order.guestId) {
-      // Public order (no user or guest ID)
       isAuthorized = true;
     }
     
@@ -240,7 +192,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Update order status (admin only)
-router.put('/:id/status', async (req, res) => {
+router.put('/:id/status', auth, async (req, res) => {
   try {
     const { status } = req.body;
     
@@ -269,7 +221,7 @@ router.put('/:id/status', async (req, res) => {
 });
 
 // Update payment status
-router.put('/:id/pay', async (req, res) => {
+router.put('/:id/pay', auth, async (req, res) => {
   try {
     const { paymentResult } = req.body;
     
@@ -292,7 +244,7 @@ router.put('/:id/pay', async (req, res) => {
 });
 
 // Get AI recommendations based on order history
-router.get('/:id/recommendations', async (req, res) => {
+router.get('/:id/recommendations', auth, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
       .populate('orderItems.product');
@@ -323,7 +275,7 @@ router.get('/:id/recommendations', async (req, res) => {
 });
 
 // Cancel order
-router.put('/:id/cancel', async (req, res) => {
+router.put('/:id/cancel', auth, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     
@@ -358,7 +310,7 @@ router.put('/:id/cancel', async (req, res) => {
 });
 
 // Get order statistics (admin only)
-router.get('/stats/overview', async (req, res) => {
+router.get('/stats/overview', auth, async (req, res) => {
   try {
     if (!req.user?.isAdmin) {
       return res.status(401).json({ message: 'Admin access required' });

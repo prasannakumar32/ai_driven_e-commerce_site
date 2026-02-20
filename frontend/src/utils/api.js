@@ -21,26 +21,13 @@ const api = axios.create({
   },
 });
 
-// Ensure there is a guest identifier for anonymous carts
-const ensureGuestId = () => {
-  let id = localStorage.getItem('guestId');
-  if (!id) {
-    id = `guest_${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
-    localStorage.setItem('guestId', id);
-  }
-  return id;
-};
-
-// Request interceptor to add auth token and guest id
+// Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    // attach guest id for anonymous cart persistence
-    const guestId = localStorage.getItem('guestId') || ensureGuestId();
-    if (guestId) config.headers['x-guest-id'] = guestId;
     return config;
   },
   (error) => {

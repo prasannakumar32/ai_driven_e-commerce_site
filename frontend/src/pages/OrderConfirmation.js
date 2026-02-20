@@ -55,21 +55,20 @@ const OrderConfirmation = () => {
       try {
         setLoading(true);
         
-        // Get order data from location state or fetch the latest order
+        // Get order data from location state or fetch by order ID
         if (location.state?.orderData) {
           setOrderData(location.state.orderData);
+        } else if (location.state?.orderId) {
+          // Fetch order by ID when coming from Orders page
+          const response = await api.get(`/orders/${location.state.orderId}`);
+          setOrderData(response.data);
         } else {
           // Fetch the most recent order for the user
-          const response = await api.get('/api/orders?limit=1');
-          if (response.data.orders && response.data.orders.length > 0) {
-            setOrderData(response.data.orders[0]);
-          } else if (response.data.message) {
-            // Check if it's a guest order error
-            if (response.data.message.includes('guest')) {
-              setError('Guest order not found. Please place a new order.');
-            } else {
-              setError('No order found');
-            }
+          const response = await api.get('/orders/myorders');
+          if (response.data && response.data.length > 0) {
+            setOrderData(response.data[0]);
+          } else {
+            setError('No order found');
           }
         }
       } catch (error) {

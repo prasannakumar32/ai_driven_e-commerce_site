@@ -19,38 +19,27 @@ const formatCurrency = (amount) => {
     return '₹0.00';
   }
   
-  // Format with Indian number system manually to avoid locale issues
-  let formattedNum;
-  
+  // Format with Indian number system
   if (num >= 10000000) { // Crores
     const crores = Math.floor(num / 10000000);
     const remainder = num % 10000000;
     const lakhs = Math.floor(remainder / 100000);
     if (lakhs > 0) {
-      formattedNum = `${crores},${lakhs.toString().padStart(2, '0')},${(remainder % 100000).toLocaleString('en-IN')}`;
+      return `₹${crores},${lakhs.toString().padStart(2, '0')},${(remainder % 100000).toLocaleString('en-IN')}`;
     } else {
-      formattedNum = `${crores},${(remainder % 10000000).toLocaleString('en-IN')}`;
+      return `₹${crores},${(remainder % 10000000).toLocaleString('en-IN')}`;
     }
   } else if (num >= 100000) { // Lakhs
     const lakhs = Math.floor(num / 100000);
     const remainder = num % 100000;
-    formattedNum = `${lakhs},${remainder.toLocaleString('en-IN')}`;
-  } else {
-    // Use standard formatting for smaller numbers
-    formattedNum = num.toLocaleString('en-IN', { 
+    const thousands = Math.floor(remainder / 1000);
+    const formattedNum = `${lakhs},${(remainder % 1000).toLocaleString('en-IN')}`;
+    return `₹${formattedNum}`;
+  } else { // Use standard formatting for smaller numbers
+    return `₹${num.toLocaleString('en-IN', { 
       minimumFractionDigits: 2, 
       maximumFractionDigits: 2
-    });
-  }
-  
-  // Clean up any extra characters and ensure proper formatting
-  const cleanFormatted = formattedNum.toString().replace(/[^0-9,.]/g, '');
-  
-  // Add decimal places if missing
-  if (!cleanFormatted.includes('.')) {
-    return `₹${cleanFormatted}.00`;
-  } else {
-    return `₹${cleanFormatted}`;
+    })}`;
   }
 };
 
