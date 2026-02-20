@@ -324,20 +324,27 @@ router.get('/:id/recommendations', auth, async (req, res) => {
 // Cancel order
 router.put('/:id/cancel', auth, async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findById(req.params.id).populate('user');
     
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
 
     // Check if user owns the order
-    if (order.user.toString() !== req.user?.id) {
-      return res.status(401).json({ message: 'Not authorized' });
+    const orderUserId = order.user._id?.toString() || order.user.toString();
+    const requestUserId = req.user?.id?.toString() || req.user?.id;
+    
+    if (orderUserId !== requestUserId) {
+      console.log(`Authorization failed: Order user ${orderUserId} !== Request user ${requestUserId}`);
+      return res.status(401).json({ message: 'Not authorized to cancel this order' });
     }
 
-    // Can only cancel pending orders
-    if (order.status !== 'pending') {
-      return res.status(400).json({ message: 'Cannot cancel order in current status' });
+    // Can only cancel pending or processing orders
+    const cancelableStatuses = ['pending', 'processing'];
+    if (!cancelableStatuses.includes(order.status?.toLowerCase())) {
+      return res.status(400).json({ 
+        message: `Cannot cancel order with status "${order.status}". Orders can only be cancelled if they are pending or processing.` 
+      });
     }
 
     // Restore stock
@@ -350,9 +357,11 @@ router.put('/:id/cancel', auth, async (req, res) => {
     order.status = 'cancelled';
     const updatedOrder = await order.save();
 
+    console.log(`Order ${order._id} successfully cancelled by user ${requestUserId}`);
     res.json(updatedOrder);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Cancel order error:', error);
+    res.status(500).json({ message: 'Failed to cancel order: ' + error.message });
   }
 });
 

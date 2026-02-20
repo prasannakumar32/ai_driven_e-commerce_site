@@ -154,14 +154,24 @@ const Profile = () => {
           const orderToReorder = orders.find(o => o._id === orderId);
           if (orderToReorder && orderToReorder.orderItems) {
             // Add items back to cart
-            orderToReorder.orderItems.forEach(item => {
-              addToCart({
-                product: item.product || { _id: item._id, name: item.name, price: item.price },
-                quantity: item.quantity
-              });
-            });
-            setMessage('Items added to cart for reorder');
-            setTimeout(() => navigate('/cart'), 1500);
+            let reorderCount = 0;
+            for (const item of orderToReorder.orderItems) {
+              try {
+                await addToCart(
+                  { _id: item.product, name: item.name, price: item.price },
+                  item.quantity
+                );
+                reorderCount++;
+              } catch (itemError) {
+                console.error(`Failed to add item to cart:`, itemError);
+              }
+            }
+            if (reorderCount > 0) {
+              setMessage(`${reorderCount} item(s) added to cart for reorder`);
+              setTimeout(() => navigate('/cart'), 1500);
+            } else {
+              setError('Failed to add items to cart. Please try again.');
+            }
           }
           break;
         default:
@@ -170,7 +180,8 @@ const Profile = () => {
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
       console.error('Order action failed:', error);
-      setError('Failed to process order action');
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to process order action';
+      setError(errorMessage);
     }
   };
 
