@@ -73,12 +73,8 @@ const ShippingForm = ({
       
       setSelectedAddressId(addressToUse._id);
       
-      // Auto-submit with a slight delay to ensure state is updated
-      const timer = setTimeout(() => {
-        handleSubmitSelectedAddressWithId(addressToUse._id);
-      }, 50);
-      
-      return () => clearTimeout(timer);
+      // Remove auto-submission - user must manually select and confirm
+      // This prevents bypassing the checkout flow
     }
   }, [savedAddresses]);
 
@@ -358,7 +354,14 @@ const ShippingForm = ({
             <Button
               onClick={() => {
                 const defaultAddr = userAddresses.find(a => a.isDefault);
-                handleSubmitSelectedAddressWithId(defaultAddr._id);
+                if (defaultAddr) {
+                  // Validate default address before submission
+                  if (!defaultAddr.name || !defaultAddr.phone || !defaultAddr.address || !defaultAddr.city || !defaultAddr.state || !defaultAddr.postalCode) {
+                    alert('Default address is incomplete. Please edit the address or select a different one.');
+                    return;
+                  }
+                  handleSubmitSelectedAddressWithId(defaultAddr._id);
+                }
               }}
               variant="contained"
               color="success"

@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({
+  orderId: {
+    type: String,
+    unique: true,
+    required: true
+  },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -107,6 +112,16 @@ const orderSchema = new mongoose.Schema({
   }]
 }, {
   timestamps: true
+});
+
+// Pre-save hook to generate order ID
+orderSchema.pre('save', function(next) {
+  if (this.isNew && !this.orderId) {
+    const currentYear = new Date().getFullYear();
+    const uniqueId = this._id.toString().slice(-8).toUpperCase();
+    this.orderId = `PKS_${currentYear}_${uniqueId}`;
+  }
+  next();
 });
 
 module.exports = mongoose.model('Order', orderSchema);

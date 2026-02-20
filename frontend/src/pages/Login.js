@@ -39,6 +39,7 @@ const Login = () => {
     loginIdentifier: '',
     password: ''
   });
+  const [isGuestLogin, setIsGuestLogin] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -51,9 +52,44 @@ const Login = () => {
     e.preventDefault();
     try {
       console.log('[Login] Form submitted:', { loginIdentifier: formData.loginIdentifier });
-      await login(formData.loginIdentifier, formData.password);
-      console.log('[Login] Success, redirecting to:', from);
-      navigate(from, { replace: true });
+      
+      // Check if it's a guest login (email or phone)
+      const isGuestLogin = !formData.loginIdentifier.includes('@') && (formData.loginIdentifier.includes('phone') || formData.loginIdentifier.includes('email'));
+      
+      if (isGuestLogin) {
+        // Generate a guest ID and proceed as guest
+        const guestId = `guest_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+        
+        // Store guest ID in localStorage for checkout
+        localStorage.setItem('guestId', guestId);
+        localStorage.setItem('guestName', formData.loginIdentifier);
+        
+        // Create a temporary guest user session
+        const guestUser = {
+          id: null,
+          isGuest: true,
+          guestId: guestId,
+          name: formData.loginIdentifier,
+          email: formData.loginIdentifier.includes('@') ? formData.loginIdentifier : ''
+        };
+        
+        // Set guest user in context
+        login(formData.loginIdentifier, '', true, guestId);
+        
+        // Redirect to checkout with guest access
+        navigate('/checkout', { 
+          state: { 
+            from: '/login',
+            message: 'Logged in as guest. You can now proceed to checkout.'
+          }
+        });
+      } else {
+        // Regular user login
+        console.log('[Login] Regular user login attempt');
+        await login(formData.loginIdentifier, formData.password);
+        console.log('[Login] Success, redirecting to:', from);
+        navigate(from, { replace: true });
+      }
     } catch (error) {
       console.error('[Login] Submit failed:', error.message);
       // Error is handled by the auth context and displayed via the error state
@@ -145,7 +181,65 @@ const Login = () => {
                 startAdornment: <Lock sx={{ mr: 1, color: '#2874F0' }} />
               }}
             />
-
+            
+            {isGuestLogin ? (
+              // Guest login form
+              <>
+                <TextField
+                  label="Email or Phone Number"
+                  variant="outlined"
+                  name="loginIdentifier"
+                  value={formData.loginIdentifier}
+                  onChange={handleChange}
+                  placeholder="Enter your email or phone number"
+                  required
+                  fullWidth
+                  sx={{ mb: 2 }}
+                />
+                
+                <Button 
+                  variant="outlined"
+                  onClick={() => {
+                    setFormData({ loginIdentifier: '', password: '' });
+                    setIsGuestLogin(false);
+                  }}
+                  sx={{ minWidth: 120, mr: 2 }}
+                >
+                  Back to Sign In
+                </Button>
+              </>
+            ) : (
+              // Regular login form
+              <>
+                <TextField
+                  label="Email Address"
+                  variant="outlined"
+                  name="loginIdentifier"
+                  value={formData.loginIdentifier}
+                  onChange={handleChange}
+                  placeholder="Enter your email"
+                  required
+                  fullWidth
+                  sx={{ mb: 2 }}
+                />
+                
+                <TextField
+                  label="Password"
+                  variant="outlined"
+                  name="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  fullWidth
+                  sx={{ mb: 3 }}
+                  InputProps={{
+                    startAdornment: <Lock sx={{ mr: 1, color: '#2874F0' }} />
+                  }}
+                />
+              </>
+            )}
+            
             <Button
               type="submit"
               fullWidth
@@ -156,14 +250,11 @@ const Login = () => {
                 mb: 3,
                 backgroundColor: '#FF6B35',
                 fontWeight: 'bold',
-                py: 1.5,
-                '&:hover': { 
-                  backgroundColor: '#E55A2B',
-                  boxShadow: '0 4px 12px rgba(255, 107, 53, 0.3)'
-                }
+                color: 'white'
               }}
+              onClick={handleSubmit}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
+              {isGuestLogin ? 'Continue as Guest' : 'Sign In'}
             </Button>
 
             <Box sx={{ textAlign: 'center' }}>

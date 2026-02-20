@@ -130,6 +130,30 @@ const Checkout = () => {
   };
 
   const handleAddressSubmit = (addressData) => {
+    // Validate address data before proceeding
+    if (!addressData || !addressData.name || !addressData.phone || !addressData.address || !addressData.city || !addressData.state || !addressData.postalCode) {
+      alert('Please fill in all required address fields');
+      return;
+    }
+    
+    // Validate phone number
+    if (!/^[0-9]{10}$/.test(addressData.phone.replace(/\D/g, ''))) {
+      alert('Please enter a valid 10-digit phone number');
+      return;
+    }
+    
+    // Validate email
+    if (!addressData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addressData.email)) {
+      alert('Please enter a valid email address');
+      return;
+    }
+    
+    // Validate postal code
+    if (!/^[0-9]{6}$/.test(addressData.postalCode.replace(/\D/g, ''))) {
+      alert('Please enter a valid 6-digit PIN code');
+      return;
+    }
+    
     setShippingAddress(addressData);
     calculateDeliveryEstimates(addressData);
     setCurrentStep(1); // Move to payment step
@@ -141,6 +165,28 @@ const Checkout = () => {
 
   const handleCashOnDelivery = async () => {
     if (items.length === 0 || !shippingAddress) return;
+    
+    // Check if user is authenticated, if not, redirect to login
+    if (!isAuthenticated) {
+      // Store checkout data for redirect after login
+      const checkoutData = {
+        items: items,
+        shippingAddress: shippingAddress,
+        total: total,
+        paymentMethod: 'COD'
+      };
+      localStorage.setItem('pendingCheckout', JSON.stringify(checkoutData));
+      
+      // Redirect to login with a message
+      navigate('/login', { 
+        state: { 
+          from: '/checkout',
+          message: 'Please login to place your order. You can continue as a guest or create an account.'
+        } 
+      });
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -174,9 +220,17 @@ const Checkout = () => {
         email: shippingAddress.email || user?.email || 'N/A'
       };
 
+      // Calculate order totals
+      const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const taxPrice = subtotal * 0.08; // 8% tax
+      const shippingPrice = subtotal > 100 ? 0 : 10; // Free shipping for orders over ₹100
+      
       const orderPayload = {
         orderItems: orderItems,
         total: total,
+        subtotal: subtotal,
+        taxPrice: taxPrice,
+        shippingPrice: shippingPrice,
         paymentMethod: 'COD',
         shippingAddress: shippingAddressWithEmail
       };

@@ -14,7 +14,9 @@ const authReducer = (state, action) => {
         token: action.payload.token,
         user: action.payload.user,
         loading: false,
-        error: null
+        error: null,
+        isGuest: action.payload.isGuest || false,
+        guestId: action.payload.guestId || null
       };
     case 'LOGIN_FAILURE':
       localStorage.removeItem('token');
@@ -91,20 +93,38 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (loginIdentifier, password) => {
+  const login = async (loginIdentifier, password, isGuest = false, guestId = null) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
-      console.log('[AUTH] Login attempt:', { loginIdentifier });
       
-      const response = await authAPI.login({ loginIdentifier, password });
-      console.log('[AUTH] Login successful:', { token: response.data.token, user: response.data.user });
-      
-      dispatch({
-        type: 'LOGIN_SUCCESS',
-        payload: response.data
-      });
-      
-      return response.data;
+      if (isGuest) {
+        // For guest users, create a temporary guest session
+        const guestUser = {
+          id: null,
+          isGuest: true,
+          guestId: guestId,
+          name: loginIdentifier,
+          email: loginIdentifier.includes('@') ? loginIdentifier : ''
+        };
+        
+        // Simulate guest login success
+        dispatch({
+          type: 'LOGIN_SUCCESS',
+          payload: {
+            token: `guest_token_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+            user: guestUser,
+            isGuest: true,
+            guestId: guestId
+          }
+        });
+      } else {
+        // Regular user login
+        const response = await authAPI.login({ loginIdentifier, password });
+        dispatch({
+          type: 'LOGIN_SUCCESS',
+          payload: response.data
+        });
+      }
     } catch (error) {
       const errorMsg = error.response?.data?.message || error.message || 'Login failed';
       console.error('[AUTH] Login failed:', {

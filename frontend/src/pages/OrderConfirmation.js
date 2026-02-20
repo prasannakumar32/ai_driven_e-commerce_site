@@ -62,8 +62,13 @@ const OrderConfirmation = () => {
           const response = await api.get('/api/orders?limit=1');
           if (response.data.orders && response.data.orders.length > 0) {
             setOrderData(response.data.orders[0]);
-          } else {
-            setError('No order found');
+          } else if (response.data.message) {
+            // Check if it's a guest order error
+            if (response.data.message.includes('guest')) {
+              setError('Guest order not found. Please place a new order.');
+            } else {
+              setError('No order found');
+            }
           }
         }
       } catch (error) {
@@ -205,6 +210,17 @@ const OrderConfirmation = () => {
   const handleDownloadInvoice = () => {
     // Simulate invoice download
     alert('Invoice download would start here');
+  };
+
+  const handleReorder = () => {
+    if (!orderData?._id) {
+      alert('Order ID not available for reordering');
+      return;
+    }
+    
+    // Simulate reorder process
+    alert(`Reordering items from order #${orderData._id?.slice(-8)}`);
+    console.log('Reorder initiated for order:', orderData._id);
   };
 
   const handleShareOrder = () => {
