@@ -22,12 +22,16 @@ import {
   Tab,
   Chip,
   CircularProgress,
-  Alert
+  Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  IconButton
 } from '@mui/material';
 import {
   Person,
   ShoppingBag,
-  Settings,
   LocalShipping,
   Payment,
   CheckCircle,
@@ -36,7 +40,9 @@ import {
   Add,
   Delete,
   LocationOn,
-  Home as HomeIcon
+  Home as HomeIcon,
+  ArrowDropDown,
+  Sort
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
@@ -59,7 +65,7 @@ const getStatusColor = (status) => {
 };
 
 const Profile = () => {
-  const { user, updateUser, updatePreferences, loading } = useAuth();
+  const { user, updateUser, loading } = useAuth();
   const { addToCart } = useCart();
   const navigate = useNavigate();
   
@@ -70,11 +76,6 @@ const Profile = () => {
     username: ''
   });
   
-  const [preferences, setPreferences] = useState({
-    categories: [],
-    brands: [],
-    priceRange: { min: 0, max: 1000 }
-  });
 
   const [addresses, setAddresses] = useState([]);
   const [message, setMessage] = useState('');
@@ -83,7 +84,24 @@ const Profile = () => {
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState('');
-  const [sortBy, setSortBy] = useState('date');
+  const [sortBy, setSortBy] = useState('order-date-desc');
+  const [sortDirection, setSortDirection] = useState('desc');
+  
+  // Amazon-style sorting options
+  const sortOptions = [
+    { value: 'order-date-desc', label: 'Newest Orders', field: 'createdAt', direction: 'desc' },
+    { value: 'order-date-asc', label: 'Oldest Orders', field: 'createdAt', direction: 'asc' },
+    { value: 'total-desc', label: 'Highest Total', field: 'totalPrice', direction: 'desc' },
+    { value: 'total-asc', label: 'Lowest Total', field: 'totalPrice', direction: 'asc' },
+    { value: 'status-asc', label: 'Status (A-Z)', field: 'status', direction: 'asc' },
+    { value: 'status-desc', label: 'Status (Z-A)', field: 'status', direction: 'desc' }
+  ];
+  
+  // Computed state for filtered and sorted orders
+  const getFilteredAndSortedOrders = () => {
+    let filtered = filterOrders(filterStatus);
+    return sortOrders(filtered, sortBy);
+  };
   const [addressDialogOpen, setAddressDialogOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
   const [addressForm, setAddressForm] = useState({
@@ -105,18 +123,13 @@ const Profile = () => {
         phone: user.phone || '',
         username: user.username || ''
       });
-      setPreferences(user.preferences || {
-        categories: [],
-        brands: [],
-        priceRange: { min: 0, max: 1000 }
-      });
       setAddresses(user.addresses || []);
     }
   }, [user]);
 
   // Fetch orders when tab changes to orders
   useEffect(() => {
-    if (activeTab === 3 && user) { // Orders tab index
+    if (activeTab === 2 && user) { // Orders tab index (updated from 3 to 2)
       fetchOrders();
     }
   }, [activeTab, user]);
@@ -127,12 +140,8 @@ const Profile = () => {
       setError('');
       const response = await orderAPI.getOrders();
       
-      // Sort orders by date (newest first)
-      const sortedOrders = (response.data || [])
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .reverse();
-      
-      setOrders(sortedOrders);
+      // Set orders without sorting here - sorting will be handled by the sort function
+      setOrders(response.data || []);
     } catch (error) {
       console.error('Failed to fetch orders:', error);
       setError('Failed to load orders');
@@ -145,10 +154,20 @@ const Profile = () => {
     try {
       switch (action) {
         case 'cancel':
-          await orderAPI.cancelOrder(orderId);
+          // Show confirmation dialog before cancelling
+          const confirmCancel = window.confirm('Are you sure you want to cancel this order? This action cannot be undone.');
+          if (!confirmCancel) {
+            return;
+          }
+          
+          console.log(`Attempting to cancel order: ${orderId}`);
+          const response = await orderAPI.cancelOrder(orderId);
+          console.log('Cancel order response:', response.data);
+          
           setMessage('Order cancelled successfully');
           fetchOrders(); // Refresh orders
           break;
+          
         case 'reorder':
           // Handle reorder logic
           const orderToReorder = orders.find(o => o._id === orderId);
@@ -174,34 +193,92 @@ const Profile = () => {
             }
           }
           break;
+          
         default:
           break;
       }
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
       console.error('Order action failed:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to process order action';
+      
+      // Provide more detailed error messages
+      let errorMessage = 'Failed to process order action';
+      
+      if (error.response) {
+        // Server responded with error status
+        if (error.response.status === 401) {
+          errorMessage = 'You are not authorized to perform this action';
+        } else if (error.response.status === 400) {
+          errorMessage = error.response.data?.message || 'Invalid request';
+        } else if (error.response.status === 404) {
+          errorMessage = 'Order not found';
+        } else if (error.response.status === 500) {
+          errorMessage = 'Server error occurred. Please try again later.';
+          if (error.response.data?.debug) {
+            console.log('Debug info:', error.response.data.debug);
+          }
+        } else {
+          errorMessage = error.response.data?.message || `Error ${error.response.status}`;
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        errorMessage = 'Network error. Please check your connection.';
+      } else {
+        // Something else happened
+        errorMessage = error.message || 'An unexpected error occurred';
+      }
+      
       setError(errorMessage);
     }
   };
 
   const filterOrders = (status) => {
     if (!status) return orders;
-    return orders.filter(order => order.status === status);
+    return orders.filter(order => {
+      const orderStatus = order.status?.toUpperCase();
+      const filterStatusUpper = status.toUpperCase();
+      return orderStatus === filterStatusUpper;
+    });
   };
 
-  const sortOrders = (sortBy) => {
-    const sorted = [...orders];
-    switch (sortBy) {
-      case 'date':
-        return sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      case 'status':
-        return sorted.sort((a, b) => a.status.localeCompare(b.status));
-      case 'total':
-        return sorted.sort((a, b) => b.totalPrice - a.totalPrice);
-      default:
-        return sorted;
+  const sortOrders = (ordersToSort, sortByValue) => {
+    const sorted = [...ordersToSort];
+    const sortOption = sortOptions.find(option => option.value === sortByValue);
+    
+    if (!sortOption) {
+      // Default to newest orders if no valid sort option
+      return sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
+    
+    const { field, direction } = sortOption;
+    
+    return sorted.sort((a, b) => {
+      let aValue = a[field];
+      let bValue = b[field];
+      
+      // Handle different field types
+      if (field === 'createdAt') {
+        aValue = new Date(aValue);
+        bValue = new Date(bValue);
+      } else if (field === 'status') {
+        aValue = (aValue || '').toUpperCase();
+        bValue = (bValue || '').toUpperCase();
+      } else if (field === 'totalPrice') {
+        aValue = aValue || 0;
+        bValue = bValue || 0;
+      }
+      
+      // Compare based on direction
+      if (direction === 'asc') {
+        if (aValue < bValue) return -1;
+        if (aValue > bValue) return 1;
+        return 0;
+      } else {
+        if (aValue > bValue) return -1;
+        if (aValue < bValue) return 1;
+        return 0;
+      }
+    });
   };
 
   const fetchAddresses = async () => {
@@ -218,11 +295,10 @@ const Profile = () => {
     e.preventDefault();
     try {
       setError('');
-      // Send name, phone, and preferences
+      // Send name and phone only
       const updateData = {
         name: formData.name,
-        phone: formData.phone,
-        preferences: user.preferences
+        phone: formData.phone
       };
       console.log('Submitting profile data:', updateData);
       const response = await updateUser(updateData);
@@ -240,17 +316,6 @@ const Profile = () => {
     }
   };
 
-  const handlePreferencesUpdate = async () => {
-    try {
-      setError('');
-      await updatePreferences(preferences);
-      setMessage('Preferences updated successfully!');
-      setTimeout(() => setMessage(''), 3000);
-    } catch (error) {
-      console.error('Preferences update error:', error);
-      setError(error.response?.data?.message || 'Failed to update preferences');
-    }
-  };
 
   const handleAddressSubmit = async (e) => {
     e.preventDefault();
@@ -326,13 +391,6 @@ const Profile = () => {
     }
   };
 
-  const categories = [
-    'electronics', 'clothing', 'books', 'home', 'sports', 'beauty', 'toys'
-  ];
-
-  const brands = [
-    'Apple', 'Samsung', 'Nike', 'Adidas', 'Sony', 'LG', 'Microsoft', 'Dell'
-  ];
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -370,7 +428,6 @@ const Profile = () => {
         <Tabs value={activeTab} onChange={handleTabChange} aria-label="profile tabs">
           <Tab label="Account Settings" icon={<Person />} />
           <Tab label="Addresses" icon={<LocationOn />} />
-          <Tab label="Preferences" icon={<Settings />} />
           <Tab label="Order History" icon={<ShoppingBag />} />
         </Tabs>
       </Box>
@@ -602,113 +659,78 @@ const Profile = () => {
         </Grid>
       </TabPanel>
 
+
       <TabPanel value={activeTab} index={2}>
         <Paper sx={{ p: 4 }}>
-          <Typography variant="h6" gutterBottom fontWeight="bold">
-            Shopping Preferences
-          </Typography>
-
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="subtitle1" gutterBottom>
-              Favorite Categories
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {categories.map((category) => (
-                <Chip
-                  key={category}
-                  label={category.charAt(0).toUpperCase() + category.slice(1)}
-                  clickable
-                  color={preferences.categories.includes(category) ? 'primary' : 'default'}
-                  onClick={() => {
-                    const newCategories = preferences.categories.includes(category)
-                      ? preferences.categories.filter(c => c !== category)
-                      : [...preferences.categories, category];
-                    setPreferences({ ...preferences, categories: newCategories });
+          {/* Amazon-style Header with Results Count and Sort */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            mb: 3,
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 2
+          }}>
+            <Box>
+              <Typography variant="h6" gutterBottom fontWeight="bold">
+                Order History
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {getFilteredAndSortedOrders().length} {getFilteredAndSortedOrders().length === 1 ? 'order' : 'orders'}
+                {filterStatus && ` · ${filterStatus}`}
+              </Typography>
+            </Box>
+            
+            {/* Amazon-style Sort Dropdown */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Sort:
+              </Typography>
+              <FormControl size="small" sx={{ minWidth: 180 }}>
+                <Select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  displayEmpty
+                  sx={{
+                    '& .MuiSelect-select': {
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
+                    }
                   }}
-                />
-              ))}
+                >
+                  {sortOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Sort fontSize="small" />
+                        {option.label}
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Box>
           </Box>
 
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="subtitle1" gutterBottom>
-              Favorite Brands
+          {/* Filter Controls - Amazon-style Pills */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 'medium' }}>
+              Filter by status:
             </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {brands.map((brand) => (
-                <Chip
-                  key={brand}
-                  label={brand}
-                  clickable
-                  color={preferences.brands.includes(brand) ? 'primary' : 'default'}
-                  onClick={() => {
-                    const newBrands = preferences.brands.includes(brand)
-                      ? preferences.brands.filter(b => b !== brand)
-                      : [...preferences.brands, brand];
-                    setPreferences({ ...preferences, brands: newBrands });
-                  }}
-                />
-              ))}
-            </Box>
-          </Box>
-
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="subtitle1" gutterBottom>
-              Price Range
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Minimum Price"
-                  type="number"
-                  value={preferences.priceRange.min}
-                  onChange={(e) => setPreferences({
-                    ...preferences,
-                    priceRange: { ...preferences.priceRange, min: parseInt(e.target.value) || 0 }
-                  })}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Maximum Price"
-                  type="number"
-                  value={preferences.priceRange.max}
-                  onChange={(e) => setPreferences({
-                    ...preferences,
-                    priceRange: { ...preferences.priceRange, max: parseInt(e.target.value) || 1000 }
-                  })}
-                />
-              </Grid>
-            </Grid>
-          </Box>
-
-          <Button
-            variant="contained"
-            onClick={handlePreferencesUpdate}
-            disabled={loading}
-            startIcon={loading ? <CircularProgress size={20} /> : <CheckCircle />}
-          >
-            {loading ? 'Saving...' : 'Save Preferences'}
-          </Button>
-        </Paper>
-      </TabPanel>
-
-      <TabPanel value={activeTab} index={3}>
-        <Paper sx={{ p: 4 }}>
-          {/* Orders Header with Controls */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">
-              Order History
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
               <Chip 
-                label="All"
+                label="All Orders"
                 size="small"
                 onClick={() => setFilterStatus('')}
                 color={!filterStatus ? 'primary' : 'default'}
-                variant={filterStatus ? 'filled' : 'outlined'}
+                variant={!filterStatus ? 'filled' : 'outlined'}
+                clickable
+                sx={{ 
+                  '&.MuiChip-filled': {
+                    backgroundColor: 'primary.main',
+                    color: 'primary.contrastText'
+                  }
+                }}
               />
               <Chip 
                 label="Pending"
@@ -716,6 +738,7 @@ const Profile = () => {
                 onClick={() => setFilterStatus('PENDING')}
                 color={filterStatus === 'PENDING' ? 'primary' : 'default'}
                 variant={filterStatus === 'PENDING' ? 'filled' : 'outlined'}
+                clickable
               />
               <Chip 
                 label="Processing"
@@ -723,6 +746,7 @@ const Profile = () => {
                 onClick={() => setFilterStatus('PROCESSING')}
                 color={filterStatus === 'PROCESSING' ? 'primary' : 'default'}
                 variant={filterStatus === 'PROCESSING' ? 'filled' : 'outlined'}
+                clickable
               />
               <Chip 
                 label="Shipped"
@@ -730,6 +754,7 @@ const Profile = () => {
                 onClick={() => setFilterStatus('SHIPPED')}
                 color={filterStatus === 'SHIPPED' ? 'primary' : 'default'}
                 variant={filterStatus === 'SHIPPED' ? 'filled' : 'outlined'}
+                clickable
               />
               <Chip 
                 label="Delivered"
@@ -737,6 +762,7 @@ const Profile = () => {
                 onClick={() => setFilterStatus('DELIVERED')}
                 color={filterStatus === 'DELIVERED' ? 'primary' : 'default'}
                 variant={filterStatus === 'DELIVERED' ? 'filled' : 'outlined'}
+                clickable
               />
               <Chip 
                 label="Cancelled"
@@ -744,36 +770,8 @@ const Profile = () => {
                 onClick={() => setFilterStatus('CANCELLED')}
                 color={filterStatus === 'CANCELLED' ? 'primary' : 'default'}
                 variant={filterStatus === 'CANCELLED' ? 'filled' : 'outlined'}
+                clickable
               />
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
-                Sort by:
-              </Typography>
-              <Button
-                size="small"
-                onClick={() => setSortBy('date')}
-                color={sortBy === 'date' ? 'primary' : 'default'}
-                variant={sortBy === 'date' ? 'contained' : 'outlined'}
-              >
-                Date
-              </Button>
-              <Button
-                size="small"
-                onClick={() => setSortBy('status')}
-                color={sortBy === 'status' ? 'primary' : 'default'}
-                variant={sortBy === 'status' ? 'contained' : 'outlined'}
-              >
-                Status
-              </Button>
-              <Button
-                size="small"
-                onClick={() => setSortBy('total')}
-                color={sortBy === 'total' ? 'primary' : 'default'}
-                variant={sortBy === 'total' ? 'contained' : 'outlined'}
-              >
-                Total
-              </Button>
             </Box>
           </Box>
 
@@ -783,7 +781,7 @@ const Profile = () => {
             </Box>
           ) : orders && orders.length > 0 ? (
             <List>
-              {sortOrders(filterOrders(filterStatus)).map((order) => (
+              {getFilteredAndSortedOrders().map((order) => (
                 <Card key={order._id} sx={{ mb: 3 }}>
                   <CardContent>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>

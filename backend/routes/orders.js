@@ -37,8 +37,8 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'Shipping address is required' });
     }
 
-    // Validate shipping address has all required fields
-    const requiredAddressFields = ['name', 'phone', 'email', 'address', 'city', 'state', 'postalCode', 'country'];
+    // Validate shipping address has all required fields (email is optional)
+    const requiredAddressFields = ['name', 'phone', 'address', 'city', 'state', 'postalCode', 'country'];
     for (const field of requiredAddressFields) {
       if (!shippingAddress[field]) {
         return res.status(400).json({ message: `Shipping address field "${field}" is required` });
@@ -324,44 +324,70 @@ router.get('/:id/recommendations', auth, async (req, res) => {
 // Cancel order
 router.put('/:id/cancel', auth, async (req, res) => {
   try {
+    console.log(`🚫 Cancel order request for order ${req.params.id} by user ${req.user?.id}`);
+    
     const order = await Order.findById(req.params.id).populate('user');
     
     if (!order) {
+      console.log(`❌ Order not found: ${req.params.id}`);
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    // Check if user owns the order
-    const orderUserId = order.user._id?.toString() || order.user.toString();
-    const requestUserId = req.user?.id?.toString() || req.user?.id;
+    console.log(`📋 Order found: ${order._id}, User: ${order.user?._id}, Status: ${order.status}`);
+
+    // Check if user owns the order - handle both string and ObjectId comparisons
+    const orderUserId = order.user?._id?.toString() || order.user?.toString() || '';
+    const requestUserId = req.user?.id?.toString() || req.user?.id || '';
+    
+    console.log(`🔐 Authorization check: Order user ${orderUserId} !== Request user ${requestUserId}`);
     
     if (orderUserId !== requestUserId) {
-      console.log(`Authorization failed: Order user ${orderUserId} !== Request user ${requestUserId}`);
-      return res.status(401).json({ message: 'Not authorized to cancel this order' });
+      return res.status(401).json({ 
+        message: 'Not authorized to cancel this order',
+        debug: {
+          orderUserId,
+          requestUserId,
+          orderUserType: typeof order.user,
+          requestUserType: typeof req.user?.id
+        }
+      });
     }
 
     // Can only cancel pending or processing orders
     const cancelableStatuses = ['pending', 'processing'];
-    if (!cancelableStatuses.includes(order.status?.toLowerCase())) {
+    const currentStatus = order.status?.toLowerCase();
+    
+    if (!cancelableStatuses.includes(currentStatus)) {
       return res.status(400).json({ 
         message: `Cannot cancel order with status "${order.status}". Orders can only be cancelled if they are pending or processing.` 
       });
     }
 
+    console.log(`🔄 Starting cancellation process for order ${order._id}`);
+
     // Restore stock
     for (const item of order.orderItems) {
-      await Product.findByIdAndUpdate(item.product, {
-        $inc: { stock: item.quantity, popularity: -item.quantity }
-      });
+      try {
+        await Product.findByIdAndUpdate(item.product, {
+          $inc: { stock: item.quantity, popularity: -item.quantity }
+        });
+        console.log(`✅ Restored ${item.quantity} units for product ${item.product}`);
+      } catch (stockError) {
+        console.error(`❌ Failed to restore stock for product ${item.product}:`, stockError);
+      }
     }
 
     order.status = 'cancelled';
     const updatedOrder = await order.save();
 
-    console.log(`Order ${order._id} successfully cancelled by user ${requestUserId}`);
+    console.log(`✅ Order ${order._id} successfully cancelled by user ${requestUserId}`);
     res.json(updatedOrder);
   } catch (error) {
-    console.error('Cancel order error:', error);
-    res.status(500).json({ message: 'Failed to cancel order: ' + error.message });
+    console.error('❌ Cancel order error:', error);
+    res.status(500).json({ 
+      message: 'Failed to cancel order: ' + error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
