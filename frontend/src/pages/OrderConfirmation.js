@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../utils/api';
-import { generatePDFInvoice } from '../utils/invoiceGenerator';
+import { generatePDFInvoice, generateCSVInvoice } from '../utils/invoiceGenerator';
 import {
   Container,
   Typography,
@@ -39,7 +39,8 @@ import {
   ArrowBack,
   Receipt,
   Download,
-  Share
+  Share,
+  Description
 } from '@mui/icons-material';
 
 const OrderConfirmation = () => {
@@ -195,16 +196,27 @@ const OrderConfirmation = () => {
   };
 
   const calculateTotals = () => {
-    if (!orderData?.orderItems) return { subtotal: 0, tax: 0, shipping: 0, total: 0 };
+    if (!orderData) return { subtotal: 0, tax: 0, shipping: 0, total: 0 };
     
-    const subtotal = orderData.orderItems.reduce((sum, item) => 
-      sum + (item.price * item.quantity), 0
-    );
-    const tax = subtotal * 0.08;
-    const shipping = subtotal > 100 ? 0 : 10;
-    const total = subtotal + tax + shipping;
+    // Use backend totals if available
+    const tax = parseFloat(orderData.taxPrice) || 0;
+    const shipping = parseFloat(orderData.shippingPrice) || 0;
+    const total = parseFloat(orderData.totalPrice) || 0;
     
-    return { subtotal, tax, shipping, total };
+    // Calculate subtotal from items if available
+    const subtotal = orderData.orderItems?.reduce((sum, item) => 
+      sum + (parseFloat(item.price) * parseInt(item.quantity)), 0
+    ) || 0;
+    
+    // Ensure subtotal adds up correctly
+    const calculatedSubtotal = Math.max(subtotal, total - tax - shipping);
+    
+    return { 
+      subtotal: calculatedSubtotal, 
+      tax, 
+      shipping, 
+      total 
+    };
   };
 
   const handleDownloadInvoice = async () => {
@@ -213,6 +225,15 @@ const OrderConfirmation = () => {
     } catch (error) {
       console.error('Error generating invoice:', error);
       alert('Failed to generate invoice. Please try again.');
+    }
+  };
+
+  const handleDownloadCSVInvoice = async () => {
+    try {
+      await generateCSVInvoice(orderData);
+    } catch (error) {
+      console.error('Error generating CSV invoice:', error);
+      alert('Failed to generate CSV invoice. Please try again.');
     }
   };
 
@@ -594,7 +615,17 @@ const OrderConfirmation = () => {
                 onClick={handleDownloadInvoice}
                 sx={{ mb: 2 }}
               >
-                Download Invoice
+                Download Invoice (PDF)
+              </Button>
+
+              <Button
+                variant="outlined"
+                fullWidth
+                startIcon={<Description />}
+                onClick={handleDownloadCSVInvoice}
+                sx={{ mb: 2 }}
+              >
+                Download Invoice (CSV)
               </Button>
               
               <Button

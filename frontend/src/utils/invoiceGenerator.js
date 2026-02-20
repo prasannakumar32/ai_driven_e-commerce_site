@@ -332,15 +332,23 @@ export const generatePDFInvoice = async (orderData) => {
 
     // Calculate totals properly
     const itemsForTotal = safeGet(orderData, 'orderItems', []);
+    
+    // Use backend totals if available, otherwise calculate
+    const taxPrice = parseFloat(safeGet(orderData, 'taxPrice', 0)) || 0;
+    const shippingPrice = parseFloat(safeGet(orderData, 'shippingPrice', 0)) || 0;
+    let totalAmount = parseFloat(safeGet(orderData, 'totalPrice', 0));
+    
+    // Calculate subtotal from items
     const subtotal = itemsForTotal.reduce((sum, item) => {
       const itemPrice = parseFloat(safeGet(item, 'price', 0)) || 0;
       const quantity = parseInt(safeGet(item, 'quantity', 0)) || 0;
       return sum + (itemPrice * quantity);
     }, 0);
     
-    const taxPrice = parseFloat(safeGet(orderData, 'taxPrice', 0)) || 0;
-    const shippingPrice = parseFloat(safeGet(orderData, 'shippingPrice', 0)) || 0;
-    const totalAmount = parseFloat(safeGet(orderData, 'totalPrice', 0)) || (subtotal + taxPrice + shippingPrice);
+    // If totalPrice is not available or invalid, calculate it
+    if (!totalAmount || isNaN(totalAmount)) {
+      totalAmount = subtotal + taxPrice + shippingPrice;
+    }
     
     console.log('📊 Invoice Totals Calculation:', {
       subtotal: subtotal,
