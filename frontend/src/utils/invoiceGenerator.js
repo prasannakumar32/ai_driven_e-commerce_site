@@ -7,39 +7,28 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
 /**
- * Format currency with proper Indian formatting
+ * Format currency with proper Indian Rupee formatting
  * @param {number} amount - Amount to format
- * @returns {string} Formatted currency string
+ * @returns {string} Formatted currency string with rupee symbol
  */
 const formatCurrency = (amount) => {
   const num = parseFloat(amount) || 0;
   
-  // Handle very large numbers by converting to string and formatting manually
+  // Handle invalid numbers
   if (isNaN(num) || !isFinite(num)) {
     return '₹0.00';
   }
   
-  // Format with Indian number system
-  if (num >= 10000000) { // Crores
-    const crores = Math.floor(num / 10000000);
-    const remainder = num % 10000000;
-    const lakhs = Math.floor(remainder / 100000);
-    if (lakhs > 0) {
-      return `₹${crores},${lakhs.toString().padStart(2, '0')},${(remainder % 100000).toLocaleString('en-IN')}`;
-    } else {
-      return `₹${crores},${(remainder % 10000000).toLocaleString('en-IN')}`;
-    }
-  } else if (num >= 100000) { // Lakhs
-    const lakhs = Math.floor(num / 100000);
-    const remainder = num % 100000;
-    const thousands = Math.floor(remainder / 1000);
-    const formattedNum = `${lakhs},${(remainder % 1000).toLocaleString('en-IN')}`;
-    return `₹${formattedNum}`;
-  } else { // Use standard formatting for smaller numbers
-    return `₹${num.toLocaleString('en-IN', { 
-      minimumFractionDigits: 2, 
+  // Simple and robust formatting using toLocaleString
+  try {
+    const formatted = num.toLocaleString('en-IN', {
+      minimumFractionDigits: 2,
       maximumFractionDigits: 2
-    })}`;
+    });
+    return `₹${formatted}`;
+  } catch (error) {
+    // Fallback to basic formatting
+    return `₹${num.toFixed(2)}`;
   }
 };
 
