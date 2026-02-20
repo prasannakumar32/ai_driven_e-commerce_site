@@ -7,29 +7,34 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
 /**
- * Format currency with proper Indian Rupee formatting
+ * Format currency for display - uses rupee symbol for web
  * @param {number} amount - Amount to format
- * @returns {string} Formatted currency string with rupee symbol
+ * @returns {string} Formatted currency string
  */
 const formatCurrency = (amount) => {
   const num = parseFloat(amount) || 0;
   
   // Handle invalid numbers
   if (isNaN(num) || !isFinite(num)) {
-    return '₹0.00';
+    return 'Rs. 0.00';
   }
   
-  // Simple and robust formatting using toLocaleString
-  try {
-    const formatted = num.toLocaleString('en-IN', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-    return `₹${formatted}`;
-  } catch (error) {
-    // Fallback to basic formatting
-    return `₹${num.toFixed(2)}`;
+  // Format number with 2 decimal places
+  const formattedNum = num.toFixed(2);
+  const [integerPart, decimalPart] = formattedNum.split('.');
+  
+  // Manually add commas in Indian number system (12,34,567)
+  let formattedInteger = '';
+  const reversed = integerPart.split('').reverse();
+  
+  for (let i = 0; i < reversed.length; i++) {
+    if (i === 3 || i === 5 || i === 7 || i === 9) {
+      formattedInteger = ',' + formattedInteger;
+    }
+    formattedInteger = reversed[i] + formattedInteger;
   }
+  
+  return `Rs. ${formattedInteger}.${decimalPart}`;
 };
 
 /**
@@ -585,10 +590,10 @@ export const generateCSVInvoice = (orderData) => {
     // Order Summary Section
     csvContent += 'ORDER SUMMARY\n';
     csvContent += '────────────────────────────────────────────────────────────────────────────\n';
-    csvContent += `"Subtotal","₹${subtotal.toFixed(2)}"\n`;
-    csvContent += `"Tax","₹${taxPrice.toFixed(2)}"\n`;
-    csvContent += `"Shipping","${shippingPrice > 0 ? `₹${shippingPrice.toFixed(2)}` : 'FREE'}"\n`;
-    csvContent += `"Total Amount","₹${totalAmount.toFixed(2)}"\n`;
+    csvContent += `"Subtotal","Rs. ${subtotal.toFixed(2)}"\n`;
+    csvContent += `"Tax","Rs. ${taxPrice.toFixed(2)}"\n`;
+    csvContent += `"Shipping","${shippingPrice > 0 ? `Rs. ${shippingPrice.toFixed(2)}` : 'FREE'}"\n`;
+    csvContent += `"Total Amount","Rs. ${totalAmount.toFixed(2)}"\n`;
     csvContent += '────────────────────────────────────────────────────────────────────────────\n\n';
     
     // Footer Section

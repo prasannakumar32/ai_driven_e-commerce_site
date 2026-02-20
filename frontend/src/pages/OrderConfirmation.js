@@ -476,10 +476,10 @@ const OrderConfirmation = () => {
                     <Grid size={{ xs: 12, sm: 4 }}>
                       <Box textAlign="right">
                         <Typography variant="body2" color="text.secondary">
-                          ₹{(item.price || item.product?.price || 0).toFixed(2)} × {item.quantity}
+                          Rs. {(item.price || item.product?.price || 0).toFixed(2)} × {item.quantity}
                         </Typography>
                         <Typography variant="h6" fontWeight="bold">
-                          ₹{((item.price || item.product?.price || 0) * item.quantity).toFixed(2)}
+                          Rs. {((item.price || item.product?.price || 0) * item.quantity).toFixed(2)}
                         </Typography>
                       </Box>
                     </Grid>
@@ -569,7 +569,7 @@ const OrderConfirmation = () => {
                       {item.name || item.product?.name} × {item.quantity}
                     </Typography>
                     <Typography variant="body2">
-                      ₹{((item.price || item.product?.price || 0) * item.quantity).toFixed(2)}
+                      Rs. {((item.price || item.product?.price || 0) * item.quantity).toFixed(2)}
                     </Typography>
                   </Box>
                 ))}
@@ -579,23 +579,23 @@ const OrderConfirmation = () => {
 
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="body2">Subtotal:</Typography>
-                <Typography variant="body2">₹{totals.subtotal.toFixed(2)}</Typography>
+                <Typography variant="body2">Rs. {totals.subtotal.toFixed(2)}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="body2">Tax (8%):</Typography>
-                <Typography variant="body2">₹{totals.tax.toFixed(2)}</Typography>
+                <Typography variant="body2">Rs. {totals.tax.toFixed(2)}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="body2">Shipping:</Typography>
                 <Typography variant="body2">
-                  {totals.shipping === 0 ? 'FREE' : `₹${totals.shipping.toFixed(2)}`}
+                  {totals.shipping === 0 ? 'FREE' : `Rs. ${totals.shipping.toFixed(2)}`}
                 </Typography>
               </Box>
               <Divider sx={{ my: 2 }} />
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Typography variant="h6">Total:</Typography>
                 <Typography variant="h6" color="primary" fontWeight="bold">
-                  ₹{totals.total.toFixed(2)}
+                  Rs. {totals.total.toFixed(2)}
                 </Typography>
               </Box>
             </CardContent>
