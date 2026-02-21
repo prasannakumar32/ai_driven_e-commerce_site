@@ -6,14 +6,37 @@ const fs = require('fs');
 
 console.log('🔨 Building AI E-commerce Platform...\n');
 
-// Use __dirname which is more reliable than process.cwd() in different environments
-const rootDir = path.dirname(path.resolve(__filename));
-console.log(`📍 Root directory: ${rootDir}`);
-console.log(`📍 Script location: ${__filename}\n`);
+// Find the root directory by looking for package.json with our project name
+let rootDir = path.dirname(path.resolve(__filename));
+console.log(`📍 Script location: ${__filename}`);
+console.log(`📍 Initial directory: ${rootDir}`);
 
-// Set the correct working directory for all commands
-process.chdir(rootDir);
+// Walk up the directory tree to find the actual project root
+const findProjectRoot = (startDir) => {
+  let currentDir = startDir;
+  
+  while (currentDir !== path.dirname(currentDir)) { // Stop at filesystem root
+    const packageJsonPath = path.join(currentDir, 'package.json');
+    
+    if (fs.existsSync(packageJsonPath)) {
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+      
+      // Check if this is the root package.json (has specific scripts)
+      if (packageJson.scripts && packageJson.scripts.build === 'node build.js') {
+        return currentDir;
+      }
+    }
+    
+    currentDir = path.dirname(currentDir);
+  }
+  
+  return startDir;
+};
 
+rootDir = findProjectRoot(rootDir);
+console.log(`📍 Project root: ${rootDir}\n`);
+
+// Verify frontend and backend exist
 const frontendDir = path.join(rootDir, 'frontend');
 const backendDir = path.join(rootDir, 'backend');
 
@@ -27,7 +50,8 @@ const runCommand = (command, workingDir, description) => {
   
   if (!fs.existsSync(workingDir)) {
     console.error(`❌ Directory not found: ${workingDir}`);
-    console.error(`   Current process.cwd(): ${process.cwd()}`);
+    console.error(`   Current dir: ${process.cwd()}`);
+    console.error(`   __dirname: ${__dirname}`);
     process.exit(1);
   }
   
