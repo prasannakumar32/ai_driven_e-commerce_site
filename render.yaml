@@ -13,10 +13,8 @@ services:
         value: production
       - key: PORT
         value: 10000
-      - fromDatabase:
-          name: ai-ecommerce-db
-          property: connectionString
-        key: MONGODB_URI
+      - key: MONGODB_URI
+        value: mongodb+srv://ai-ecommerce-user:trglucifer%4032K@cluster0.naulav.mongodb.net/ai-ecommerce?retryWrites=true&w=majority
       - key: JWT_SECRET
         generateValue: true
       - key: STRIPE_SECRET_KEY
@@ -38,7 +36,7 @@ services:
     runtime: static
     plan: free
     rootDir: frontend
-    buildCommand: npm run build
+    buildCommand: npm install && npm run build
     staticPublishPath: ./build
     envVars:
       - key: REACT_APP_API_URL
