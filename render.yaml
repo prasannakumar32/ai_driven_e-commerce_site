@@ -25,11 +25,14 @@ services:
         sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
 
-  # Frontend React App
-  - type: web
+  # Frontend React App - Static Site
+  - type: static
     name: ai-ecommerce-frontend
-    runtime: static
     plan: free
     rootDir: frontend
     buildCommand: cd frontend && npm install && npm run build
