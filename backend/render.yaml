@@ -5,9 +5,8 @@ services:
     runtime: node
     plan: free
     env: node
-    rootDir: backend
-    buildCommand: npm install
-    startCommand: npm start
+    buildCommand: npm install --prefix frontend && npm run build --prefix frontend && npm install --prefix backend
+    startCommand: npm start --prefix backend
     envVars:
       - key: NODE_ENV
         value: production
@@ -39,3 +38,9 @@ services:
       - key: FRONTEND_URL
         sync: false
       - key: API_URL
+        sync: false
+
+databases:
+  - name: ai-ecommerce-db
+    databaseName: ai-ecommerce
+    plan: free
