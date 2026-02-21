@@ -6,32 +6,28 @@ const fs = require('fs');
 
 console.log('🔨 Building AI E-commerce Platform...\n');
 
-// Use process.cwd() instead of __dirname for better compatibility
-const rootDir = process.cwd();
+// Use __dirname which is more reliable than process.cwd() in different environments
+const rootDir = path.dirname(path.resolve(__filename));
 console.log(`📍 Root directory: ${rootDir}`);
-console.log(`📍 Node version: ${process.version}`);
-console.log(`📍 npm version: ${execSync('npm --version', { encoding: 'utf8' }).trim()}\n`);
+console.log(`📍 Script location: ${__filename}\n`);
 
-// Look for frontend and backend directories
-let frontendDir = path.join(rootDir, 'frontend');
-let backendDir = path.join(rootDir, 'backend');
+// Set the correct working directory for all commands
+process.chdir(rootDir);
 
-// Fallback: check if we're in a subdirectory
-if (!fs.existsSync(frontendDir)) {
-  console.log(`⚠️  Frontend not found at ${frontendDir}, searching...`);
-  const parentDir = path.dirname(rootDir);
-  frontendDir = path.join(parentDir, 'frontend');
-  backendDir = path.join(parentDir, 'backend');
-  console.log(`📍 Trying: ${frontendDir}`);
-}
+const frontendDir = path.join(rootDir, 'frontend');
+const backendDir = path.join(rootDir, 'backend');
+
+console.log(`📍 Frontend directory: ${frontendDir}`);
+console.log(`📍 Backend directory: ${backendDir}\n`);
 
 const runCommand = (command, workingDir, description) => {
   console.log(`\n${description}`);
   console.log(`   Command: ${command}`);
-  console.log(`   Directory: ${workingDir}`);
+  console.log(`   Working directory: ${workingDir}`);
   
   if (!fs.existsSync(workingDir)) {
     console.error(`❌ Directory not found: ${workingDir}`);
+    console.error(`   Current process.cwd(): ${process.cwd()}`);
     process.exit(1);
   }
   
@@ -56,8 +52,8 @@ const runCommand = (command, workingDir, description) => {
     console.log(`✅ ${description} completed`);
   } catch (error) {
     console.error(`\n❌ ${description} failed!`);
+    console.error(`   Working directory: ${workingDir}`);
     console.error(`   Exit code: ${error.status}`);
-    console.error(`   Error: ${error.message}`);
     process.exit(1);
   }
 };
