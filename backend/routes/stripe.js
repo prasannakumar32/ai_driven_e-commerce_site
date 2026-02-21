@@ -5,7 +5,7 @@ const router = express.Router();
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeSecretKey ? require('stripe')(stripeSecretKey) : null;
 
-// Temporary in-memory store for mock sessions (in production, use Redis or database)
+// Temporary in-memory store for mock sessions
 const mockSessionStore = new Map();
 
 // Cleanup old sessions periodically (every hour)

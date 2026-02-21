@@ -9,9 +9,7 @@ const PORT = process.env.PORT || 10000;
 
 // Middleware
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://ai-ecommerce-frontend.onrender.com', 'https://your-custom-domain.com']
-    : ['http://localhost:3000'],
+  origin: ['http://localhost:3000'],
   credentials: true
 }));
 app.use(express.json());
@@ -55,19 +53,9 @@ app.use('/api/orders', require('./routes/orders'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/stripe', require('./routes/stripe'));
 
-// Serve React app in production
-if (process.env.NODE_ENV === 'production') {
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
-  });
-}
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🔧 Backend API: http://localhost:${PORT}/api`);
-  if (process.env.NODE_ENV === 'production') {
-    console.log(`🌐 Production Mode - Deployed on Render`);
-  } else {
-    console.log(`🌐 Frontend: http://localhost:3000`);
-  }
+  console.log(`🌐 Frontend: http://localhost:3000`);
 });

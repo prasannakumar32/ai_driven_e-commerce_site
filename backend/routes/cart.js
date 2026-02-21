@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
 
-// Cart storage (in production, use Redis or database)
+// Cart storage
 const carts = new Map();
 
 // Get user's cart

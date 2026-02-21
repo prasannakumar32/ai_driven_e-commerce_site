@@ -690,7 +690,7 @@ const extractEntities = (doc) => {
     }
   });
 
-  // Extract brands (simplified - in production, use a brand database)
+  // Extract brands
   const brands = ['apple', 'samsung', 'nike', 'adidas', 'sony', 'lg'];
   brands.forEach(brand => {
     if (doc.has(brand)) {
