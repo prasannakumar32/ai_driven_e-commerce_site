@@ -1,13 +1,13 @@
 services:
-  # Backend API Service
+  # Full Stack Application (Backend + Frontend)
   - type: web
-    name: ai-ecommerce-backend
+    name: ai-ecommerce-fullstack
     runtime: node
     plan: free
     env: node
-    rootDir: backend
-    buildCommand: npm install
-    startCommand: npm start
+    rootDir: .
+    buildCommand: npm install && npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend
+    startCommand: npm start --prefix backend
     envVars:
       - key: NODE_ENV
         value: production
@@ -29,20 +29,3 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
-
-  # Frontend React App - Static Site
-  - type: static
-    name: ai-ecommerce-frontend
-    plan: free
-    rootDir: frontend
-    buildCommand: cd frontend && npm install && npm run build
-    staticPublishPath: ./build
-    envVars:
-      - key: REACT_APP_API_URL
-        value: https://ai-ecommerce-backend.onrender.com/api
-      - key: REACT_APP_URL
-        value: https://ai-ecommerce-frontend.onrender.com
-      - key: NODE_PATH
-        value: ./src
-      - key: PUBLIC_URL
-        value: https://ai-ecommerce-frontend.onrender.com
