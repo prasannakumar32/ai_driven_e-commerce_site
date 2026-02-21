@@ -25,10 +25,6 @@ services:
         sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
-      - key: CLOUDINARY_API_KEY
-        sync: false
-      - key: CLOUDINARY_API_SECRET
-        sync: false
 
   # Frontend React App
   - type: web
@@ -36,7 +32,7 @@ services:
     runtime: static
     plan: free
     rootDir: frontend
-    buildCommand: npm install && npm run build
+    buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: ./build
     envVars:
       - key: REACT_APP_API_URL
@@ -45,3 +41,5 @@ services:
         value: https://ai-ecommerce-frontend.onrender.com
       - key: NODE_PATH
         value: ./src
+      - key: PUBLIC_URL
+        value: https://ai-ecommerce-frontend.onrender.com
