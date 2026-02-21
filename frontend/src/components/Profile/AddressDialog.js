@@ -7,8 +7,11 @@ import {
   TextField,
   Button,
   Grid,
-  Box
+  Box,
+  Typography,
+  IconButton
 } from '@mui/material';
+import { Close, Home, LocationCity } from '@mui/icons-material';
 
 const AddressDialog = ({
   open,
@@ -22,26 +25,59 @@ const AddressDialog = ({
     <Dialog 
       open={open} 
       onClose={onClose} 
-      maxWidth="sm" 
+      maxWidth="md" 
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: 2.5
+          borderRadius: 3,
+          overflow: 'hidden',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
         }
       }}
     >
       <DialogTitle sx={{ 
         fontWeight: 'bold', 
-        fontSize: '1.2rem',
+        fontSize: '1.3rem',
         color: '#1a1a1a',
-        pb: 2
+        pb: 2,
+        pt: 3,
+        px: 3,
+        background: 'linear-gradient(135deg, rgba(255, 107, 53, 0.02) 0%, rgba(247, 147, 30, 0.02) 100%)',
+        borderBottom: '1px solid rgba(0,0,0,0.06)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
       }}>
-        {isEditing ? '✏️ Edit Address' : '➕ Add New Address'}
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box sx={{
+            width: 36,
+            height: 36,
+            borderRadius: 2,
+            background: 'linear-gradient(135deg, #ff6b35 0%, #f7931e 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            mr: 2
+          }}>
+            {isEditing ? <LocationCity sx={{ fontSize: 20, color: 'white' }} /> : <Home sx={{ fontSize: 20, color: 'white' }} />}
+          </Box>
+          <Box>
+            <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
+              {isEditing ? 'Edit Address' : 'Add New Address'}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {isEditing ? 'Update your address details' : 'Enter your address information'}
+            </Typography>
+          </Box>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: 'text.secondary' }}>
+          <Close />
+        </IconButton>
       </DialogTitle>
-      <DialogContent sx={{ py: 2 }}>
+      <DialogContent sx={{ py: 3, px: 3 }}>
         <Box component="form" onSubmit={onSubmit}>
-          <Grid container spacing={2.5} sx={{ mt: 0.5 }}>
-            <Grid item xs={12}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
                 label="Full Name"
@@ -51,10 +87,44 @@ const AddressDialog = ({
                 variant="outlined"
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
+                    borderRadius: 2,
+                    transition: 'all 0.2s ease',
                     '&:hover fieldset': {
-                      borderColor: '#2196f3'
+                      borderColor: '#ff6b35'
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#ff6b35',
+                      borderWidth: 2
                     }
+                  },
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.95rem'
+                  }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Phone Number"
+                value={addressForm.phone}
+                onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
+                required
+                variant="outlined"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    transition: 'all 0.2s ease',
+                    '&:hover fieldset': {
+                      borderColor: '#ff6b35'
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#ff6b35',
+                      borderWidth: 2
+                    }
+                  },
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.95rem'
                   }
                 }}
               />
@@ -63,18 +133,24 @@ const AddressDialog = ({
               <TextField
                 fullWidth
                 label="Street Address"
-                value={addressForm.address}
-                onChange={(e) => setAddressForm({ ...addressForm, address: e.target.value })}
+                value={addressForm.street}
+                onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })}
                 required
-                multiline
-                rows={3}
                 variant="outlined"
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
+                    borderRadius: 2,
+                    transition: 'all 0.2s ease',
                     '&:hover fieldset': {
-                      borderColor: '#2196f3'
+                      borderColor: '#ff6b35'
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#ff6b35',
+                      borderWidth: 2
                     }
+                  },
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.95rem'
                   }
                 }}
               />
@@ -89,10 +165,18 @@ const AddressDialog = ({
                 variant="outlined"
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
+                    borderRadius: 2,
+                    transition: 'all 0.2s ease',
                     '&:hover fieldset': {
-                      borderColor: '#2196f3'
+                      borderColor: '#ff6b35'
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#ff6b35',
+                      borderWidth: 2
                     }
+                  },
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.95rem'
                   }
                 }}
               />
@@ -100,17 +184,25 @@ const AddressDialog = ({
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="State"
+                label="State/Province"
                 value={addressForm.state}
                 onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
                 required
                 variant="outlined"
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
+                    borderRadius: 2,
+                    transition: 'all 0.2s ease',
                     '&:hover fieldset': {
-                      borderColor: '#2196f3'
+                      borderColor: '#ff6b35'
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#ff6b35',
+                      borderWidth: 2
                     }
+                  },
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.95rem'
                   }
                 }}
               />
@@ -125,10 +217,18 @@ const AddressDialog = ({
                 variant="outlined"
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
+                    borderRadius: 2,
+                    transition: 'all 0.2s ease',
                     '&:hover fieldset': {
-                      borderColor: '#2196f3'
+                      borderColor: '#ff6b35'
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#ff6b35',
+                      borderWidth: 2
                     }
+                  },
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.95rem'
                   }
                 }}
               />
@@ -136,20 +236,25 @@ const AddressDialog = ({
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Phone"
-                value={addressForm.phone}
-                onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
+                label="Country"
+                value={addressForm.country}
+                onChange={(e) => setAddressForm({ ...addressForm, country: e.target.value })}
                 required
-                helperText="10-digit mobile number"
-                inputProps={{ maxLength: 10 }}
-                error={addressForm.phone && (!/^[6-9]\d{9}$/.test(addressForm.phone))}
                 variant="outlined"
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
+                    borderRadius: 2,
+                    transition: 'all 0.2s ease',
                     '&:hover fieldset': {
-                      borderColor: '#2196f3'
+                      borderColor: '#ff6b35'
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#ff6b35',
+                      borderWidth: 2
                     }
+                  },
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.95rem'
                   }
                 }}
               />

@@ -7,12 +7,12 @@ import {
   Tabs,
   Tab,
   Alert,
-  Grid
+  Typography
 } from '@mui/material';
 import {
   Person,
-  MapPin,
-  Package
+  LocationOn,
+  Inventory2
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
@@ -25,22 +25,6 @@ import {
   AddressesTab,
   OrderHistoryTab
 } from '../components/Profile';
-
-// Helper function to get status color
-const getStatusColor = (status) => {
-  switch (status?.toLowerCase()) {
-    case 'delivered':
-      return 'success';
-    case 'shipped':
-      return 'info';
-    case 'processing':
-      return 'warning';
-    case 'cancelled':
-      return 'error';
-    default:
-      return 'default';
-  }
-};
 
 // TabPanel component
 function TabPanel(props) {
@@ -69,6 +53,7 @@ const Profile = () => {
     phone: '',
     username: ''
   });
+  const [resetKey, setResetKey] = useState(0);
   
 
   const [addresses, setAddresses] = useState([]);
@@ -288,16 +273,21 @@ const Profile = () => {
     e.preventDefault();
     try {
       setError('');
-      // Send name and phone only
+      // Send name, phone, and username with current value to satisfy backend
       const updateData = {
         name: formData.name,
-        phone: formData.phone
+        phone: formData.phone,
+        username: formData.username || 'user' // Fallback to 'user' if username is empty
       };
       console.log('Submitting profile data:', updateData);
+      console.log('Username included to satisfy backend validation');
       const response = await updateUser(updateData);
       console.log('Profile update response:', response);
       setMessage('Profile updated successfully!');
       setTimeout(() => setMessage(''), 3000);
+      
+      // Increment resetKey to trigger form reset in AccountSettingsTab
+      setResetKey(prev => prev + 1);
     } catch (error) {
       console.error('Profile update error details:', {
         message: error.message,
@@ -305,7 +295,27 @@ const Profile = () => {
         status: error.response?.status,
         config: error.config
       });
-      setError(error.response?.data?.message || error.message || 'Failed to update profile');
+      
+      // If backend still complains about username, try without it
+      if (error.response?.data?.message?.includes('username')) {
+        console.log('Backend username validation failed, trying without username field');
+        try {
+          const updateDataWithoutUsername = {
+            name: formData.name,
+            phone: formData.phone
+          };
+          const response = await updateUser(updateDataWithoutUsername);
+          console.log('Profile update response (without username):', response);
+          setMessage('Profile updated successfully!');
+          setTimeout(() => setMessage(''), 3000);
+          setResetKey(prev => prev + 1);
+        } catch (secondError) {
+          console.error('Second attempt failed:', secondError);
+          setError(secondError.response?.data?.message || secondError.message || 'Failed to update profile');
+        }
+      } else {
+        setError(error.response?.data?.message || error.message || 'Failed to update profile');
+      }
     }
   };
 
@@ -485,12 +495,12 @@ const Profile = () => {
               />
               <Tab 
                 label="Addresses" 
-                icon={<MapPin sx={{ fontSize: 20 }} />} 
+                icon={<LocationOn sx={{ fontSize: 20 }} />} 
                 iconPosition="start"
               />
               <Tab 
                 label="Order History" 
-                icon={<Package sx={{ fontSize: 20 }} />} 
+                icon={<Inventory2 sx={{ fontSize: 20 }} />} 
                 iconPosition="start"
               />
             </Tabs>
@@ -500,14 +510,19 @@ const Profile = () => {
           <Box sx={{ p: { xs: 3, md: 5 } }}>
             {/* Account Settings Tab */}
             <TabPanel value={activeTab} index={0}>
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 2fr' }, gap: 4 }}>
-                <ProfileCard user={user} orders={orders} addresses={addresses} />
-                <AccountSettingsTab 
-                  formData={formData}
-                  setFormData={setFormData}
-                  onSubmit={handleProfileUpdate}
-                  loading={loading}
-                />
+              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
+                <Box sx={{ flex: { xs: '1', md: '0.4' }, minWidth: { xs: '100%', md: '300px' } }}>
+                  <ProfileCard user={user} orders={orders} addresses={addresses} />
+                </Box>
+                <Box sx={{ flex: { xs: '1', md: '0.6' }, minWidth: { xs: '100%', md: '400px' } }}>
+                  <AccountSettingsTab 
+                    formData={formData}
+                    setFormData={setFormData}
+                    onSubmit={handleProfileUpdate}
+                    loading={loading}
+                    resetKey={resetKey}
+                  />
+                </Box>
               </Box>
             </TabPanel>
 
@@ -563,21 +578,5 @@ const Profile = () => {
     </Box>
   );
 };
-
-// TabPanel component
-function TabPanel(props) {
-  const { children, value, index } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`profile-tabpanel-${index}`}
-      aria-labelledby={`profile-tab-${index}`}
-    >
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
-    </div>
-  );
-}
 
 export default Profile;

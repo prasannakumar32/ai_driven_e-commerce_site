@@ -5,13 +5,10 @@ import {
   Typography,
   Divider,
   CircularProgress,
-  FormControl,
-  Select,
-  MenuItem,
   Chip,
   List
 } from '@mui/material';
-import { Package, ShoppingBag, Sort } from '@mui/icons-material';
+import { Inventory2, ShoppingBag } from '@mui/icons-material';
 import OrderCard from './OrderCard';
 
 const OrderHistoryTab = ({
@@ -34,7 +31,7 @@ const OrderHistoryTab = ({
       boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
       border: '1px solid rgba(0,0,0,0.06)'
     }}>
-      {/* Header with Results Count and Sort */}
+      {/* Header */}
       <Box sx={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
@@ -55,53 +52,16 @@ const OrderHistoryTab = ({
               justifyContent: 'center',
               boxShadow: '0 4px 12px rgba(76, 175, 80, 0.2)'
             }}>
-              <Package sx={{ fontSize: 24, color: 'white' }} />
+              <Inventory2 sx={{ fontSize: 24, color: 'white' }} />
             </Box>
             <Typography variant="h6" fontWeight="bold" sx={{ color: '#1a1a1a' }}>
               Order History
             </Typography>
           </Box>
           <Typography variant="body2" color="text.secondary" sx={{ ml: 7 }}>
-            {getFilteredAndSortedOrders().length} {getFilteredAndSortedOrders().length === 1 ? 'order' : 'orders'}
+            {getFilteredAndSortedOrders?.()?.length || 0} orders
             {filterStatus && ` · Filtered: ${filterStatus}`}
           </Typography>
-        </Box>
-        
-        {/* Sort Dropdown */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Typography variant="body2" color="text.secondary" fontWeight="500">
-            Sort:
-          </Typography>
-          <FormControl size="small" sx={{ minWidth: 200 }}>
-            <Select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              displayEmpty
-              sx={{
-                borderRadius: 1.5,
-                '& .MuiSelect-select': {
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  py: 1
-                },
-                '& .MuiOutlinedInput-root': {
-                  '&:hover fieldset': {
-                    borderColor: '#2196f3'
-                  }
-                }
-              }}
-            >
-              {sortOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Sort fontSize="small" />
-                    {option.label}
-                  </Box>
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
         </Box>
       </Box>
 
@@ -116,7 +76,7 @@ const OrderHistoryTab = ({
           <Chip 
             label="All Orders"
             size="small"
-            onClick={() => setFilterStatus('')}
+            onClick={() => setFilterStatus?.('')}
             color={!filterStatus ? 'primary' : 'default'}
             variant={!filterStatus ? 'filled' : 'outlined'}
             clickable
@@ -133,7 +93,7 @@ const OrderHistoryTab = ({
               key={status}
               label={status}
               size="small"
-              onClick={() => setFilterStatus(status)}
+              onClick={() => setFilterStatus?.(status)}
               color={filterStatus === status ? 'primary' : 'default'}
               variant={filterStatus === status ? 'filled' : 'outlined'}
               clickable
@@ -149,13 +109,27 @@ const OrderHistoryTab = ({
         </Box>
       </Box>
 
+      {/* Orders List */}
       {ordersLoading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+        <Box sx={{ textAlign: 'center', py: 6 }}>
           <CircularProgress size={40} />
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+            Loading your orders...
+          </Typography>
         </Box>
-      ) : orders && orders.length > 0 ? (
+      ) : getFilteredAndSortedOrders?.()?.length === 0 ? (
+        <Box sx={{ textAlign: 'center', py: 6 }}>
+          <ShoppingBag sx={{ fontSize: 64, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
+          <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
+            {filterStatus ? 'No orders found with this filter' : 'No orders yet'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            {filterStatus ? 'Try changing the filter criteria' : 'Start shopping to see your order history here'}
+          </Typography>
+        </Box>
+      ) : (
         <List sx={{ p: 0 }}>
-          {getFilteredAndSortedOrders().map((order) => (
+          {getFilteredAndSortedOrders?.()?.map((order) => (
             <OrderCard
               key={order._id}
               order={order}
@@ -165,16 +139,6 @@ const OrderHistoryTab = ({
             />
           ))}
         </List>
-      ) : (
-        <Box sx={{ textAlign: 'center', py: 6 }}>
-          <ShoppingBag sx={{ fontSize: 64, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
-          <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
-            No orders yet
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Start shopping to see your orders here
-          </Typography>
-        </Box>
       )}
     </Paper>
   );

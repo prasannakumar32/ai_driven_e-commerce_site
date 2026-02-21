@@ -10,7 +10,7 @@ import {
 
 const ProfileCard = ({ user, orders, addresses }) => {
   return (
-    <Box>
+    <Box sx={{ width: '100%' }}>
       {/* User Profile Card */}
       <Paper 
         sx={{ 
@@ -26,6 +26,16 @@ const ProfileCard = ({ user, orders, addresses }) => {
           '&:hover': {
             boxShadow: '0 12px 32px rgba(33, 150, 243, 0.3)',
             transform: 'translateY(-2px)'
+          },
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 100%)',
+            pointerEvents: 'none'
           }
         }}
       >
@@ -39,14 +49,16 @@ const ProfileCard = ({ user, orders, addresses }) => {
             fontSize: '2.5rem',
             border: '3px solid rgba(255,255,255,0.3)',
             boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-            fontWeight: 'bold'
+            fontWeight: 'bold',
+            position: 'relative',
+            zIndex: 1
           }}
         >
-          {user.name?.charAt(0).toUpperCase()}
+          {user.name?.charAt(0).toUpperCase() || 'U'}
         </Avatar>
         
-        <Typography variant="h6" gutterBottom fontWeight="bold">
-          {user.name}
+        <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ position: 'relative', zIndex: 1 }}>
+          {user.name || 'User Name'}
         </Typography>
         
         <Typography 
@@ -54,10 +66,12 @@ const ProfileCard = ({ user, orders, addresses }) => {
           sx={{ 
             mb: 2, 
             opacity: 0.9,
-            wordBreak: 'break-all'
+            wordBreak: 'break-all',
+            position: 'relative',
+            zIndex: 1
           }}
         >
-          {user.email}
+          {user.email || 'user@example.com'}
         </Typography>
         
         <Chip 
@@ -71,7 +85,9 @@ const ProfileCard = ({ user, orders, addresses }) => {
             border: '1px solid rgba(255,255,255,0.3)',
             '& .MuiChip-label': {
               px: 1.5
-            }
+            },
+            position: 'relative',
+            zIndex: 1
           }}
         />
       </Paper>
@@ -82,17 +98,25 @@ const ProfileCard = ({ user, orders, addresses }) => {
         borderRadius: 2.5,
         boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
         mt: 3,
-        border: '1px solid rgba(0,0,0,0.06)'
+        border: '1px solid rgba(0,0,0,0.06)',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
+        }
       }}>
         <Typography variant="subtitle1" gutterBottom fontWeight="bold" sx={{ color: '#1a1a1a' }}>
           Account Overview
         </Typography>
         <Divider sx={{ my: 2, opacity: 0.5 }} />
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="body2" color="text.secondary" fontWeight="500">Member Since</Typography>
             <Typography variant="body2" fontWeight="600" color="#1a1a1a">
-              {new Date(user.createdAt || Date.now()).toLocaleDateString('en-IN', { 
+              {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { 
+                year: 'numeric', 
+                month: 'short',
+                day: 'numeric'
+              }) : new Date().toLocaleDateString('en-IN', { 
                 year: 'numeric', 
                 month: 'short',
                 day: 'numeric'
@@ -106,7 +130,11 @@ const ProfileCard = ({ user, orders, addresses }) => {
               color="primary" 
               size="small"
               variant="outlined"
-              sx={{ fontWeight: 'bold' }}
+              sx={{ 
+                fontWeight: 'bold',
+                minWidth: '40px',
+                justifyContent: 'center'
+              }}
             />
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -116,7 +144,11 @@ const ProfileCard = ({ user, orders, addresses }) => {
               color="primary" 
               size="small"
               variant="outlined"
-              sx={{ fontWeight: 'bold' }}
+              sx={{ 
+                fontWeight: 'bold',
+                minWidth: '40px',
+                justifyContent: 'center'
+              }}
             />
           </Box>
         </Box>
