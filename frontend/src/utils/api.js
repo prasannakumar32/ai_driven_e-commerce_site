@@ -1,16 +1,30 @@
 import axios from 'axios';
 
-// In development with proxy: use relative path (will be proxied to http://localhost:5000)
-// In production: use the full URL from env var
-const API_BASE_URL = process.env.REACT_APP_API_URL || (
-  process.env.NODE_ENV === 'development' ? '/api' : 'http://localhost:5000/api'
-);
+// Determine API URL based on environment
+const getAPIURL = () => {
+  // Priority 1: Explicit environment variable
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+  
+  // Priority 2: Production environment
+  if (process.env.NODE_ENV === 'production') {
+    // On Render, the frontend and backend are on the same domain
+    return `${window.location.origin}/api`;
+  }
+  
+  // Priority 3: Development environment
+  return '/api';
+};
+
+const API_BASE_URL = getAPIURL();
 
 // Debug: log the actual API URL at runtime
 if (typeof window !== 'undefined') {
   console.debug('[API] Using baseURL:', API_BASE_URL);
   console.debug('[API] NODE_ENV:', process.env.NODE_ENV);
   console.debug('[API] REACT_APP_API_URL env:', process.env.REACT_APP_API_URL);
+  console.debug('[API] Window origin:', window.location.origin);
 }
 
 const api = axios.create({
