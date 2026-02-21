@@ -26,11 +26,11 @@ const AccountSettingsTab = ({ formData, setFormData, onSubmit, loading, resetKey
     setUsernameError('');
   }, [resetKey]);
 
-  // Validate username
+  // Validate username (optional field)
   const validateUsername = (username) => {
-    if (!username) {
-      setUsernameError('Username is required');
-      return false;
+    if (!username || username.trim() === '') {
+      setUsernameError('');
+      return true; // Empty username is valid
     }
     if (username.length < 3) {
       setUsernameError('Username must be at least 3 characters');
@@ -162,9 +162,8 @@ const AccountSettingsTab = ({ formData, setFormData, onSubmit, loading, resetKey
                   name="username"
                   value={formData.username}
                   onChange={handleInputChange('username')}
-                  helperText={usernameError || "Choose a unique username (letters, numbers, underscores)"}
+                  helperText={usernameError || "Optional: Choose a unique username (letters, numbers, underscores)"}
                   error={!!usernameError}
-                  required
                   variant="outlined"
                   sx={{
                     '& .MuiOutlinedInput-root': {

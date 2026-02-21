@@ -92,22 +92,23 @@ const Profile = () => {
     country: 'India'
   });
 
-  // Fetch user data when component mounts
+  // Fetch user data and orders when component mounts
   useEffect(() => {
     if (user) {
       setFormData({
         name: user.name || '',
         email: user.email || '',
         phone: user.phone || '',
-        username: user.username || ''
+        username: user.username || user.name || '' // Use name as fallback for username
       });
       setAddresses(user.addresses || []);
+      fetchOrders(); // Fetch orders on component mount
     }
   }, [user]);
 
-  // Fetch orders when tab changes to orders
+  // Fetch orders when tab changes to orders (additional fetch to ensure fresh data)
   useEffect(() => {
-    if (activeTab === 2 && user) { // Orders tab index (updated from 3 to 2)
+    if (activeTab === 2 && user) { // Orders tab index
       fetchOrders();
     }
   }, [activeTab, user]);
@@ -273,14 +274,16 @@ const Profile = () => {
     e.preventDefault();
     try {
       setError('');
-      // Send name, phone, and username with current value to satisfy backend
+      // Send name and phone, ensure username is always present for backend validation
       const updateData = {
         name: formData.name,
         phone: formData.phone,
-        username: formData.username || 'user' // Fallback to 'user' if username is empty
+        username: formData.username && formData.username.trim() !== '' 
+          ? formData.username 
+          : formData.name.replace(/\s+/g, '').toLowerCase() // Use name (without spaces, lowercase) as fallback
       };
+      
       console.log('Submitting profile data:', updateData);
-      console.log('Username included to satisfy backend validation');
       const response = await updateUser(updateData);
       console.log('Profile update response:', response);
       setMessage('Profile updated successfully!');
@@ -295,27 +298,7 @@ const Profile = () => {
         status: error.response?.status,
         config: error.config
       });
-      
-      // If backend still complains about username, try without it
-      if (error.response?.data?.message?.includes('username')) {
-        console.log('Backend username validation failed, trying without username field');
-        try {
-          const updateDataWithoutUsername = {
-            name: formData.name,
-            phone: formData.phone
-          };
-          const response = await updateUser(updateDataWithoutUsername);
-          console.log('Profile update response (without username):', response);
-          setMessage('Profile updated successfully!');
-          setTimeout(() => setMessage(''), 3000);
-          setResetKey(prev => prev + 1);
-        } catch (secondError) {
-          console.error('Second attempt failed:', secondError);
-          setError(secondError.response?.data?.message || secondError.message || 'Failed to update profile');
-        }
-      } else {
-        setError(error.response?.data?.message || error.message || 'Failed to update profile');
-      }
+      setError(error.response?.data?.message || error.message || 'Failed to update profile');
     }
   };
 

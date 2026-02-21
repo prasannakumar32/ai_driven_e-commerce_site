@@ -133,8 +133,8 @@ const AddressDialog = ({
               <TextField
                 fullWidth
                 label="Street Address"
-                value={addressForm.street}
-                onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })}
+                value={addressForm.address}
+                onChange={(e) => setAddressForm({ ...addressForm, address: e.target.value })}
                 required
                 variant="outlined"
                 sx={{

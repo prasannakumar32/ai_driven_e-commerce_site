@@ -226,7 +226,7 @@ router.get('/profile', auth, async (req, res) => {
 // Update user profile
 router.put('/profile', auth, async (req, res) => {
   try {
-    const { name, phone, preferences } = req.body;
+    const { name, phone, username, preferences } = req.body;
     
     const user = await User.findById(req.user.id);
     
@@ -237,6 +237,28 @@ router.put('/profile', auth, async (req, res) => {
     // Only update fields that are provided
     if (name && name.trim()) user.name = name;
     if (phone && phone.trim()) user.phone = phone;
+    if (username && username.trim()) {
+      // Validate username format and length
+      if (username.length < 3 || username.length > 30) {
+        return res.status(400).json({ message: 'Username must be between 3 and 30 characters long' });
+      }
+
+      const usernameRegex = /^[a-zA-Z0-9_]+$/;
+      if (!usernameRegex.test(username)) {
+        return res.status(400).json({ message: 'Username can only contain letters, numbers, and underscores' });
+      }
+
+      // Check if username already exists (but exclude current user)
+      const existingUsername = await User.findOne({ 
+        username: username,
+        _id: { $ne: req.user.id }
+      });
+      if (existingUsername) {
+        return res.status(400).json({ message: 'Username is already taken' });
+      }
+
+      user.username = username;
+    }
     if (preferences) {
       user.preferences = { ...user.preferences, ...preferences };
     }
@@ -255,6 +277,22 @@ router.put('/profile', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating profile:', error);
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ message: messages.join(', ') });
+    }
+    
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      if (field === 'username') {
+        return res.status(400).json({ message: 'Username is already taken' });
+      }
+      return res.status(400).json({ message: `${field} already exists` });
+    }
+    
     res.status(500).json({ message: error.message });
   }
 });
