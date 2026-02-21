@@ -43,3 +43,5 @@ services:
         value: https://ai-ecommerce-backend.onrender.com/api
       - key: REACT_APP_URL
         value: https://ai-ecommerce-frontend.onrender.com
+      - key: NODE_PATH
+        value: ./src
