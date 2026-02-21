@@ -23,8 +23,8 @@ NODE_ENV=production
 PORT=10000
 MONGODB_URI=mongodb+srv://ai-ecommerce-user:trglucifer%4032K@cluster0.naulav.mongodb.net/ai-ecommerce?retryWrites=true&w=majority
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-STRIPE_SECRET_KEY=sk_test_51T1lJoEtyhAZP0CGxyxq1dbutEzmfOaXOGOlE6s1oRNxrCWc6ouSfVAq4w0kQ1be9qDHjGFvb9KlJRwgGzmZEhRw00BztN08H0
-STRIPE_PUBLISHABLE_KEY=pk_test_51T1lJoEtyhAZP0CGwKrnEsUO53xOMu8bH2tud8Ic8RdTmTu4O2jhSTFLXjLTR1pvK0yAWiM8p4JxhCFK1yARjilA00ieDDTVuY
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key_here
+STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key_here
 STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret_here
 ```
 
