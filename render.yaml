@@ -1,0 +1,77 @@
+services:
+  # Single All-in-One Web Service: Frontend + Backend
+  # This is the recommended approach for this monorepo structure
+  - type: web
+    name: ai-ecommerce
+    runtime: node
+    plan: free  # Change to 'starter' or 'standard' for always-on service
+    
+    # Build Command: Install dependencies and build frontend
+    # The build.js script handles:
+    # 1. Installing frontend dependencies
+    # 2. Building React app to static files
+    # 3. Installing backend dependencies
+    buildCommand: npm install && npm run build
+    
+    # Start Command: Run Express backend from root
+    # This starts the backend which serves both API routes and the built React app
+    startCommand: npm start
+    
+    # Health Check: Used by Render to monitor service health
+    # Add this endpoint to backend/server.js:
+    # app.get('/health', (req, res) => res.json({ status: 'ok' }));
+    healthCheckPath: /health
+    healthCheckTimeout: 5
+    
+    # Environment Variables
+    envVars:
+      # Node Environment
+      - key: NODE_ENV
+        value: production
+      
+      # Port Configuration
+      - key: PORT
+        value: 10000
+      
+      # MongoDB Atlas Connection
+      # Update this with your actual MongoDB Atlas connection string
+      - key: MONGODB_URI
+        sync: false  # Set to true to link to Render PostgreSQL, but you're using Atlas
+      
+      # JWT Secret - Should be a strong random string
+      # Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+      - key: JWT_SECRET
+        generateValue: true
+      
+      # Stripe Configuration
+      # Get these from: https://dashboard.stripe.com/apikeys
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      
+      # Cloudinary Configuration
+      # Get these from: https://cloudinary.com/console
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      
+      # Frontend/API URLs (Optional, but helpful for debugging)
+      # These will be auto-populated based on your Render service URL
+      - key: FRONTEND_URL
+        sync: false  # Manually set to: https://your-service-name.render.com
+      - key: API_URL
+        sync: false  # Manually set to: https://your-service-name.render.com/api
+
+# Optional: MongoDB Database on Render (if not using Atlas)
+# Uncomment to create a managed MongoDB database
+# Note: The Free tier is limited. For production, use MongoDB Atlas (which is more powerful and free)
+# databases:
+#   - name: ai-ecommerce-db
+#     databaseName: ai-ecommerce
+#     plan: free
