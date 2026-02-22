@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
+const User = require('../models/User');
 const mongoose = require('mongoose');
 const getRecommendations = require('../utils/aiRecommendations').getRecommendations;
 const getRelatedProducts = require('../utils/aiRecommendations').getRelatedProducts;
@@ -342,6 +343,21 @@ router.post('/:id/reviews', auth, async (req, res) => {
       return res.status(401).json({ message: 'User not authenticated' });
     }
 
+    // Validate input
+    if (!comment || comment.trim().length === 0) {
+      return res.status(400).json({ message: 'Review comment is required' });
+    }
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+    }
+
+    // Fetch user to get name
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     const product = await Product.findById(req.params.id);
     
     if (!product) {
@@ -354,25 +370,26 @@ router.post('/:id/reviews', auth, async (req, res) => {
     );
 
     if (existingReview) {
-      return res.status(400).json({ message: 'Product already reviewed' });
+      return res.status(400).json({ message: 'You have already reviewed this product' });
     }
 
-    const review = {
+    const newReview = {
       user: userId,
-      name: req.user.name,
+      name: user.name || 'Anonymous',
       rating: parseInt(rating),
-      comment
+      comment: comment.trim()
     };
 
-    product.reviews.push(review);
+    product.reviews.push(newReview);
     product.numReviews = product.reviews.length;
     product.rating = product.reviews.reduce((acc, item) => item.rating + acc, 0) / product.reviews.length;
 
     await product.save();
 
-    res.status(201).json({ message: 'Review added successfully' });
+    res.status(201).json({ message: 'Review added successfully', review: newReview });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Review submission error:', error);
+    res.status(500).json({ message: 'Failed to add review: ' + error.message });
   }
 });
 
