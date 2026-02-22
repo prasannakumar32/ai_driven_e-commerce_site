@@ -1,5 +1,6 @@
 const Product = require('../models/Product');
 const User = require('../models/User');
+const Order = require('../models/Order');
 const mongoose = require('mongoose');
 const AISearchEngine = require('./aiSearchEngine');
 const aiSearchEngine = new AISearchEngine();
@@ -13,6 +14,32 @@ const tokenizer = {
       .split(/\s+/)
       .filter(word => word.length > 0);
   }
+};
+
+// Intent detection for chatbot
+const detectIntent = (message) => {
+  const lowerMsg = message.toLowerCase();
+  
+  if (lowerMsg.includes('search') || lowerMsg.includes('find') || lowerMsg.includes('looking for')) {
+    return 'search';
+  }
+  if (lowerMsg.includes('recommend') || lowerMsg.includes('suggest')) {
+    return 'recommendation';
+  }
+  if (lowerMsg.includes('order') || lowerMsg.includes('track') || lowerMsg.includes('delivery')) {
+    return 'order_status';
+  }
+  if (lowerMsg.includes('price') || lowerMsg.includes('cost') || lowerMsg.includes('expensive')) {
+    return 'price_inquiry';
+  }
+  if (lowerMsg.includes('help') || lowerMsg.includes('support') || lowerMsg.includes('how')) {
+    return 'help';
+  }
+  if (lowerMsg.includes('category') || lowerMsg.includes('browse')) {
+    return 'category_browse';
+  }
+  
+  return 'general';
 };
 
 // AI-powered product recommendations
@@ -542,8 +569,8 @@ const getChatbotResponse = async (message, userId = null, context = {}) => {
     const doc = compromise(message.toLowerCase());
     const tokens = tokenizer.tokenize(message.toLowerCase());
     
-    // Intent recognition
-    const intent = recognizeIntent(tokens, doc);
+    // Detect user intent
+    const intent = detectIntent(message);
     
     let response = {
       message: '',
@@ -552,7 +579,7 @@ const getChatbotResponse = async (message, userId = null, context = {}) => {
     };
 
     switch (intent) {
-      case 'product_search':
+      case 'search':
         response = await handleProductSearch(message, userId);
         break;
       case 'recommendation':
@@ -564,112 +591,239 @@ const getChatbotResponse = async (message, userId = null, context = {}) => {
       case 'order_status':
         response = await handleOrderStatus(userId);
         break;
+      case 'price_inquiry':
+        response = await handlePriceInquiry(message);
+        break;
+      case 'category_browse':
+        response = await handleCategoryBrowse(message);
+        break;
       default:
         response = handleGeneralQuery(message);
+    }
+
+    // Add follow-up suggestions if not already provided
+    if (!response.suggestions || response.suggestions.length === 0) {
+      response.suggestions = [
+        'Search for products',
+        'Get recommendations',
+        'Browse categories'
+      ];
     }
 
     return response;
   } catch (error) {
     console.error('Error in chatbot response:', error);
     return {
-      message: 'I apologize, but I encountered an error. Please try again.',
-      suggestions: ['Search for products', 'Get recommendations', 'Contact support']
+      message: 'I apologize, but I encountered an error. Please try again or contact support.',
+      suggestions: ['Search for products', 'Get recommendations', 'Contact support'],
+      products: []
     };
   }
 };
 
-// Recognize user intent
-const recognizeIntent = (tokens, doc) => {
-  const searchKeywords = ['search', 'find', 'look', 'show', 'product', 'item'];
-  const recommendationKeywords = ['recommend', 'suggest', 'like', 'similar'];
-  const helpKeywords = ['help', 'how', 'what', 'support'];
-  const orderKeywords = ['order', 'status', 'tracking', 'delivery'];
-
-  if (tokens.some(token => searchKeywords.includes(token))) {
-    return 'product_search';
-  }
-  if (tokens.some(token => recommendationKeywords.includes(token))) {
-    return 'recommendation';
-  }
-  if (tokens.some(token => helpKeywords.includes(token))) {
-    return 'help';
-  }
-  if (tokens.some(token => orderKeywords.includes(token))) {
-    return 'order_status';
-  }
-
-  return 'general';
-};
-
 // Handle product search queries
 const handleProductSearch = async (message, userId) => {
-  const doc = compromise(message);
-  const entities = extractEntities(doc);
-  
-  let query = {};
-  if (entities.category) query.category = entities.category;
-  if (entities.brand) query.brand = entities.brand;
-  if (entities.price) query.price = entities.price;
+  try {
+    // Extract search terms from message
+    const searchTerms = message
+      .toLowerCase()
+      .replace(/search|find|looking for|looking|show me|get|want/gi, '')
+      .trim();
+    
+    if (!searchTerms) {
+      return {
+        message: 'What products would you like to search for? For example: "Find laptops", "Show me iPhones", "Search for blue shirts"',
+        suggestions: [
+          'Browse by category',
+          'Get recommendations',
+          'View trending products'
+        ],
+        products: []
+      };
+    }
 
-  const products = await Product.find(query)
-    .sort({ rating: -1 })
-    .limit(5);
+    // Search for products
+    const products = await Product.find({
+      $or: [
+        { name: { $regex: searchTerms, $options: 'i' } },
+        { description: { $regex: searchTerms, $options: 'i' } },
+        { category: { $regex: searchTerms, $options: 'i' } },
+        { brand: { $regex: searchTerms, $options: 'i' } },
+        { tags: { $in: [searchTerms.toLowerCase()] } }
+      ]
+    })
+      .sort({ rating: -1, popularity: -1 })
+      .limit(8);
 
-  return {
-    message: `I found ${products.length} products matching your search:`,
-    products,
-    suggestions: [
-      'Show more results',
-      'Filter by price',
-      'Get recommendations'
-    ]
-  };
+    if (products.length === 0) {
+      return {
+        message: `I couldn't find any products matching "${searchTerms}". Would you like to try a different search or browse by category?`,
+        suggestions: [
+          'Browse by category',
+          'View trending products',
+          'Get recommendations'
+        ],
+        products: []
+      };
+    }
+
+    return {
+      message: `I found ${products.length} product(s) matching your search for "${searchTerms}". Here are the top results:`,
+      products: products.slice(0, 5),
+      suggestions: [
+        `More results for "${searchTerms}"`,
+        'Refine by category',
+        'Get recommendations'
+      ]
+    };
+  } catch (error) {
+    console.error('Error in product search:', error);
+    return {
+      message: 'Sorry, I had trouble searching for products. Please try again.',
+      suggestions: ['Browse by category', 'Get recommendations'],
+      products: []
+    };
+  }
 };
 
 // Handle recommendation requests
 const handleRecommendation = async (userId) => {
-  const recommendations = await getPersonalizedRecommendations(userId);
-  
-  return {
-    message: 'Based on your preferences, here are some products you might like:',
-    products: recommendations.slice(0, 5),
-    suggestions: [
-      'View all recommendations',
-      'Update preferences',
-      'Search for products'
-    ]
-  };
+  try {
+    let recommendations = [];
+
+    if (userId) {
+      try {
+        const user = await User.findById(userId);
+        if (user && user.browsingHistory && user.browsingHistory.length > 0) {
+          // Get personalized recommendations based on browsing history
+          const recentProductIds = user.browsingHistory
+            .slice(-5)
+            .map(item => item.product);
+
+          recommendations = await Product.find({
+            _id: { $nin: recentProductIds }
+          })
+            .sort({ rating: -1, popularity: -1 })
+            .limit(8);
+        }
+      } catch (userError) {
+        console.error('Error fetching user preferences:', userError);
+      }
+    }
+
+    // Fallback to trending products if no personalized recommendations
+    if (recommendations.length === 0) {
+      recommendations = await Product.find({})
+        .sort({ rating: -1, popularity: -1 })
+        .limit(8);
+    }
+
+    return {
+      message: userId 
+        ? 'Based on your browsing history, here are some products you might like:'
+        : 'Here are some trending products we think you\'ll love:',
+      products: recommendations.slice(0, 5),
+      suggestions: [
+        'See more recommendations',
+        'Similar products',
+        'Featured deals'
+      ]
+    };
+  } catch (error) {
+    console.error('Error in recommendation:', error);
+    return {
+      message: 'I\'d love to give you personalized recommendations. Please check back later!',
+      suggestions: ['Browse by category', 'Search for products'],
+      products: []
+    };
+  }
+};
+
+// Handle price inquiry
+const handlePriceInquiry = async (message) => {
+  try {
+    // Extract price range if mentioned
+    const priceMatch = message.match(/\$?\d+(?:,\d{3})*(?:\.\d{2})?|\d+/g);
+    let query = {};
+
+    if (priceMatch) {
+      const prices = priceMatch.map(p => parseInt(p));
+      const minPrice = Math.min(...prices);
+      const maxPrice = Math.max(...prices);
+      query.price = { $gte: minPrice, $lte: maxPrice };
+    }
+
+    const products = await Product.find(query)
+      .sort({ rating: -1 })
+      .limit(8);
+
+    return {
+      message: priceMatch 
+        ? `I found ${products.length} products in the $${Math.min(...priceMatch)} - $${Math.max(...priceMatch)} range:` 
+        : 'Here are some products available at various price points:',
+      products: products.slice(0, 5),
+      suggestions: [
+        'Filter by category',
+        'View all price ranges',
+        'Get recommendations'
+      ]
+    };
+  } catch (error) {
+    console.error('Error in price inquiry:', error);
+    return {
+      message: 'Tell me your budget and I\'ll find products in that price range for you!',
+      suggestions: ['Browse by category', 'Get recommendations'],
+      products: []
+    };
+  }
+};
+
+// Handle category browse
+const handleCategoryBrowse = async (message) => {
+  try {
+    // Get all unique categories
+    const categories = await Product.distinct('category');
+    
+    const categoryMatch = categories.find(cat => 
+      message.toLowerCase().includes(cat.toLowerCase())
+    );
+
+    let products = [];
+    if (categoryMatch) {
+      products = await Product.find({ category: categoryMatch })
+        .sort({ rating: -1 })
+        .limit(8);
+    } else {
+      products = await Product.find({})
+        .sort({ rating: -1 })
+        .limit(8);
+    }
+
+    return {
+      message: categoryMatch
+        ? `Here are the top products in the ${categoryMatch} category:`
+        : 'Here are some popular products from various categories:',
+      products: products.slice(0, 5),
+      suggestions: [
+        'View all categories',
+        'Filter by price',
+        'Get recommendations'
+      ]
+    };
+  } catch (error) {
+    console.error('Error in category browse:', error);
+    return {
+      message: 'Let me help you browse our product categories!',
+      suggestions: ['Search for products', 'Get recommendations'],
+      products: []
+    };
+  }
 };
 
 // Handle help requests
 const handleHelp = () => {
   return {
-    message: 'I can help you with:\n• Finding products\n• Getting personalized recommendations\n• Checking order status\n• Product information\n• Shopping assistance',
-    suggestions: [
-      'Search for products',
-      'Get recommendations',
-      'Check order status'
-    ]
-  };
-};
-
-// Handle order status queries
-const handleOrderStatus = async (userId) => {
-  // This would integrate with your order system
-  return {
-    message: 'To check your order status, please provide your order number or log in to your account.',
-    suggestions: [
-      'View order history',
-      'Track recent order',
-      'Contact support'
-    ]
-  };
-};
-
-// Handle general queries
-const handleGeneralQuery = (message) => {
-  return {
-    message: 'I can help you find products, get recommendations, and assist with your shopping. What would you like to do?',
+    message: '🤖 I\'m your AI Shopping Assistant! Here\'s what I can help you with:\n\n📦 **Search Products** - Find items by name, category, or brand\n⭐ **Get Recommendations** - Discover personalized product suggestions\n💰 **Price Inquiry** - Find products in your budget\n📂 **Browse Categories** - Explore different product categories\n📋 **Track Orders** - Check your order status\n❓ **Need Help** - Answer your shopping questions',
     suggestions: [
       'Search for products',
       'Get recommendations',
@@ -678,35 +832,75 @@ const handleGeneralQuery = (message) => {
   };
 };
 
-// Extract entities from user message
-const extractEntities = (doc) => {
-  const entities = {};
-  
-  // Extract categories
-  const categories = ['electronics', 'clothing', 'books', 'home', 'sports', 'beauty', 'toys'];
-  categories.forEach(cat => {
-    if (doc.has(cat)) {
-      entities.category = cat;
+// Handle order status queries
+const handleOrderStatus = async (userId) => {
+  try {
+    if (!userId) {
+      return {
+        message: 'To check your order status, please log in to your account first.',
+        suggestions: [
+          'Login',
+          'Search for products',
+          'Get recommendations'
+        ]
+      };
     }
-  });
 
-  // Extract brands
-  const brands = ['apple', 'samsung', 'nike', 'adidas', 'sony', 'lg'];
-  brands.forEach(brand => {
-    if (doc.has(brand)) {
-      entities.brand = brand;
+    const userOrders = await Order.find({ user: userId })
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    if (userOrders.length === 0) {
+      return {
+        message: 'You don\'t have any orders yet. Would you like to start shopping?',
+        suggestions: [
+          'Search for products',
+          'Get recommendations',
+          'Browse categories'
+        ]
+      };
     }
-  });
 
-  // Extract price ranges
-  if (doc.has('under') || doc.has('less than')) {
-    entities.price = { $lte: 100 };
+    const latestOrder = userOrders[0];
+    return {
+      message: `Your latest order (#${latestOrder.orderId}) is currently **${latestOrder.status.toUpperCase()}**. ${
+        latestOrder.estimatedDeliveryDate 
+          ? `Expected delivery: ${new Date(latestOrder.estimatedDeliveryDate).toLocaleDateString()}`
+          : ''
+      }`,
+      suggestions: [
+        'View all orders',
+        'Continue shopping',
+        'Contact support'
+      ],
+      products: []
+    };
+  } catch (error) {
+    console.error('Error in order status:', error);
+    return {
+      message: 'I had trouble checking your orders. Please try again or contact support.',
+      suggestions: ['Contact support', 'Search for products'],
+      products: []
+    };
   }
-  if (doc.has('over') || doc.has('more than')) {
-    entities.price = { $gte: 500 };
-  }
+};
 
-  return entities;
+// Handle general queries
+const handleGeneralQuery = (message) => {
+  const greetings = ['hi', 'hello', 'hey', 'greetings'];
+  const isGreeting = greetings.some(g => message.toLowerCase().includes(g));
+
+  return {
+    message: isGreeting
+      ? '👋 Hello! I\'m your AI shopping assistant. How can I help you today?'
+      : '💡 I can help you find products, get recommendations, check orders, and more! What would you like to do?',
+    suggestions: [
+      'Search for products',
+      'Get recommendations',
+      'Browse categories',
+      'Check my orders'
+    ]
+  };
 };
 
 module.exports = {

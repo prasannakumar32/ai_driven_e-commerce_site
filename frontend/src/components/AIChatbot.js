@@ -151,20 +151,63 @@ const AIChatbot = ({ open, onClose }) => {
             {message.products && message.products.length > 0 && (
               <Box sx={{ mt: 2 }}>
                 <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-                  Recommended Products:
+                  📦 Recommended Products:
                 </Typography>
-                <List dense>
-                  {message.products.slice(0, 3).map((product, idx) => (
-                    <ListItem key={idx} sx={{ py: 0.5 }}>
-                      <ListItemText
-                        primary={product.name}
-                        secondary={`$${product.price}`}
-                        primaryTypographyProps={{ variant: 'caption' }}
-                        secondaryTypographyProps={{ variant: 'caption' }}
-                      />
-                    </ListItem>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {message.products.slice(0, 5).map((product, idx) => (
+                    <Paper
+                      key={idx}
+                      sx={{
+                        p: 1.5,
+                        backgroundColor: 'white',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: 1,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                          transform: 'translateY(-2px)'
+                        }
+                      }}
+                    >
+                      <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 0.5 }}>
+                        {product.name}
+                      </Typography>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="caption" color="success.main" sx={{ fontWeight: 'bold' }}>
+                          ₹{product.price?.toLocaleString('en-IN') || 'N/A'}
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          {product.rating && (
+                            <Chip
+                              label={`⭐ ${product.rating}`}
+                              size="small"
+                              variant="outlined"
+                              sx={{ fontSize: '0.65rem', height: 20 }}
+                            />
+                          )}
+                          {product.stock > 0 ? (
+                            <Chip
+                              label="In Stock"
+                              size="small"
+                              color="success"
+                              variant="filled"
+                              sx={{ fontSize: '0.65rem', height: 20 }}
+                            />
+                          ) : (
+                            <Chip
+                              label="Out of Stock"
+                              size="small"
+                              color="error"
+                              variant="filled"
+                              sx={{ fontSize: '0.65rem', height: 20 }}
+                            />
+                          )}
+                        </Box>
+                      </Box>
+                    </Paper>
                   ))}
-                </List>
+                </Box>
               </Box>
             )}
             
