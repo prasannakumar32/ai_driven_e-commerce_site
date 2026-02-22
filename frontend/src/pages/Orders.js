@@ -11,23 +11,13 @@ import {
   CircularProgress,
   Chip,
   Alert,
-  Breadcrumbs,
-  Link,
-  Divider,
-  IconButton,
-  Tooltip
+  IconButton
 } from '@mui/material';
 import {
   Receipt,
-  LocalShipping,
-  CheckCircle,
-  ArrowBack,
   Refresh,
   Visibility,
   Download,
-  Phone,
-  Email,
-  LocationOn,
   Home
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -37,7 +27,7 @@ import { generatePDFInvoice } from '../utils/invoiceGenerator';
 
 const Orders = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

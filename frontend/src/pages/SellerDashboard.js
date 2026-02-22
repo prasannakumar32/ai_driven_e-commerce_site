@@ -22,16 +22,12 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  List,
-  ListItem,
-  ListItemText,
   Avatar,
   LinearProgress,
   Tabs,
   Tab,
   Fab,
   useTheme,
-  Badge,
   MenuItem,
   FormControl,
   InputLabel,
@@ -47,10 +43,7 @@ import {
   AttachMoney,
   ShoppingCart,
   Star,
-  Image,
   Close,
-  Upload,
-  BusinessCenter,
   Analytics,
   Inventory,
   LocalShipping,
@@ -58,8 +51,6 @@ import {
   Pending,
   Cancel,
   Refresh,
-  FilterList,
-  Search,
   Category,
   LocalOffer,
   CloudUpload
@@ -70,7 +61,6 @@ import api from '../utils/api';
 
 const SellerDashboard = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, loading } = useAuth();
   const theme = useTheme();
   
   const [products, setProducts] = useState([]);

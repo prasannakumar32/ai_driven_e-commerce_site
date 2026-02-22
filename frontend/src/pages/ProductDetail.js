@@ -28,7 +28,6 @@ import {
   TrendingUp,
   Verified,
   FlashOn,
-  Star,
   ArrowBack,
   Add,
   Remove

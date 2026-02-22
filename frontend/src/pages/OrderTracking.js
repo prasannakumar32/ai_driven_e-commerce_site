@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Typography,
@@ -7,8 +7,6 @@ import {
   Stepper,
   Step,
   StepLabel,
-  Card,
-  CardContent,
   Grid,
   Button,
   Chip,
@@ -17,7 +15,6 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  Divider,
   Alert,
   Dialog,
   DialogTitle,
@@ -33,19 +30,15 @@ import {
 } from '@mui/material';
 import {
   LocalShipping,
-  LocalMall,
   CheckCircle,
   Truck,
   Package,
   Home,
-  Phone,
-  Email,
-  AccessTime,
   Refresh,
   Edit
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
-import api, { orderAPI } from '../utils/api';
+import { orderAPI } from '../utils/api';
 import DeliveryStatusUpdate from '../components/DeliveryStatusUpdate';
 
 const OrderTracking = () => {
@@ -63,6 +56,17 @@ const OrderTracking = () => {
     notes: ''
   });
 
+  const fetchOrderDetails = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await orderAPI.getOrder(orderId);
+      setOrder(response.data);
+    } catch (error) {
+      console.error('Error fetching order:', error);
+      setLoading(false);
+    }
+  }, [orderId]);
+
   useEffect(() => {
     fetchOrderDetails();
     // Get current user to check if admin
@@ -74,18 +78,7 @@ const OrderTracking = () => {
         console.error('Error parsing user data');
       }
     }
-  }, [orderId]);
-
-  const fetchOrderDetails = async () => {
-    try {
-      setLoading(true);
-      const response = await orderAPI.getOrder(orderId);
-      setOrder(response.data);
-    } catch (error) {
-      console.error('Error fetching order:', error);
-      setLoading(false);
-    }
-  };
+  }, [orderId, fetchOrderDetails]);
 
   const updateOrderStatus = async (statusData) => {
     try {
@@ -284,9 +277,7 @@ const OrderTracking = () => {
       </Paper>
 
       {/* Delivery Tracking */}
-      {order.status === 'shipped' && (
-      {/* Status Timeline */}
-      {order.statusTimeline && order.statusTimeline.length > 0 && (
+      {order.statusTimeline && order.statusTimeline.length > 0 && order.status === 'shipped' && (
         <Paper sx={{ p: 3, mb: 4 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography variant="h6">

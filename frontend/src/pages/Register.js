@@ -37,7 +37,6 @@ import { useAuth } from '../contexts/AuthContext';
 const Register = () => {
   const navigate = useNavigate();
   const { register, loading, error } = useAuth();
-  const theme = useTheme();
   
   const [formData, setFormData] = useState({
     username: '',

@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { debounce } from 'lodash';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Box,
@@ -21,10 +20,7 @@ import {
   CircularProgress,
   Drawer,
   useMediaQuery,
-  Breadcrumbs,
-  Link,
   Rating,
-  Tooltip,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -36,7 +32,6 @@ import {
   ShoppingCart,
   FavoriteBorder,
   FilterList,
-  Search,
   Close,
   ViewList,
   ViewModule,
@@ -62,12 +57,9 @@ const Products = () => {
 
   const [products, setProducts] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
-  const [relatedProducts, setRelatedProducts] = useState([]);
   const [aiSearchResults, setAiSearchResults] = useState([]);
   const [isAiSearch, setIsAiSearch] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [relatedLoading, setRelatedLoading] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -166,14 +158,6 @@ const Products = () => {
       setAvailablePriceRange([0, 100000]);
     }
   }, [products]);
-
-  const categories = [
-    'electronics', 'clothing', 'books', 'home', 'sports', 'beauty', 'toys'
-  ];
-
-  const brands = [
-    'Apple', 'Samsung', 'Nike', 'Adidas', 'Sony', 'LG', 'Microsoft', 'Dell'
-  ];
 
   const fetchProducts = useCallback(async () => {
     try {
