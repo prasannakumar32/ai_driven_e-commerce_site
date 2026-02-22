@@ -1063,66 +1063,6 @@ const Products = () => {
         </Box>
       )}
 
-      <TextField
-        fullWidth
-        label="Search Products"
-        value={inputSearch}
-        onChange={(e) => {
-          const value = e.target.value;
-          // Update local input immediately for continuous typing
-          setInputSearch(value);
-          setPage(1);
-
-          // Clear AI search state if active (user is performing a new query)
-          if (isAiSearch) {
-            setIsAiSearch(false);
-            setAiSearchResults([]);
-            setRelatedProducts([]);
-          }
-
-          // Clear related search cache for brand-new search
-          if (value.length === 0) {
-            Object.keys(localStorage).forEach(key => {
-              if (key.startsWith('related_')) {
-                localStorage.removeItem(key);
-              }
-            });
-          }
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            // push current input into canonical search and run immediate search
-            setSearch(inputSearch);
-            handleSearch();
-          }
-        }}
-        InputProps={{
-          startAdornment: <Search sx={{ mr: 1, color: '#2874F0' }} />,
-          endAdornment: searchLoading ? <CircularProgress size={20} /> : null
-        }}
-        sx={{ 
-          mb: 3,
-          '& .MuiOutlinedInput-root': {
-            borderRadius: 2,
-            backgroundColor: 'white',
-            '&:hover fieldset': {
-              borderColor: '#2874F0',
-            },
-            '&.Mui-focused fieldset': {
-              borderColor: '#2874F0',
-              borderWidth: 2,
-            },
-          },
-          '& .MuiInputLabel-root': {
-            color: '#666',
-            '&.Mui-focused': {
-              color: '#2874F0'
-            }
-          }
-        }}
-      />
-
       <FormControl fullWidth sx={{ mb: 3 }}>
         <InputLabel sx={{ color: '#666', '&.Mui-focused': { color: '#2874F0' } }}>Category</InputLabel>
         <Select
