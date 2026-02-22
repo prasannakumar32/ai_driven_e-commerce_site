@@ -47,12 +47,12 @@ const Home = () => {
   const [trendingProducts, setTrendingProducts] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [categories] = useState([
-    { name: 'Electronics', icon: <Devices />, color: '#2874F0', discount: 'Up to 50% off' },
-    { name: 'Fashion', icon: <Checkroom />, color: '#FF6B35', discount: 'Min 40% off' },
-    { name: 'Home & Kitchen', icon: <Kitchen />, color: '#4CAF50', discount: 'Under ₹999' },
-    { name: 'Sports', icon: <SportsSoccer />, color: '#9C27B0', discount: 'Buy 1 Get 1' },
-    { name: 'Beauty', icon: <Face />, color: '#E91E63', discount: 'Extra 20% off' },
-    { name: 'Books', icon: <MenuBook />, color: '#00BCD4', discount: 'Best Deals' }
+    { name: 'Electronics', dbName: 'electronics', icon: <Devices />, color: '#2874F0', discount: 'Up to 50% off' },
+    { name: 'Fashion', dbName: 'clothing', icon: <Checkroom />, color: '#FF6B35', discount: 'Min 40% off' },
+    { name: 'Home & Kitchen', dbName: 'home', icon: <Kitchen />, color: '#4CAF50', discount: 'Under ₹999' },
+    { name: 'Sports', dbName: 'sports', icon: <SportsSoccer />, color: '#9C27B0', discount: 'Buy 1 Get 1' },
+    { name: 'Beauty', dbName: 'beauty', icon: <Face />, color: '#E91E63', discount: 'Extra 20% off' },
+    { name: 'Books', dbName: 'books', icon: <MenuBook />, color: '#00BCD4', discount: 'Best Deals' }
   ]);
   
   const [loading, setLoading] = useState(true);
@@ -126,7 +126,7 @@ const Home = () => {
   };
 
   const handleCategoryClick = (category) => {
-    navigate(`/products?category=${category.toLowerCase()}`);
+    navigate(`/products?category=${category.dbName}`);
   };
 
   const ProductCard = ({ product, showRecommendationScore = false }) => (
