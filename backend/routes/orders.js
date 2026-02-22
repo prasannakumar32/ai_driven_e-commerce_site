@@ -107,7 +107,9 @@ router.post('/', auth, async (req, res) => {
       totalPrice: finalTotal,
       isPaid: paymentMethod !== 'COD',
       isDelivered: false,
-      status: paymentMethod === 'COD' ? 'pending' : 'processing'
+      status: paymentMethod === 'COD' ? 'pending' : 'processing',
+      // Set estimated delivery date automatically (3-5 days from now)
+      estimatedDeliveryDate: new Date(Date.now() + (4 * 24 * 60 * 60 * 1000)) // 4 days
     };
     
     // Ensure orderId exists before saving

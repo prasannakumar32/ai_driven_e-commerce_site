@@ -14,6 +14,7 @@ const updateDeliveredOrders = async () => {
   try {
     const now = new Date();
     
+    // Find orders with explicit estimatedDeliveryDate in the past
     const ordersToUpdate = await Order.find({
       estimatedDeliveryDate: { $lt: now },
       status: { $ne: 'delivered' },
@@ -21,8 +22,55 @@ const updateDeliveredOrders = async () => {
     });
 
     if (ordersToUpdate.length === 0) {
-      // Silently skip if no orders to update
-      return;
+      const cutoffDate = new Date(Date.now() - (2 * 24 * 60 * 60 * 1000));
+      
+      const oldOrders = await Order.find({
+        createdAt: { $lt: cutoffDate },
+        estimatedDeliveryDate: { $exists: false },
+        status: { $ne: 'delivered' },
+        isDelivered: false
+      });
+
+      if (oldOrders.length === 0) {
+        // Silently skip if no orders to update
+        return 0;
+      }
+
+      // Auto-mark old orders as delivered
+      let updatedCount = 0;
+      for (const order of oldOrders) {
+        if (order.status === 'cancelled') {
+          continue;
+        }
+
+        const previousStatus = order.status;
+        order.status = 'delivered';
+        order.isDelivered = true;
+        order.deliveredAt = new Date();
+        order.actualDeliveryDate = new Date();
+        // Set estimated delivery date to 4 days after creation
+        if (!order.estimatedDeliveryDate) {
+          order.estimatedDeliveryDate = new Date(order.createdAt.getTime() + (4 * 24 * 60 * 60 * 1000));
+        }
+
+        order.statusTimeline.push({
+          status: 'delivered',
+          timestamp: new Date(),
+          location: order.currentLocation || 'Delivery complete',
+          notes: 'Automatically marked as delivered - order age exceeded delivery window'
+        });
+
+        await order.save();
+        updatedCount++;
+
+        console.log(`✅ Order ${order.orderId} automatically updated: ${previousStatus} → delivered (auto-aged)`);
+      }
+
+      if (updatedCount > 0) {
+        console.log(`✅ Auto-updated ${updatedCount} order(s) to delivered status (age-based)`);
+      }
+
+      return updatedCount;
     }
 
     console.log(`📦 Checking ${ordersToUpdate.length} order(s) for automatic delivery status update...`);
@@ -64,6 +112,7 @@ const updateDeliveredOrders = async () => {
     return updatedCount;
   } catch (error) {
     console.error('❌ Error in automatic delivery status update:', error.message);
+    return 0;
   }
 };
 
