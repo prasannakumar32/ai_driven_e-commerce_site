@@ -60,9 +60,9 @@ const productImageMap = {
     ]
   },
   'Adidas Ultraboost 22': {
-    main: 'https://images.unsplash.com/photo-1588666872657-840-790ff3bde1c5?w=500&h=500&fit=crop',
+    main: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&h=500&fit=crop',
     thumbnails: [
-      'https://images.unsplash.com/photo-1588666872657-840-790ff3bde1c5?w=300&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&h=300&fit=crop',
       'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&h=300&fit=crop'
     ]
   },
@@ -200,7 +200,7 @@ const productImageMap = {
   
   // Additional Books
   'To Kill a Mockingbird': {
-    main: '://images.unsplash.com/phothttpso-1507842217343-583f20270319?w=500&h=500&fit=crop',
+    main: 'https://images.unsplash.com/photo-1507842217343-583f20270319?w=500&h=500&fit=crop',
     thumbnails: [
       'https://images.unsplash.com/photo-1507842217343-583f20270319?w=300&h=300&fit=crop',
       'https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?w=300&h=300&fit=crop'
