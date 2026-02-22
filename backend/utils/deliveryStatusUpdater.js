@@ -39,31 +39,48 @@ const updateDeliveredOrders = async () => {
       // Auto-mark old orders as delivered
       let updatedCount = 0;
       for (const order of oldOrders) {
-        if (order.status === 'cancelled') {
+        try {
+          if (order.status === 'cancelled') {
+            continue;
+          }
+
+          const previousStatus = order.status;
+          order.status = 'delivered';
+          order.isDelivered = true;
+          order.deliveredAt = new Date();
+          order.actualDeliveryDate = new Date();
+          
+          // Set estimated delivery date to 4 days after creation
+          if (!order.estimatedDeliveryDate) {
+            order.estimatedDeliveryDate = new Date(order.createdAt.getTime() + (4 * 24 * 60 * 60 * 1000));
+          }
+
+          // Ensure shipping address has all required fields
+          if (order.shippingAddress) {
+            order.shippingAddress.name = order.shippingAddress.name || 'Customer';
+            order.shippingAddress.phone = order.shippingAddress.phone || 'N/A';
+            order.shippingAddress.state = order.shippingAddress.state || 'N/A';
+            order.shippingAddress.address = order.shippingAddress.address || 'Address not provided';
+            order.shippingAddress.city = order.shippingAddress.city || 'N/A';
+            order.shippingAddress.postalCode = order.shippingAddress.postalCode || '000000';
+            order.shippingAddress.country = order.shippingAddress.country || 'India';
+          }
+
+          order.statusTimeline.push({
+            status: 'delivered',
+            timestamp: new Date(),
+            location: order.currentLocation || 'Delivery complete',
+            notes: 'Automatically marked as delivered - order age exceeded delivery window'
+          });
+
+          await order.save();
+          updatedCount++;
+
+          console.log(`✅ Order ${order.orderId} automatically updated: ${previousStatus} → delivered (auto-aged)`);
+        } catch (itemError) {
+          console.error(`⚠️  Failed to update order ${order.orderId}:`, itemError.message);
           continue;
         }
-
-        const previousStatus = order.status;
-        order.status = 'delivered';
-        order.isDelivered = true;
-        order.deliveredAt = new Date();
-        order.actualDeliveryDate = new Date();
-        // Set estimated delivery date to 4 days after creation
-        if (!order.estimatedDeliveryDate) {
-          order.estimatedDeliveryDate = new Date(order.createdAt.getTime() + (4 * 24 * 60 * 60 * 1000));
-        }
-
-        order.statusTimeline.push({
-          status: 'delivered',
-          timestamp: new Date(),
-          location: order.currentLocation || 'Delivery complete',
-          notes: 'Automatically marked as delivered - order age exceeded delivery window'
-        });
-
-        await order.save();
-        updatedCount++;
-
-        console.log(`✅ Order ${order.orderId} automatically updated: ${previousStatus} → delivered (auto-aged)`);
       }
 
       if (updatedCount > 0) {
@@ -78,31 +95,47 @@ const updateDeliveredOrders = async () => {
     let updatedCount = 0;
 
     for (const order of ordersToUpdate) {
-      // Skip cancelled orders
-      if (order.status === 'cancelled') {
+      try {
+        // Skip cancelled orders
+        if (order.status === 'cancelled') {
+          continue;
+        }
+
+        const previousStatus = order.status;
+
+        // Update status to delivered
+        order.status = 'delivered';
+        order.isDelivered = true;
+        order.deliveredAt = new Date();
+        order.actualDeliveryDate = new Date();
+
+        // Ensure shipping address has all required fields
+        if (order.shippingAddress) {
+          order.shippingAddress.name = order.shippingAddress.name || 'Customer';
+          order.shippingAddress.phone = order.shippingAddress.phone || 'N/A';
+          order.shippingAddress.state = order.shippingAddress.state || 'N/A';
+          order.shippingAddress.address = order.shippingAddress.address || 'Address not provided';
+          order.shippingAddress.city = order.shippingAddress.city || 'N/A';
+          order.shippingAddress.postalCode = order.shippingAddress.postalCode || '000000';
+          order.shippingAddress.country = order.shippingAddress.country || 'India';
+        }
+
+        // Add to status timeline
+        order.statusTimeline.push({
+          status: 'delivered',
+          timestamp: new Date(),
+          location: order.currentLocation || 'Delivery complete',
+          notes: 'Automatically marked as delivered - estimated delivery date reached'
+        });
+
+        await order.save();
+        updatedCount++;
+
+        console.log(`✅ Order ${order.orderId} automatically updated: ${previousStatus} → delivered`);
+      } catch (itemError) {
+        console.error(`⚠️  Failed to update order ${order.orderId}:`, itemError.message);
         continue;
       }
-
-      const previousStatus = order.status;
-
-      // Update status to delivered
-      order.status = 'delivered';
-      order.isDelivered = true;
-      order.deliveredAt = new Date();
-      order.actualDeliveryDate = new Date();
-
-      // Add to status timeline
-      order.statusTimeline.push({
-        status: 'delivered',
-        timestamp: new Date(),
-        location: order.currentLocation || 'Delivery complete',
-        notes: 'Automatically marked as delivered - estimated delivery date reached'
-      });
-
-      await order.save();
-      updatedCount++;
-
-      console.log(`✅ Order ${order.orderId} automatically updated: ${previousStatus} → delivered`);
     }
 
     if (updatedCount > 0) {
