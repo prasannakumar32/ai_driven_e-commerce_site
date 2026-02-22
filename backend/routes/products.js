@@ -333,7 +333,7 @@ router.post('/search', async (req, res) => {
 });
 
 // Add review to product
-router.post('/:id/reviews', async (req, res) => {
+router.post('/:id/reviews', auth, async (req, res) => {
   try {
     const { rating, comment } = req.body;
     const userId = req.user?.id;
