@@ -41,10 +41,12 @@ import {
   Phone,
   Email,
   AccessTime,
-  Refresh
+  Refresh,
+  Edit
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import api, { orderAPI } from '../utils/api';
+import DeliveryStatusUpdate from '../components/DeliveryStatusUpdate';
 
 const OrderTracking = () => {
   const { orderId } = useParams();
@@ -52,6 +54,8 @@ const OrderTracking = () => {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [trackingDialog, setTrackingDialog] = useState(false);
+  const [showStatusUpdate, setShowStatusUpdate] = useState(false);
+  const [user, setUser] = useState(null);
   const [deliveryUpdate, setDeliveryUpdate] = useState({
     status: '',
     location: '',
@@ -61,6 +65,15 @@ const OrderTracking = () => {
 
   useEffect(() => {
     fetchOrderDetails();
+    // Get current user to check if admin
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        setUser(JSON.parse(userData));
+      } catch (e) {
+        console.error('Error parsing user data');
+      }
+    }
   }, [orderId]);
 
   const fetchOrderDetails = async () => {
@@ -272,6 +285,142 @@ const OrderTracking = () => {
 
       {/* Delivery Tracking */}
       {order.status === 'shipped' && (
+      {/* Status Timeline */}
+      {order.statusTimeline && order.statusTimeline.length > 0 && (
+        <Paper sx={{ p: 3, mb: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6">
+              📦 Delivery Timeline
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <IconButton onClick={() => fetchOrderDetails()} color="primary" size="small">
+                <Refresh />
+              </IconButton>
+              {user?.isAdmin && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<Edit />}
+                  onClick={() => setShowStatusUpdate(true)}
+                  color="primary"
+                >
+                  Update Status
+                </Button>
+              )}
+            </Box>
+          </Box>
+
+          <Timeline sx={{ m: 0 }}>
+            {order.statusTimeline.map((item, index) => {
+              const isLast = index === order.statusTimeline.length - 1;
+              const statusColorMap = {
+                'pending': 'warning',
+                'processing': 'info',
+                'shipped': 'primary',
+                'in-transit': 'primary',
+                'out-for-delivery': 'info',
+                'delivered': 'success',
+                'cancelled': 'error'
+              };
+
+              const statusIconMap = {
+                'pending': <Package />,
+                'processing': <Package />,
+                'shipped': <LocalShipping />,
+                'in-transit': <Truck />,
+                'out-for-delivery': <Truck />,
+                'delivered': <Home />,
+                'cancelled': <CheckCircle />
+              };
+
+              return (
+                <TimelineItem key={index}>
+                  <TimelineSeparator>
+                    <TimelineDot 
+                      sx={{ 
+                        bgcolor: isLast ? (statusColorMap[item.status] === 'warning' ? 'warning.main' : 
+                                        statusColorMap[item.status] === 'info' ? 'info.main' :
+                                        statusColorMap[item.status] === 'primary' ? 'primary.main' :
+                                        statusColorMap[item.status] === 'success' ? 'success.main' : 'error.main')
+                                      : 'grey.400'
+                      }}
+                    >
+                      {statusIconMap[item.status]}
+                    </TimelineDot>
+                    {!isLast && <Box sx={{ height: '60px', bgcolor: 'grey.200' }} />}
+                  </TimelineSeparator>
+                  <TimelineContent sx={{ pb: 4 }}>
+                    <Box sx={{ 
+                      p: 2, 
+                      bgcolor: isLast ? '#e3f2fd' : '#f5f5f5',
+                      borderRadius: 1,
+                      border: isLast ? '2px solid #1976d2' : '1px solid #e0e0e0'
+                    }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="h6" sx={{ textTransform: 'capitalize', fontWeight: 'bold' }}>
+                          {item.status.replace('-', ' ')}
+                        </Typography>
+                        <Chip 
+                          label={new Date(item.timestamp).toLocaleDateString()} 
+                          size="small"
+                          variant="outlined"
+                        />
+                      </Box>
+                      
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        {new Date(item.timestamp).toLocaleString('en-IN', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </Typography>
+
+                      {item.location && (
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>Location:</strong> {item.location}
+                        </Typography>
+                      )}
+
+                      {item.notes && (
+                        <Typography variant="body2">
+                          <strong>Notes:</strong> {item.notes}
+                        </Typography>
+                      )}
+                    </Box>
+                  </TimelineContent>
+                </TimelineItem>
+              );
+            })}
+          </Timeline>
+
+          {/* Current Status Summary */}
+          <Box sx={{ mt: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+            <Typography variant="body2" color="text.secondary">
+              <strong>Current Status:</strong> {order.status.replace('-', ' ').toUpperCase()}
+            </Typography>
+            {order.trackingNumber && (
+              <Typography variant="body2" color="text.secondary">
+                <strong>Tracking Number:</strong> {order.trackingNumber}
+              </Typography>
+            )}
+            {order.currentLocation && (
+              <Typography variant="body2" color="text.secondary">
+                <strong>Current Location:</strong> {order.currentLocation}
+              </Typography>
+            )}
+            {order.estimatedDeliveryDate && (
+              <Typography variant="body2" color="text.secondary">
+                <strong>Estimated Delivery:</strong> {new Date(order.estimatedDeliveryDate).toLocaleDateString('en-IN')}
+              </Typography>
+            )}
+          </Box>
+        </Paper>
+      )}
+
+      {/* Delivery Update Form - for admin */}
+      {order && (
         <Paper sx={{ p: 3, mb: 4 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">
@@ -455,6 +604,19 @@ const OrderTracking = () => {
           </Grid>
         </DialogContent>
       </Dialog>
+
+      {/* Delivery Status Update Dialog (for admins) */}
+      {order && (
+        <DeliveryStatusUpdate
+          open={showStatusUpdate}
+          onClose={() => setShowStatusUpdate(false)}
+          order={order}
+          onSuccess={() => {
+            setShowStatusUpdate(false);
+            fetchOrderDetails();
+          }}
+        />
+      )}
     </Container>
   );
 };

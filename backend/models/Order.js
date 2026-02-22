@@ -116,8 +116,47 @@ const orderSchema = new mongoose.Schema({
   status: {
     type: String,
     required: true,
-    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+    enum: ['pending', 'processing', 'shipped', 'in-transit', 'out-for-delivery', 'delivered', 'cancelled'],
     default: 'pending'
+  },
+  // Timeline tracking for delivery status
+  statusTimeline: [{
+    status: {
+      type: String,
+      enum: ['pending', 'processing', 'shipped', 'in-transit', 'out-for-delivery', 'delivered', 'cancelled'],
+      required: true
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now
+    },
+    location: {
+      type: String,
+      default: ''
+    },
+    notes: {
+      type: String,
+      default: ''
+    }
+  }],
+  // Delivery tracking
+  trackingNumber: {
+    type: String,
+    default: ''
+  },
+  currentLocation: {
+    type: String,
+    default: ''
+  },
+  estimatedDeliveryDate: {
+    type: Date
+  },
+  actualDeliveryDate: {
+    type: Date
+  },
+  carrier: {
+    type: String,
+    default: ''
   },
   aiRecommendations: [{
     product: {
@@ -131,7 +170,7 @@ const orderSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Pre-save hook to generate order ID
+// Pre-save hook to generate order ID and initialize status timeline
 orderSchema.pre('save', async function(next) {
   try {
     if (!this.orderId) {
@@ -146,6 +185,21 @@ orderSchema.pre('save', async function(next) {
       
       this.orderId = `PKS_${currentYear}_${timestamp}_${randomSuffix}`;
     }
+
+    // Initialize status timeline on first save
+    if (!this.statusTimeline || this.statusTimeline.length === 0) {
+      this.statusTimeline = [{
+        status: 'pending',
+        timestamp: new Date(),
+        notes: 'Order created'
+      }];
+    }
+
+    // Generate tracking number if not present
+    if (!this.trackingNumber && this.orderId) {
+      this.trackingNumber = `TRK_${this.orderId}`;
+    }
+
     next();
   } catch (error) {
     next(error);

@@ -63,6 +63,14 @@ mongoose.connect(mongoURI, mongoOptions)
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'MongoDB Atlas connection error:'));
 
+// Automatic delivery status updater
+const { startDeliveryStatusScheduler } = require('./utils/deliveryStatusUpdater');
+
+// Start the scheduler when MongoDB is connected
+mongoose.connection.on('connected', () => {
+  startDeliveryStatusScheduler(10 * 60 * 1000); // Check every 10 minutes
+});
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));

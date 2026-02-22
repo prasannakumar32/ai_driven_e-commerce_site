@@ -238,13 +238,17 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
-// Update order status (admin only)
+// Update order status (admin only) - with timeline tracking
 router.put('/:id/status', auth, async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, location, notes, estimatedDeliveryDate, carrier, trackingNumber } = req.body;
     
     if (!req.user?.isAdmin) {
       return res.status(401).json({ message: 'Admin access required' });
+    }
+
+    if (!status) {
+      return res.status(400).json({ message: 'Status is required' });
     }
 
     const order = await Order.findById(req.params.id);
@@ -253,14 +257,54 @@ router.put('/:id/status', auth, async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
+    // Update status
+    const previousStatus = order.status;
     order.status = status;
 
+    // Add to status timeline
+    order.statusTimeline.push({
+      status: status,
+      timestamp: new Date(),
+      location: location || order.currentLocation || '',
+      notes: notes || ''
+    });
+
+    // Update location if provided
+    if (location) {
+      order.currentLocation = location;
+    }
+
+    // Update tracking information if provided
+    if (trackingNumber) {
+      order.trackingNumber = trackingNumber;
+    }
+
+    if (carrier) {
+      order.carrier = carrier;
+    }
+
+    if (estimatedDeliveryDate) {
+      order.estimatedDeliveryDate = new Date(estimatedDeliveryDate);
+    }
+
+    // Handle delivered status
     if (status === 'delivered') {
       order.isDelivered = true;
-      order.deliveredAt = Date.now();
+      order.deliveredAt = new Date();
+      order.actualDeliveryDate = new Date();
+    }
+
+    // Handle cancelled status
+    if (status === 'cancelled') {
+      // Don't override delivery status if already delivered
+      if (!order.isDelivered) {
+        order.status = 'cancelled';
+      }
     }
 
     const updatedOrder = await order.save();
+    
+    console.log(`✅ Order status updated: ${previousStatus} → ${status}`);
     res.json(updatedOrder);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -439,6 +483,27 @@ router.get('/stats/overview', auth, async (req, res) => {
     res.json(stats[0] || {});
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+});
+
+// Manual trigger to update delivery status for orders past their estimated delivery date
+router.post('/admin/update-delivery-status', auth, async (req, res) => {
+  try {
+    // Check admin access
+    if (!req.user?.isAdmin) {
+      return res.status(401).json({ message: 'Admin access required' });
+    }
+
+    const { updateDeliveredOrders } = require('../utils/deliveryStatusUpdater');
+    const updatedCount = await updateDeliveredOrders();
+
+    res.json({ 
+      message: `Successfully updated ${updatedCount || 0} order(s) to delivered status`,
+      ordersUpdated: updatedCount || 0
+    });
+  } catch (error) {
+    console.error('❌ Error updating delivery status:', error);
+    res.status(500).json({ message: error.message || 'Failed to update delivery status' });
   }
 });
 
