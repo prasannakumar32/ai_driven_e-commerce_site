@@ -367,7 +367,7 @@ const Home = () => {
                     borderColor: category.color
                   }
                 }}
-                onClick={() => handleCategoryClick(category.name)}
+                onClick={() => handleCategoryClick(category)}
               >
                 <CardContent sx={{ py: 2 }}>
                   <Box sx={{ 
