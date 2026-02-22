@@ -57,9 +57,12 @@ const Products = () => {
 
   const [products, setProducts] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
+  const [relatedProducts, setRelatedProducts] = useState([]);
   const [aiSearchResults, setAiSearchResults] = useState([]);
   const [isAiSearch, setIsAiSearch] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [relatedLoading, setRelatedLoading] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(false);
