@@ -14,48 +14,69 @@ const updateDeliveredOrders = async () => {
   try {
     const now = new Date();
     
-    // Find orders with explicit estimatedDeliveryDate in the past
-    const ordersToUpdate = await Order.find({
-      estimatedDeliveryDate: { $lt: now },
-      status: { $ne: 'delivered' },
+    // Find all active orders that haven't been delivered or cancelled
+    const activeOrders = await Order.find({
+      status: { $nin: ['delivered', 'cancelled'] },
       isDelivered: false
     });
 
-    if (ordersToUpdate.length === 0) {
-      const cutoffDate = new Date(Date.now() - (2 * 24 * 60 * 60 * 1000));
-      
-      const oldOrders = await Order.find({
-        createdAt: { $lt: cutoffDate },
-        estimatedDeliveryDate: { $exists: false },
-        status: { $ne: 'delivered' },
-        isDelivered: false
-      });
+    if (activeOrders.length === 0) {
+      return 0;
+    }
 
-      if (oldOrders.length === 0) {
-        // Silently skip if no orders to update
-        return 0;
-      }
+    console.log(`📦 Checking ${activeOrders.length} order(s) for smooth delivery status updates...`);
 
-      // Auto-mark old orders as delivered
-      let updatedCount = 0;
-      for (const order of oldOrders) {
-        try {
-          if (order.status === 'cancelled') {
-            continue;
-          }
+    let updatedCount = 0;
 
-          const previousStatus = order.status;
-          order.status = 'delivered';
-          order.isDelivered = true;
-          order.deliveredAt = new Date();
-          order.actualDeliveryDate = new Date();
+    for (const order of activeOrders) {
+      try {
+        const created = order.createdAt.getTime();
+        // Default to 4 days if no estimated date
+        const estimated = order.estimatedDeliveryDate 
+          ? order.estimatedDeliveryDate.getTime() 
+          : created + (4 * 24 * 60 * 60 * 1000);
           
-          // Set estimated delivery date to 4 days after creation
-          if (!order.estimatedDeliveryDate) {
-            order.estimatedDeliveryDate = new Date(order.createdAt.getTime() + (4 * 24 * 60 * 60 * 1000));
+        const totalDuration = estimated - created;
+        const elapsed = now.getTime() - created;
+        const progress = Math.max(0, elapsed / totalDuration); // 0.0 to 1.0+
+
+        const previousStatus = order.status;
+        let newStatus = previousStatus;
+        let newLocation = order.currentLocation;
+        let newNotes = '';
+        let shouldUpdate = false;
+
+        // Determine correct status based on time progress
+        if (progress >= 1.0 && previousStatus !== 'delivered') {
+          newStatus = 'delivered';
+          newLocation = order.shippingAddress?.city || 'Destination';
+          newNotes = 'Package delivered successfully';
+        } else if (progress >= 0.8 && !['delivered', 'out-for-delivery'].includes(previousStatus)) {
+          newStatus = 'out-for-delivery';
+          newLocation = `Local Facility, ${order.shippingAddress?.city || 'Destination'}`;
+          newNotes = 'Package is out for delivery';
+        } else if (progress >= 0.5 && !['delivered', 'out-for-delivery', 'in-transit'].includes(previousStatus)) {
+          newStatus = 'in-transit';
+          newLocation = 'Regional Transit Hub';
+          newNotes = 'Package is in transit to destination';
+        } else if (progress >= 0.2 && !['delivered', 'out-for-delivery', 'in-transit', 'shipped'].includes(previousStatus)) {
+          newStatus = 'shipped';
+          newLocation = 'Origin Facility';
+          newNotes = 'Package has left the origin facility';
+        }
+
+        // Only update if status actually transitions forward
+        if (newStatus !== previousStatus) {
+          order.status = newStatus;
+          order.currentLocation = newLocation;
+          
+          if (newStatus === 'delivered') {
+            order.isDelivered = true;
+            order.deliveredAt = new Date();
+            order.actualDeliveryDate = new Date();
           }
 
-          // Ensure shipping address has all required fields
+          // Ensure shipping address has required fields
           if (order.shippingAddress) {
             order.shippingAddress.name = order.shippingAddress.name || 'Customer';
             order.shippingAddress.phone = order.shippingAddress.phone || 'N/A';
@@ -66,72 +87,18 @@ const updateDeliveredOrders = async () => {
             order.shippingAddress.country = order.shippingAddress.country || 'India';
           }
 
+          // Add to status timeline
           order.statusTimeline.push({
-            status: 'delivered',
+            status: newStatus,
             timestamp: new Date(),
-            location: order.currentLocation || 'Delivery complete',
-            notes: 'Automatically marked as delivered - order age exceeded delivery window'
+            location: newLocation,
+            notes: newNotes || `Automatically updated status to ${newStatus}`
           });
 
           await order.save();
           updatedCount++;
-
-          console.log(`✅ Order ${order.orderId} automatically updated: ${previousStatus} → delivered (auto-aged)`);
-        } catch (itemError) {
-          console.error(`⚠️  Failed to update order ${order.orderId}:`, itemError.message);
-          continue;
+          console.log(`✅ Order ${order.orderId} progressed: ${previousStatus} → ${newStatus} (${Math.round(progress * 100)}% time elapsed)`);
         }
-      }
-
-      if (updatedCount > 0) {
-        console.log(`✅ Auto-updated ${updatedCount} order(s) to delivered status (age-based)`);
-      }
-
-      return updatedCount;
-    }
-
-    console.log(`📦 Checking ${ordersToUpdate.length} order(s) for automatic delivery status update...`);
-
-    let updatedCount = 0;
-
-    for (const order of ordersToUpdate) {
-      try {
-        // Skip cancelled orders
-        if (order.status === 'cancelled') {
-          continue;
-        }
-
-        const previousStatus = order.status;
-
-        // Update status to delivered
-        order.status = 'delivered';
-        order.isDelivered = true;
-        order.deliveredAt = new Date();
-        order.actualDeliveryDate = new Date();
-
-        // Ensure shipping address has all required fields
-        if (order.shippingAddress) {
-          order.shippingAddress.name = order.shippingAddress.name || 'Customer';
-          order.shippingAddress.phone = order.shippingAddress.phone || 'N/A';
-          order.shippingAddress.state = order.shippingAddress.state || 'N/A';
-          order.shippingAddress.address = order.shippingAddress.address || 'Address not provided';
-          order.shippingAddress.city = order.shippingAddress.city || 'N/A';
-          order.shippingAddress.postalCode = order.shippingAddress.postalCode || '000000';
-          order.shippingAddress.country = order.shippingAddress.country || 'India';
-        }
-
-        // Add to status timeline
-        order.statusTimeline.push({
-          status: 'delivered',
-          timestamp: new Date(),
-          location: order.currentLocation || 'Delivery complete',
-          notes: 'Automatically marked as delivered - estimated delivery date reached'
-        });
-
-        await order.save();
-        updatedCount++;
-
-        console.log(`✅ Order ${order.orderId} automatically updated: ${previousStatus} → delivered`);
       } catch (itemError) {
         console.error(`⚠️  Failed to update order ${order.orderId}:`, itemError.message);
         continue;
@@ -139,12 +106,12 @@ const updateDeliveredOrders = async () => {
     }
 
     if (updatedCount > 0) {
-      console.log(`✅ Auto-updated ${updatedCount} order(s) to delivered status`);
+      console.log(`✅ Smooth delivery process updated ${updatedCount} order(s)`);
     }
 
     return updatedCount;
   } catch (error) {
-    console.error('❌ Error in automatic delivery status update:', error.message);
+    console.error('❌ Error in smooth delivery status update:', error.message);
     return 0;
   }
 };

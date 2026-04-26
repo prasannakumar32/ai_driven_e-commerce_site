@@ -109,13 +109,7 @@ const SellerDashboard = () => {
       setProducts(response.data);
     } catch (error) {
       console.error('Error fetching products:', error);
-      if (error.response?.status === 403) {
-        setError('Access denied. Only sellers can view products.');
-      } else if (error.response?.status === 401) {
-        setError('Please login to continue.');
-      } else {
-        setError('Failed to fetch products. Please try again.');
-      }
+      setError(error.friendlyMessage || 'Failed to fetch products. Please try again.');
     } finally {
       setProductsLoading(false);
     }
@@ -129,47 +123,7 @@ const SellerDashboard = () => {
       setOrders(response.data);
     } catch (error) {
       console.error('Error fetching orders:', error);
-      if (error.response?.status === 403) {
-        setError('Access denied. Only sellers can view orders.');
-      } else if (error.response?.status === 401) {
-        setError('Please login to continue.');
-      } else {
-        setError('Failed to fetch orders. Please try again.');
-        // Add mock data for demonstration
-        setOrders([
-          {
-            _id: 'order1',
-            customer: { name: 'John Doe', email: 'john@example.com' },
-            items: [
-              { quantity: 2, product: { name: 'iPhone 15 Pro' } },
-              { quantity: 1, product: { name: 'AirPods Pro' } }
-            ],
-            total: 159999,
-            status: 'pending',
-            createdAt: new Date().toISOString()
-          },
-          {
-            _id: 'order2',
-            customer: { name: 'Jane Smith', email: 'jane@example.com' },
-            items: [
-              { quantity: 1, product: { name: 'Samsung Galaxy S24' } }
-            ],
-            total: 95999,
-            status: 'processing',
-            createdAt: new Date(Date.now() - 86400000).toISOString()
-          },
-          {
-            _id: 'order3',
-            customer: { name: 'Mike Johnson', email: 'mike@example.com' },
-            items: [
-              { quantity: 3, product: { name: 'Nike Air Max 270' } }
-            ],
-            total: 29997,
-            status: 'delivered',
-            createdAt: new Date(Date.now() - 172800000).toISOString()
-          }
-        ]);
-      }
+      setError(error.friendlyMessage || 'Failed to fetch orders. Please try again.');
     } finally {
       setOrdersLoading(false);
     }
@@ -257,20 +211,7 @@ const SellerDashboard = () => {
       
     } catch (error) {
       console.error('Error saving product:', error);
-      let errorMessage = 'Failed to save product';
-      
-      if (error.response) {
-        // Server responded with error
-        errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
-      } else if (error.request) {
-        // Network error
-        errorMessage = 'Network error. Please check your connection.';
-      } else {
-        // Other error
-        errorMessage = error.message || 'An unexpected error occurred';
-      }
-      
-      setError(errorMessage);
+      setError(error.friendlyMessage || 'Failed to save product. Please try again.');
     }
   };
 

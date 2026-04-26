@@ -18,10 +18,8 @@ services:
     startCommand: npm start
     
     # Health Check: Used by Render to monitor service health
-    # Add this endpoint to backend/server.js:
-    # app.get('/health', (req, res) => res.json({ status: 'ok' }));
-    healthCheckPath: /health
-    healthCheckTimeout: 5
+    healthCheckPath: /api/health
+    healthCheckTimeout: 10
     
     # Environment Variables
     envVars:

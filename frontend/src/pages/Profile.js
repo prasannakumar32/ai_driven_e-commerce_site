@@ -179,35 +179,7 @@ const Profile = () => {
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
       console.error('Order action failed:', error);
-      
-      // Provide more detailed error messages
-      let errorMessage = 'Failed to process order action';
-      
-      if (error.response) {
-        // Server responded with error status
-        if (error.response.status === 401) {
-          errorMessage = 'You are not authorized to perform this action';
-        } else if (error.response.status === 400) {
-          errorMessage = error.response.data?.message || 'Invalid request';
-        } else if (error.response.status === 404) {
-          errorMessage = 'Order not found';
-        } else if (error.response.status === 500) {
-          errorMessage = 'Server error occurred. Please try again later.';
-          if (error.response.data?.debug) {
-            console.log('Debug info:', error.response.data.debug);
-          }
-        } else {
-          errorMessage = error.response.data?.message || `Error ${error.response.status}`;
-        }
-      } else if (error.request) {
-        // Request was made but no response received
-        errorMessage = 'Network error. Please check your connection.';
-      } else {
-        // Something else happened
-        errorMessage = error.message || 'An unexpected error occurred';
-      }
-      
-      setError(errorMessage);
+      setError(error.friendlyMessage || 'Failed to process order action. Please try again.');
     }
   };
 
@@ -292,13 +264,8 @@ const Profile = () => {
       // Increment resetKey to trigger form reset in AccountSettingsTab
       setResetKey(prev => prev + 1);
     } catch (error) {
-      console.error('Profile update error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        config: error.config
-      });
-      setError(error.response?.data?.message || error.message || 'Failed to update profile');
+      console.error('Profile update error:', error.message);
+      setError(error.friendlyMessage || 'Failed to update profile. Please try again.');
     }
   };
 
@@ -335,13 +302,8 @@ const Profile = () => {
       fetchAddresses();
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
-      console.error('Address error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        config: error.config
-      });
-      setError(error.response?.data?.message || error.message || 'Failed to save address');
+      console.error('Address error:', error.message);
+      setError(error.friendlyMessage || 'Failed to save address. Please try again.');
     }
   };
 

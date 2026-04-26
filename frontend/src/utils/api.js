@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getFriendlyError } from './errorHandler';
 
 // Determine API URL based on environment
 const getAPIURL = () => {
@@ -49,14 +50,23 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle errors
+// Response interceptor to handle errors globally
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Attach a human-readable message to every error so pages don't need
+    // to inspect status codes themselves — just use error.friendlyMessage
+    error.friendlyMessage = getFriendlyError(error);
+
+    // Auto-redirect on 401 only for protected routes (not public fetches)
+    const isPublicEndpoint = ['/products', '/ai/'].some(p =>
+      error.config?.url?.startsWith(p)
+    );
+    if (error.response?.status === 401 && !isPublicEndpoint) {
       localStorage.removeItem('token');
       window.location.href = '/login';
     }
+
     return Promise.reject(error);
   }
 );

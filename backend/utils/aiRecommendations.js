@@ -304,7 +304,7 @@ const calculateBrandRelationships = (searchQuery, productBrand) => {
   return relationshipScore;
 };
 
-// Get similar products using AI analysis
+// Get similar products using AI analysis and suggest proper related items
 const getSimilarProducts = async (product, userId) => {
   // Validate input product
   if (!product || !product._id) {
@@ -312,26 +312,68 @@ const getSimilarProducts = async (product, userId) => {
     return [];
   }
 
+  // Determine complementary categories based on the product's category
+  const complementaryMapping = {
+    'phone': ['case', 'charger', 'earbuds', 'screen protector', 'power bank'],
+    'smartphone': ['case', 'charger', 'earbuds', 'screen protector', 'power bank'],
+    'laptop': ['mouse', 'keyboard', 'bag', 'monitor', 'stand'],
+    'computer': ['mouse', 'keyboard', 'monitor', 'webcam'],
+    'tv': ['soundbar', 'speaker', 'mount', 'cable'],
+    'television': ['soundbar', 'speaker', 'mount', 'cable'],
+    'camera': ['lens', 'tripod', 'memory card', 'bag']
+  };
+
+  const productCategoryLower = (product.category || '').toLowerCase();
+  const complementaryCategories = [];
+  
+  for (const [mainCat, accessories] of Object.entries(complementaryMapping)) {
+    if (productCategoryLower.includes(mainCat)) {
+      complementaryCategories.push(...accessories);
+    }
+  }
+
+  const queryOr = [
+    { category: product.category },
+    { brand: product.brand },
+    { tags: { $in: (product.tags || []) } }
+  ];
+
+  // Include complementary items in the query
+  if (complementaryCategories.length > 0) {
+    queryOr.push({
+      category: { $regex: complementaryCategories.join('|'), $options: 'i' }
+    });
+    queryOr.push({
+      tags: { $in: complementaryCategories }
+    });
+  }
+
   const query = {
     _id: { $ne: product._id },
-    $or: [
-      { category: product.category },
-      { brand: product.brand },
-      { tags: { $in: (product.tags || []) } }
-    ]
+    $or: queryOr
   };
 
   try {
     const similarProducts = await Product.find(query)
       .sort({ rating: -1, popularity: -1 })
-      .limit(10)
+      .limit(15) // fetch a bit more to mix similar and complementary
       .maxTimeMS(2000);
 
-    // Apply AI scoring with null checks
+    // Apply AI scoring with null checks and boost complementary items
     const scoredProducts = similarProducts.map(p => {
       let score = 0;
+      const pCategoryLower = (p.category || '').toLowerCase();
       
-      // Category match with null checks
+      // Is it a complementary accessory?
+      const isComplementary = complementaryCategories.some(cat => 
+        pCategoryLower.includes(cat) || (p.tags && p.tags.includes(cat))
+      );
+      
+      if (isComplementary) {
+        score += 0.5; // High boost for proper related accessories
+      }
+      
+      // Category match with null checks (for similar items)
       if (p.category && product.category && p.category === product.category) {
         score += 0.4;
       }
@@ -347,8 +389,8 @@ const getSimilarProducts = async (product, userId) => {
       const commonTags = pTags.filter(tag => productTags.includes(tag));
       score += commonTags.length * 0.1;
       
-      // Price similarity with null checks
-      if (product.price > 0 && p.price > 0) {
+      // Price similarity with null checks (for similar items)
+      if (!isComplementary && product.price > 0 && p.price > 0) {
         const priceDiff = Math.abs(p.price - product.price) / product.price;
         if (priceDiff < 0.2) score += 0.2;
       }
@@ -367,6 +409,7 @@ const getSimilarProducts = async (product, userId) => {
     return [];
   }
 };
+
 
 // Get personalized recommendations for user
 const getPersonalizedRecommendations = async (userId) => {
@@ -563,42 +606,100 @@ const getTrendingProducts = async () => {
     .limit(10);
 };
 
-// AI Chatbot responses
+// AI Chatbot responses with Google GenAI Integration
+let GoogleGenAI;
+try {
+  GoogleGenAI = require('@google/genai').GoogleGenAI;
+} catch (e) {
+  console.log('google/genai not available, will fallback to standard intent detection');
+}
+
 const getChatbotResponse = async (message, userId = null, context = {}) => {
   try {
-    const doc = compromise(message.toLowerCase());
-    const tokens = tokenizer.tokenize(message.toLowerCase());
-    
     // Detect user intent
-    const intent = detectIntent(message);
-    
+    let intent = 'general';
+    let searchTerms = '';
     let response = {
       message: '',
       suggestions: [],
       products: []
     };
+    
+    if (GoogleGenAI && process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY') {
+      try {
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        const prompt = `You are a helpful AI shopping assistant for an e-ecommerce store. 
+User message: "${message}"
+
+Your task is to:
+1. Determine the user's intent from the following list: 'search', 'recommendation', 'help', 'order_status', 'price_inquiry', 'category_browse', 'general'.
+2. If the user is searching for a product, extract the exact search terms (for example, if they say 'show me red shirts', the search terms are 'red shirts').
+3. Write a friendly, conversational message to answer them.
+4. Suggest 2-3 short follow-up suggestions for them.
+
+Respond ONLY with valid JSON strictly matching this schema:
+{
+  "intent": "search",
+  "searchTerms": "extracted item name",
+  "message": "Friendly response",
+  "suggestions": ["Suggestion 1", "Suggestion 2"]
+}`;
+        const genResponse = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+            }
+        });
+        const resultJson = JSON.parse(genResponse.text);
+        intent = resultJson.intent || 'general';
+        searchTerms = resultJson.searchTerms || '';
+        response.message = resultJson.message || '';
+        response.suggestions = resultJson.suggestions || [];
+      } catch (genError) {
+        console.error('Error using Google GenAI:', genError);
+        intent = detectIntent(message);
+      }
+    } else {
+      intent = detectIntent(message);
+    }
+    
+    let actionResponse = null;
 
     switch (intent) {
       case 'search':
-        response = await handleProductSearch(message, userId);
+        actionResponse = await handleProductSearch(searchTerms || message, userId);
+        response.products = actionResponse ? actionResponse.products : [];
         break;
       case 'recommendation':
-        response = await handleRecommendation(userId);
+        actionResponse = await handleRecommendation(userId);
+        response.products = actionResponse ? actionResponse.products : [];
         break;
       case 'help':
-        response = handleHelp();
+        actionResponse = handleHelp();
         break;
       case 'order_status':
-        response = await handleOrderStatus(userId);
+        actionResponse = await handleOrderStatus(userId);
+        response.products = actionResponse ? actionResponse.products : [];
         break;
       case 'price_inquiry':
-        response = await handlePriceInquiry(message);
+        actionResponse = await handlePriceInquiry(message);
+        response.products = actionResponse ? actionResponse.products : [];
         break;
       case 'category_browse':
-        response = await handleCategoryBrowse(message);
+        actionResponse = await handleCategoryBrowse(searchTerms || message);
+        response.products = actionResponse ? actionResponse.products : [];
         break;
       default:
-        response = handleGeneralQuery(message);
+        actionResponse = handleGeneralQuery(message);
+    }
+    
+    // If Gemini didn't generate a message/suggestions, use standard ones
+    if (!response.message && actionResponse && actionResponse.message) {
+      response.message = actionResponse.message;
+    }
+    if (response.suggestions.length === 0 && actionResponse && actionResponse.suggestions) {
+      response.suggestions = actionResponse.suggestions;
     }
 
     // Add follow-up suggestions if not already provided

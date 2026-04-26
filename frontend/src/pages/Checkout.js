@@ -260,25 +260,9 @@ const Checkout = () => {
       setLoading(false);
     } catch (err) {
       console.error('COD checkout failed', err);
-      console.error('Error response:', err.response?.data);
       setLoading(false);
-      
-      // Handle different error types
-      if (err.response?.status === 500) {
-        const errorMsg = err.response?.data?.message || 'Server error occurred';
-        alert(`Server error: ${errorMsg}. Please try again in a few minutes.`);
-      } else if (err.response?.status === 400) {
-        const errorMessage = err.response?.data?.message || 'Invalid order data';
-        alert(`Order failed: ${errorMessage}. Please check your order details and try again.`);
-      } else if (err.response?.status === 401) {
-        alert('Please log in to place an order.');
-        navigate('/login');
-      } else if (err.code === 'ERR_NETWORK') {
-        alert('Network error. Please check your internet connection and try again.');
-      } else {
-        const errorMessage = err.response?.data?.message || err.message;
-        alert(`Order placement failed: ${errorMessage}. Please try again.`);
-      }
+      alert(err.friendlyMessage || 'Failed to place order. Please try again.');
+      if (err.response?.status === 401) navigate('/login');
     }
   };
 
@@ -369,8 +353,7 @@ const Checkout = () => {
       setLoading(false);
     } catch (err) {
       console.error('❌ Stripe checkout failed', err);
-      const errorMessage = err.response?.data?.message || err.message;
-      alert(`Payment setup failed: ${errorMessage}. Please try Cash on Delivery instead.`);
+      alert(err.friendlyMessage || 'Payment setup failed. Please try Cash on Delivery instead.');
       setLoading(false);
     }
   };
