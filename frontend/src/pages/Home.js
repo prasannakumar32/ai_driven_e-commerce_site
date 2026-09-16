@@ -90,7 +90,11 @@ const Home = () => {
 
       // Fetch personalized recommendations if authenticated
       if (isAuthenticated) {
-        const recommendationsResponse = await fetchWithRetry(() => aiAPI.getRecommendations('current'), 2);
+        const { user } = useAuth ? {} : {}; // accessed via closure below
+        const recommendationsResponse = await fetchWithRetry(
+          () => aiAPI.getRecommendations('current'), // backend now resolves 'current' via token
+          2
+        );
         setRecommendations(recommendationsResponse.data.slice(0, 6));
       }
     } catch (err) {

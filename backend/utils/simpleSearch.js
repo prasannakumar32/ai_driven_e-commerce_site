@@ -12,33 +12,23 @@ const simpleSearch = async (query, filters = {}, limit = 20) => {
     
     if (query) {
       if (isIPhoneSearch) {
-        // AGGRESSIVE iPhone search - prioritize iPhone/Apple products heavily
         searchQuery.$or = [
-          // Exact iPhone matches (highest priority)
           { name: { $regex: 'iphone', $options: 'i' } },
-          // Apple brand products (high priority)
-          { brand: 'Apple' },
-          // Phone category (medium priority)
-          { category: { $regex: 'phone|smartphone|mobile', $options: 'i' } },
-          // General text search (lowest priority)
+          { brand: { $regex: 'apple', $options: 'i' } },
           { name: { $regex: query, $options: 'i' } },
           { description: { $regex: query, $options: 'i' } }
         ];
       } else if (isTVSearch) {
-        // TV search - prioritize TV products
         searchQuery.$or = [
-          { category: { $regex: 'tv|television', $options: 'i' } },
           { name: { $regex: 'tv|television', $options: 'i' } },
           { name: { $regex: query, $options: 'i' } },
           { description: { $regex: query, $options: 'i' } }
         ];
       } else {
-        // General search
         searchQuery.$or = [
           { name: { $regex: query, $options: 'i' } },
           { description: { $regex: query, $options: 'i' } },
           { brand: { $regex: query, $options: 'i' } },
-          { category: { $regex: query, $options: 'i' } },
           { tags: { $in: [query.toLowerCase()] } }
         ];
       }

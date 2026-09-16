@@ -246,23 +246,54 @@ const AIChatbot = ({ open, onClose }) => {
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="md"
+      maxWidth="sm"
       fullWidth
+      hideBackdrop
+      disableEnforceFocus
       PaperProps={{
-        sx: { height: '80vh', maxHeight: 600 }
+        elevation: 8,
+        sx: { 
+          position: 'fixed',
+          bottom: { xs: 0, sm: 80 }, // Above the FAB
+          right: { xs: 0, sm: 24 },
+          m: 0,
+          width: { xs: '100%', sm: 380 },
+          height: { xs: '100%', sm: 600 },
+          maxHeight: '100%',
+          borderRadius: { xs: 0, sm: 4 },
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column'
+        }
       }}
     >
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <SmartToy color="primary" />
-          <Typography variant="h6">AI Shopping Assistant</Typography>
+      <DialogTitle sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        background: 'linear-gradient(135deg, #2874F0 0%, #4B8BF5 100%)',
+        color: 'white',
+        p: 2
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Avatar sx={{ bgcolor: 'white', color: '#2874F0', width: 32, height: 32 }}>
+            <SmartToy fontSize="small" />
+          </Avatar>
+          <Box>
+            <Typography variant="subtitle1" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
+              AI Shopping Assistant
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+              Powered by Gemini 2.0
+            </Typography>
+          </Box>
         </Box>
-        <IconButton onClick={onClose}>
-          <Close />
+        <IconButton onClick={onClose} size="small" sx={{ color: 'white' }}>
+          <Close fontSize="small" />
         </IconButton>
       </DialogTitle>
       
-      <DialogContent sx={{ display: 'flex', flexDirection: 'column', p: 2 }}>
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', p: 2, backgroundColor: '#f8f9fa' }}>
         <Box sx={{ flexGrow: 1, overflow: 'auto', mb: 2 }}>
           {messages.map((message, index) => renderMessage(message, index))}
           

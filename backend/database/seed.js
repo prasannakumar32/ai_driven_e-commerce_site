@@ -2,8 +2,9 @@ const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
-const { getImageArray } = require('../utils/productImages');
-require('dotenv').config();
+const { getImageArray, productImageMap } = require('../utils/productImages');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
 // Function to generate random discount between 2% and 25%
 function generateRandomDiscount() {
@@ -3203,6 +3204,39 @@ const sampleUsers = [
   }
 ];
 
+const productionImageAliases = {
+  'Dell XPS 15 Laptop': 'Dell XPS 15',
+  'Sony WH-1000XM5 Headphones': 'Sony WH-1000XM5',
+  'Nike Air Jordan 1': 'Nike Jordan 1 Low',
+  'Speedo Swim Goggles': 'Speedo Swimming Goggles'
+};
+
+const productionImageFallbacks = {
+  electronics: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=500&h=500&fit=crop',
+  clothing: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=500&h=500&fit=crop',
+  books: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=500&h=500&fit=crop',
+  home: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&h=500&fit=crop',
+  sports: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=500&h=500&fit=crop',
+  beauty: 'https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?w=500&h=500&fit=crop',
+  toys: 'https://images.unsplash.com/photo-1594736797933-d0501ba2fe65?w=500&h=500&fit=crop'
+};
+
+function getProductionImages(product) {
+  const mappedName = productionImageAliases[product.name] || product.name;
+
+  if (productImageMap[mappedName]) {
+    return getImageArray(mappedName);
+  }
+
+  const fallbackImage = productionImageFallbacks[product.category] || productionImageFallbacks.electronics;
+  return [fallbackImage];
+}
+
+const productsWithProductionImages = sampleProducts.map(product => ({
+  ...product,
+  images: getProductionImages(product)
+}));
+
 async function seedDatabase() {
   try {
     // Connect to MongoDB Atlas
@@ -3226,7 +3260,11 @@ async function seedDatabase() {
       sampleUsers.map(async (user) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(user.password, salt);
-        return { ...user, password: hashedPassword };
+        return {
+          ...user,
+          username: user.username || user.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_'),
+          password: hashedPassword
+        };
       })
     );
 
@@ -3235,7 +3273,7 @@ async function seedDatabase() {
     console.log(`Created ${createdUsers.length} users`);
 
     // Add seller to each product
-    const productsWithSeller = sampleProducts.map(product => ({
+    const productsWithSeller = productsWithProductionImages.map(product => ({
       ...product,
       seller: createdUsers[0]._id // Use first user as seller
     }));

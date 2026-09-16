@@ -18,7 +18,9 @@ import {
   ListItemText,
   ListItemIcon,
   Divider,
-  CircularProgress
+  CircularProgress,
+  Fab,
+  Tooltip
 } from '@mui/material';
 import {
   Search,
@@ -492,6 +494,41 @@ const Header = () => {
 
       {/* AI Chatbot */}
       <AIChatbot open={chatbotOpen} onClose={() => setChatbotOpen(false)} />
+
+      {/* Floating Animated Chatbot Icon */}
+      {!loading && isAuthenticated && (
+        <Tooltip title="Ask AI Assistant" placement="left">
+          <Fab
+            color="primary"
+            aria-label="chat"
+            onClick={() => setChatbotOpen(true)}
+            sx={{
+              position: 'fixed',
+              bottom: 24,
+              right: 24,
+              boxShadow: '0 4px 14px 0 rgba(40, 116, 240, 0.39)',
+              animation: 'float 3s ease-in-out infinite',
+              '@keyframes float': {
+                '0%': {
+                  transform: 'translateY(0px)',
+                },
+                '50%': {
+                  transform: 'translateY(-10px)',
+                },
+                '100%': {
+                  transform: 'translateY(0px)',
+                },
+              },
+              '&:hover': {
+                animation: 'none',
+                transform: 'scale(1.1)',
+              }
+            }}
+          >
+            <SmartToy />
+          </Fab>
+        </Tooltip>
+      )}
     </>
   );
 };

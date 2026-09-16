@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const AISearchEngine = require('./aiSearchEngine');
 const aiSearchEngine = new AISearchEngine();
 const compromise = require('compromise');
+const { getAIRecommendations, getSimilarProductsAI, reorderByRankedIds, isGeminiAvailable } = require('./geminiService');
 
 // Simple tokenizer implementation
 const tokenizer = {
@@ -306,108 +307,69 @@ const calculateBrandRelationships = (searchQuery, productBrand) => {
 
 // Get similar products using AI analysis and suggest proper related items
 const getSimilarProducts = async (product, userId) => {
-  // Validate input product
-  if (!product || !product._id) {
-    console.log('Invalid product for similarity search');
-    return [];
-  }
+  if (!product || !product._id) return [];
 
-  // Determine complementary categories based on the product's category
-  const complementaryMapping = {
-    'phone': ['case', 'charger', 'earbuds', 'screen protector', 'power bank'],
-    'smartphone': ['case', 'charger', 'earbuds', 'screen protector', 'power bank'],
-    'laptop': ['mouse', 'keyboard', 'bag', 'monitor', 'stand'],
-    'computer': ['mouse', 'keyboard', 'monitor', 'webcam'],
-    'tv': ['soundbar', 'speaker', 'mount', 'cable'],
-    'television': ['soundbar', 'speaker', 'mount', 'cable'],
-    'camera': ['lens', 'tripod', 'memory card', 'bag']
-  };
-
-  const productCategoryLower = (product.category || '').toLowerCase();
-  const complementaryCategories = [];
-  
-  for (const [mainCat, accessories] of Object.entries(complementaryMapping)) {
-    if (productCategoryLower.includes(mainCat)) {
-      complementaryCategories.push(...accessories);
-    }
-  }
-
+  // Build a diverse candidate pool
   const queryOr = [
     { category: product.category },
     { brand: product.brand },
     { tags: { $in: (product.tags || []) } }
   ];
 
-  // Include complementary items in the query
-  if (complementaryCategories.length > 0) {
-    queryOr.push({
-      category: { $regex: complementaryCategories.join('|'), $options: 'i' }
-    });
-    queryOr.push({
-      tags: { $in: complementaryCategories }
-    });
-  }
-
-  const query = {
+  const candidates = await Product.find({
     _id: { $ne: product._id },
     $or: queryOr
-  };
+  })
+    .sort({ rating: -1, popularity: -1 })
+    .limit(30)
+    .lean();
 
-  try {
-    const similarProducts = await Product.find(query)
-      .sort({ rating: -1, popularity: -1 })
-      .limit(15) // fetch a bit more to mix similar and complementary
-      .maxTimeMS(2000);
+  if (candidates.length === 0) return [];
 
-    // Apply AI scoring with null checks and boost complementary items
-    const scoredProducts = similarProducts.map(p => {
-      let score = 0;
-      const pCategoryLower = (p.category || '').toLowerCase();
-      
-      // Is it a complementary accessory?
-      const isComplementary = complementaryCategories.some(cat => 
-        pCategoryLower.includes(cat) || (p.tags && p.tags.includes(cat))
-      );
-      
-      if (isComplementary) {
-        score += 0.5; // High boost for proper related accessories
+  // --- Gemini AI: pick similar + complementary products ---
+  if (isGeminiAvailable()) {
+    try {
+      console.log(`[SimilarProducts] Asking Gemini for products similar to "${product.name}"`);
+      const { rankedIds, types, reasons } = await getSimilarProductsAI(product, candidates, 6);
+      const extraProps = {};
+      for (const id of rankedIds) {
+        extraProps[id] = { similarType: types[id] || 'similar', aiReason: reasons[id] || '', aiPowered: true };
       }
-      
-      // Category match with null checks (for similar items)
-      if (p.category && product.category && p.category === product.category) {
-        score += 0.4;
-      }
-      
-      // Brand match with null checks
-      if (p.brand && product.brand && p.brand === product.brand) {
-        score += 0.3;
-      }
-      
-      // Tag similarity with null checks
-      const productTags = product.tags || [];
-      const pTags = p.tags || [];
-      const commonTags = pTags.filter(tag => productTags.includes(tag));
-      score += commonTags.length * 0.1;
-      
-      // Price similarity with null checks (for similar items)
-      if (!isComplementary && product.price > 0 && p.price > 0) {
-        const priceDiff = Math.abs(p.price - product.price) / product.price;
-        if (priceDiff < 0.2) score += 0.2;
-      }
-      
-      return { 
-        ...p.toObject(), 
-        aiScore: Math.min(score, 1.0) // Cap score at 1.0
-      };
-    });
-
-    return scoredProducts
-      .sort((a, b) => b.aiScore - a.aiScore)
-      .slice(0, 5);
-  } catch (error) {
-    console.error('Error in getSimilarProducts:', error);
-    return [];
+      const result = reorderByRankedIds(candidates, rankedIds, extraProps).slice(0, 6);
+      console.log(`[SimilarProducts] Gemini returned ${result.length} similar/complementary products`);
+      return result;
+    } catch (geminiErr) {
+      console.error('[SimilarProducts] Gemini failed, using rule-based fallback:', geminiErr.message);
+    }
   }
+
+  // --- Rule-based fallback ---
+  const complementaryMapping = {
+    phone: ['case', 'charger', 'earbuds', 'screen protector', 'power bank'],
+    smartphone: ['case', 'charger', 'earbuds', 'screen protector', 'power bank'],
+    laptop: ['mouse', 'keyboard', 'bag', 'monitor', 'stand'],
+    tv: ['soundbar', 'speaker', 'mount', 'cable'],
+    camera: ['lens', 'tripod', 'memory card', 'bag']
+  };
+  const productCategoryLower = (product.category || '').toLowerCase();
+  const complementaryCategories = [];
+  for (const [mainCat, accessories] of Object.entries(complementaryMapping)) {
+    if (productCategoryLower.includes(mainCat)) complementaryCategories.push(...accessories);
+  }
+
+  const scored = candidates.map(p => {
+    let score = 0;
+    const pCatLower = (p.category || '').toLowerCase();
+    const isComplementary = complementaryCategories.some(c => pCatLower.includes(c) || (p.tags || []).includes(c));
+    if (isComplementary) score += 0.5;
+    if (p.category === product.category) score += 0.4;
+    if (p.brand === product.brand) score += 0.3;
+    const commonTags = (p.tags || []).filter(t => (product.tags || []).includes(t));
+    score += commonTags.length * 0.1;
+    return { ...p, aiScore: Math.min(score, 1.0) };
+  });
+
+  return scored.sort((a, b) => b.aiScore - a.aiScore).slice(0, 5);
 };
 
 
@@ -423,115 +385,89 @@ const getPersonalizedRecommendations = async (userId) => {
     const user = await User.findById(userId)
       .populate('browsingHistory.product')
       .populate('purchaseHistory.products.product')
-      .maxTimeMS(3000); // Add timeout to prevent hanging
+      .maxTimeMS(3000);
 
     if (!user) {
       console.log('User not found, returning trending products');
       return await getTrendingProducts();
     }
 
-    // Validate user preferences structure
-    if (!user.preferences) {
-      user.preferences = {
-        categories: [],
-        brands: [],
-        priceRange: { min: 0, max: 10000 }
-      };
-    }
-
-    if (!user.aiProfile) {
-      user.aiProfile = {
-        interests: [],
-        personalityTraits: [],
-        recommendationWeights: {
-          price: 0.3,
-          brand: 0.2,
-          category: 0.3,
-          popularity: 0.2
-        }
-      };
-    }
-
-    // Analyze user behavior with error handling
+    // Analyze user behavior
     const userInterests = analyzeUserInterests(user);
-    
-    // Build query with fallback
-    let query = {};
-    try {
-      if (userInterests.categories && userInterests.categories.length > 0) {
-        query.$or = [
-          { category: { $in: userInterests.categories } },
-          { brand: { $in: userInterests.brands || [] } },
-          { tags: { $in: userInterests.tags || [] } }
-        ];
-      } else {
-        // Fallback to trending if no interests
-        return await getTrendingProducts();
-      }
-    } catch (queryError) {
-      console.error('Error building recommendation query:', queryError);
+
+    // If no interests yet, return trending
+    if (!userInterests.categories?.length && !userInterests.brands?.length) {
       return await getTrendingProducts();
     }
-    
-    // Get products with timeout and error handling
-    let recommendations = [];
+
+    // Fetch a broad candidate pool
+    const query = {
+      $or: [
+        { category: { $in: userInterests.categories } },
+        { brand: { $in: userInterests.brands } },
+        { tags: { $in: userInterests.tags } }
+      ]
+    };
+
+    let candidates = [];
     try {
-      recommendations = await Product.find(query)
+      candidates = await Product.find(query)
         .sort({ rating: -1, popularity: -1 })
-        .limit(20)
-        .maxTimeMS(2000);
-    } catch (dbError) {
-      console.error('Error fetching recommendations from database:', dbError);
+        .limit(40)
+        .lean();
+    } catch (dbErr) {
+      console.error('DB error fetching recommendation candidates:', dbErr.message);
       return await getTrendingProducts();
     }
 
-    // Apply personalized scoring with error handling
-    const scoredRecommendations = recommendations.map(product => {
+    if (candidates.length === 0) return await getTrendingProducts();
+
+    // --- Gemini AI ranking ---
+    if (isGeminiAvailable()) {
       try {
-        let score = 0;
-        const weights = user.aiProfile?.recommendationWeights || {
-          price: 0.3,
-          brand: 0.2,
-          category: 0.3,
-          popularity: 0.2
+        const userProfile = {
+          interests: userInterests,
+          browsingHistory: (user.browsingHistory || []).slice(-10).map(h => ({
+            category: h.product?.category,
+            brand: h.product?.brand
+          })),
+          purchaseHistory: (user.purchaseHistory || []).flatMap(o =>
+            (o.products || []).map(i => ({
+              category: i.product?.category,
+              brand: i.product?.brand
+            }))
+          ),
+          preferences: user.preferences || {}
         };
 
-        // Category preference with null checks
-        if (userInterests.categories && userInterests.categories.includes(product.category)) {
-          score += weights.category || 0.3;
+        console.log(`[Recommendations] Asking Gemini to rank ${candidates.length} products for user ${userId}`);
+        const { rankedIds, scores, reasons } = await getAIRecommendations(userProfile, candidates, 10);
+        const extraProps = {};
+        for (const id of rankedIds) {
+          extraProps[id] = { aiScore: scores[id] || 0.8, aiReason: reasons[id] || '', aiPowered: true };
         }
-
-        // Brand preference with null checks
-        if (userInterests.brands && userInterests.brands.includes(product.brand)) {
-          score += weights.brand || 0.2;
-        }
-
-        // Price preference with null checks
-        const priceRange = user.preferences?.priceRange || { min: 0, max: 10000 };
-        if (product.price >= priceRange.min && product.price <= priceRange.max) {
-          score += weights.price || 0.3;
-        }
-
-        // Popularity with null checks
-        score += ((product.popularity || 0) / 100) * (weights.popularity || 0.2);
-
-        return { 
-          ...product.toObject(), 
-          aiScore: Math.min(score, 1.0) // Cap score at 1.0
-        };
-      } catch (scoringError) {
-        console.error('Error scoring product:', scoringError);
-        return { 
-          ...product.toObject(), 
-          aiScore: 0.1 // Minimal score for errored items
-        };
+        const ranked = reorderByRankedIds(candidates, rankedIds, extraProps);
+        console.log(`[Recommendations] Gemini returned ${ranked.length} ranked recommendations`);
+        return ranked.slice(0, 10);
+      } catch (geminiErr) {
+        console.error('[Recommendations] Gemini failed, using rule-based fallback:', geminiErr.message);
       }
+    }
+
+    // --- Rule-based fallback ---
+    const weights = user.aiProfile?.recommendationWeights || { price: 0.3, brand: 0.2, category: 0.3, popularity: 0.2 };
+    const priceRange = user.preferences?.priceRange || { min: 0, max: 100000 };
+
+    const scored = candidates.map(product => {
+      let score = 0;
+      if (userInterests.categories?.includes(product.category)) score += weights.category;
+      if (userInterests.brands?.includes(product.brand)) score += weights.brand;
+      if (product.price >= priceRange.min && product.price <= priceRange.max) score += weights.price;
+      score += ((product.popularity || 0) / 100) * weights.popularity;
+      return { ...product, aiScore: Math.min(score, 1.0) };
     });
 
-    // Sort and return results
-    return scoredRecommendations
-      .sort((a, b) => b.aiScore - a.aiScore)
-      .slice(0, 10);
+    return scored.sort((a, b) => b.aiScore - a.aiScore).slice(0, 10);
   } catch (error) {
     console.error('Error getting personalized recommendations:', error);
     return await getTrendingProducts();

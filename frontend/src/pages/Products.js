@@ -190,7 +190,10 @@ const Products = () => {
 
   const fetchRecommendations = async () => {
     try {
-      const response = await aiAPI.getRecommendations('current');
+      // Use the actual user ID so the backend can look up preferences
+      const userId = user?._id || user?.id;
+      if (!userId) return;
+      const response = await aiAPI.getRecommendations(userId);
       setRecommendations(response.data.slice(0, 4));
     } catch (error) {
       console.error('Error fetching recommendations:', error);
@@ -281,25 +284,25 @@ const Products = () => {
     return Array.from(map.values()).sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
   };
 
-  // Debounced effect for search API calls
+  // Debounced search: run normal search when query changes
   useEffect(() => {
     const timeoutId = setTimeout(() => {
+      // Clear AI search state on any new typing or filter changes so normal results show
+      setIsAiSearch(false);
+      setAiSearchResults([]);
+      
       if (search && search.trim().length >= 2) {
-        setSearchLoading(true);
-        fetchProducts()
-          .then(() => {
-            return fetchRelatedProducts(search, category, brand);
-          })
-          .finally(() => {
-            setSearchLoading(false);
-          });
+        // Run normal search on typing
+        fetchProducts();
       } else if (search.trim().length === 0) {
+        setRelatedProducts([]);
         fetchProducts();
       }
-    }, 300);
+    }, 400);
 
     return () => clearTimeout(timeoutId);
-  }, [search, category, brand, fetchProducts]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, category, brand, priceRange]);
 
   useEffect(() => {
     // Only fetch on initial load or when page/sort changes
@@ -350,7 +353,7 @@ const Products = () => {
       
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Search timeout')), 5000)
+        setTimeout(() => reject(new Error('Search timeout')), 15000)
       );
       
       const [relatedProductsData, aiResponse] = await Promise.race([searchPromise, timeoutPromise]);

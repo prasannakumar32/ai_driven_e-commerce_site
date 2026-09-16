@@ -3,18 +3,48 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const User = require('../models/User');
-const { getPersonalizedRecommendations, getChatbotResponse } = require('../utils/aiRecommendations');
-const { hybridSearch, vectorSearch } = require('../utils/vectorSearch');
+const { getPersonalizedRecommendations, getChatbotResponse, getTrendingProducts } = require('../utils/aiRecommendations');
+const { hybridSearch } = require('../utils/vectorSearch');
+const { rankSearchResults, getAIRecommendations, reorderByRankedIds, isGeminiAvailable } = require('../utils/geminiService');
+const jwt = require('jsonwebtoken');
+
+// Optional auth — attaches req.userId if a valid token is present, never blocks the request
+const optionalAuth = (req, res, next) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+      req.userId = decoded.id;
+    }
+  } catch (_) { /* token invalid or missing — fine, continue as guest */ }
+  next();
+};
+
+// Resolve 'current' placeholder to the real userId from token, else validate the raw id
+const resolveUserId = (rawId, req) => {
+  if (!rawId || rawId === 'current') return req.userId || null;
+  return mongoose.Types.ObjectId.isValid(rawId) ? rawId : null;
+};
 
 // Get personalized recommendations for user
-router.get('/recommendations/:userId', async (req, res) => {
+router.get('/recommendations/:userId', optionalAuth, async (req, res) => {
   try {
-    const { userId } = req.params;
-    
-    const recommendations = await getPersonalizedRecommendations(userId);
+    const userId = resolveUserId(req.params.userId, req);
+
+    let recommendations;
+    if (userId) {
+      recommendations = await getPersonalizedRecommendations(userId);
+    } else {
+      // Guest user — return trending products as recommendations
+      const { getTrendingProducts } = require('../utils/aiRecommendations');
+      recommendations = await getTrendingProducts(8);
+    }
+
     res.json(recommendations);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Recommendations error:', error.message);
+    // Never crash — return empty on error
+    res.json([]);
   }
 });
 
@@ -91,201 +121,72 @@ router.post('/smart-search', async (req, res) => {
       };
     }
 
+    // Step 1: Get candidate products via hybrid search
+    let candidates = [];
     try {
-      // Use enhanced hybrid search combining text and vector search
-      const products = await hybridSearch(query, filters, 20);
-      
-      // Apply enhanced AI-based reranking with aggressive iPhone prioritization
-      const rankedProducts = products.map(product => {
-        let score = product.hybridScore || product.vectorScore || 0;
-        const queryLower = query.toLowerCase();
-        const isIPhoneSearch = queryLower.includes('iphone') || queryLower.includes('phone') || queryLower.includes('apple');
-        
-        // AGGRESSIVE category-specific prioritization
-        if (isIPhoneSearch) {
-          const productCategory = (product.category || '').toLowerCase();
-          const productBrand = (product.brand || '').toLowerCase();
-          const productName = (product.name || '').toLowerCase();
-          
-          // MASSIVE boost for iPhone/Apple products
-          if (productName.includes('iphone') || productName.includes('apple')) {
-            score += 5.0; // Huge boost
-          }
-          
-          if (productBrand === 'apple') {
-            score += 3.0; // Big boost for Apple brand
-          }
-          
-          if (productCategory.includes('phone') || productCategory.includes('smartphone') || productCategory.includes('mobile')) {
-            score += 2.0; // Boost for phone category
-          }
-          
-          // HEAVY penalty for TV products when searching iPhone
-          if (productCategory.includes('tv') || productCategory.includes('television') || 
-              productName.includes('tv') || productName.includes('television')) {
-            score -= 10.0; // Massive penalty for TVs
-          }
-          
-          // Penalty for LG/Samsung TV products
-          if ((productBrand === 'lg' || productBrand === 'samsung') && 
-              (productCategory.includes('tv') || productCategory.includes('electronics'))) {
-            score -= 8.0;
-          }
-        }
-        
-        if (queryLower.includes('tv') || queryLower.includes('television')) {
-          const productCategory = (product.category || '').toLowerCase();
-          if (productCategory.includes('tv') || productCategory.includes('television')) {
-            score += 2.0;
-          }
-        }
-        
-        // Boost score based on user preferences with null checks
-        if (userPreferences.categories && userPreferences.categories.includes(product.category)) {
-          score += 0.4;
-        }
-        if (userPreferences.brands && userPreferences.brands.includes(product.brand)) {
-          score += 0.3;
-        }
-        if (product.price >= userPreferences.priceRange.min && 
-            product.price <= userPreferences.priceRange.max) {
-          score += 0.2;
-        }
-        
-        return { 
-          ...product, 
-          aiScore: Math.min(score, 10.0) // Cap score for consistency
-        };
-      }).sort((a, b) => b.aiScore - a.aiScore);
-
-      // Standardize response format
-      res.json({
-        success: true,
-        data: {
-          products: rankedProducts,
-          searchQuery: query,
-          appliedFilters: Object.keys(filters),
-          totalCount: rankedProducts.length,
-          searchType: 'enhanced-hybrid'
-        }
-      });
-    } catch (dbError) {
-      console.error('Database search error, using enhanced fallback:', dbError);
-      
-      // Enhanced fallback to simple search with category prioritization
-      let fallbackQuery = {};
-      const queryLower = query.toLowerCase();
-      
-      if (query) {
-        fallbackQuery.$or = [
-          { name: { $regex: query, $options: 'i' } },
-          { description: { $regex: query, $options: 'i' } },
-          { tags: { $in: [query.toLowerCase()] } },
-          { features: { $in: [query.toLowerCase()] } },
-          { brand: { $regex: query, $options: 'i' } },
-          { category: { $regex: query, $options: 'i' } }
-        ];
-        
-        // Add category-specific boosts for phone searches
-        if (queryLower.includes('iphone') || queryLower.includes('phone')) {
-          fallbackQuery.$or.push(
-            { category: { $regex: 'phone|smartphone|mobile', $options: 'i' } },
-            { brand: 'Apple' }
-          );
-        }
-      }
-      
-      if (filters.category) fallbackQuery.category = filters.category;
-      if (filters.brand) fallbackQuery.brand = filters.brand;
-      if (filters.priceRange) {
-        fallbackQuery.price = {
-          $gte: filters.priceRange.min || 0,
-          $lte: filters.priceRange.max || 100000
-        };
-      }
-      
-      const fallbackProducts = await Product.find(fallbackQuery)
-        .sort({ rating: -1, popularity: -1 })
-        .limit(30) // Get more to filter better
-        .populate('reviews.user', 'name');
-
-      // Apply enhanced scoring to fallback results with aggressive iPhone prioritization
-      const scoredFallbackProducts = fallbackProducts.map(product => {
-        let score = Math.min((product.rating || 0) / 5, 1.0); // Base score from rating
-        const productCategory = (product.category || '').toLowerCase();
-        const productBrand = (product.brand || '').toLowerCase();
-        const productName = (product.name || '').toLowerCase();
-        const isIPhoneSearch = queryLower.includes('iphone') || queryLower.includes('phone') || queryLower.includes('apple');
-        
-        // AGGRESSIVE iPhone-specific scoring
-        if (isIPhoneSearch) {
-          // MASSIVE boost for iPhone/Apple products
-          if (productName.includes('iphone') || productName.includes('apple')) {
-            score += 8.0; // Huge boost
-          }
-          
-          if (productBrand === 'apple') {
-            score += 5.0; // Big boost for Apple brand
-          }
-          
-          if (productCategory.includes('phone') || productCategory.includes('smartphone') || productCategory.includes('mobile')) {
-            score += 3.0; // Boost for phone category
-          }
-          
-          // HEAVY penalty for TV products when searching iPhone
-          if (productCategory.includes('tv') || productCategory.includes('television') || 
-              productName.includes('tv') || productName.includes('television')) {
-            score -= 15.0; // Massive penalty for TVs
-          }
-          
-          // Penalty for LG/Samsung TV products
-          if ((productBrand === 'lg' || productBrand === 'samsung') && 
-              (productCategory.includes('tv') || productCategory.includes('electronics'))) {
-            score -= 12.0;
-          }
-        }
-        
-        if (queryLower.includes('tv') || queryLower.includes('television')) {
-          if (productCategory.includes('tv') || productCategory.includes('television')) {
-            score += 3.0;
-          }
-        }
-        
-        // Exact name match bonus (for non-iPhone searches)
-        if (!isIPhoneSearch && productName.includes(queryLower)) {
-          score += 2.0;
-        }
-        
-        return {
-          ...product.toObject(),
-          aiScore: Math.min(score, 10.0)
-        };
-      }).sort((a, b) => b.aiScore - a.aiScore);
-
-      // Standardize fallback response format
-      res.json({
-        success: true,
-        data: {
-          products: scoredFallbackProducts,
-          searchQuery: req.body.query || '',
-          appliedFilters: Object.keys(fallbackQuery),
-          totalCount: scoredFallbackProducts.length
-        }
-      });
+      candidates = await hybridSearch(query, filters, 30);
+    } catch (searchErr) {
+      console.error('[SmartSearch] hybridSearch failed, using fallback:', searchErr.message);
+      // Fallback: simple regex search
+      const fallbackQ = { $or: [
+        { name: { $regex: query, $options: 'i' } },
+        { description: { $regex: query, $options: 'i' } },
+        { brand: { $regex: query, $options: 'i' } },
+        { category: { $regex: query, $options: 'i' } },
+        { tags: { $in: [query.toLowerCase()] } }
+      ]};
+      if (filters.category) fallbackQ.category = filters.category;
+      if (filters.brand) fallbackQ.brand = filters.brand;
+      candidates = await Product.find(fallbackQ).sort({ rating: -1 }).limit(30).lean();
     }
-  } catch (error) {
-    console.error('Error in smart search:', error);
-    const { query: searchQuery } = req.body;
-    res.status(500).json({ 
-      success: false,
-      message: 'Smart search temporarily unavailable',
+
+    if (candidates.length === 0) {
+      return res.json({ success: true, data: { products: [], searchQuery: query, totalCount: 0, searchType: 'no-results' } });
+    }
+
+    // Step 2: Re-rank with Gemini AI (with fallback to hybrid scores)
+    let finalProducts = candidates;
+    let searchType = 'hybrid';
+
+    if (isGeminiAvailable()) {
+      try {
+        console.log(`[SmartSearch] Ranking ${candidates.length} candidates with Gemini AI for: "${query}"`);
+        const { rankedIds, reasons } = await rankSearchResults(query, candidates);
+        const extraProps = {};
+        for (const [id, reason] of Object.entries(reasons)) {
+          extraProps[id] = { aiReason: reason, aiScore: 1.0 };
+        }
+        finalProducts = reorderByRankedIds(candidates, rankedIds, extraProps);
+        searchType = 'gemini-ai';
+        console.log(`[SmartSearch] Gemini re-ranked ${finalProducts.length} results`);
+      } catch (geminiErr) {
+        console.error('[SmartSearch] Gemini ranking failed, using hybrid scores:', geminiErr.message);
+      }
+    }
+
+    // Apply user preference boosts on top of AI ranking
+    if (userPreferences.categories?.length || userPreferences.brands?.length) {
+      finalProducts = finalProducts.map((p, idx) => ({
+        ...p,
+        aiScore: (p.aiScore || (1 - idx * 0.01)) +
+          (userPreferences.categories?.includes(p.category) ? 0.05 : 0) +
+          (userPreferences.brands?.includes(p.brand) ? 0.03 : 0)
+      }));
+    }
+
+    return res.json({
+      success: true,
       data: {
-        products: [],
-        searchQuery: searchQuery || '',
-        appliedFilters: [],
-        totalCount: 0
+        products: finalProducts,
+        searchQuery: query,
+        appliedFilters: Object.keys(filters),
+        totalCount: finalProducts.length,
+        searchType
       }
     });
+  } catch (error) {
+    console.error('[SmartSearch] Fatal error:', error);
+    res.status(500).json({ success: false, message: 'Smart search temporarily unavailable', data: { products: [], searchQuery: query, totalCount: 0 } });
   }
 });
 

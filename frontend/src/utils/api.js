@@ -3,19 +3,14 @@ import { getFriendlyError } from './errorHandler';
 
 // Determine API URL based on environment
 const getAPIURL = () => {
-  // Priority 1: Explicit environment variable
   if (process.env.REACT_APP_API_URL) {
     return process.env.REACT_APP_API_URL;
   }
-  
-  // Priority 2: Production environment
   if (process.env.NODE_ENV === 'production') {
-    // On Render, the frontend and backend are on the same domain
     return `${window.location.origin}/api`;
   }
-  
-  // Priority 3: Development environment
-  return '/api';
+  // Force connection directly to backend to avoid proxy loops
+  return 'http://localhost:10000/api';
 };
 
 const API_BASE_URL = getAPIURL();
@@ -30,7 +25,7 @@ if (typeof window !== 'undefined') {
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 20000,
   headers: {
     'Content-Type': 'application/json',
   },

@@ -268,7 +268,7 @@ async function vectorSearch(query, filters = {}, limit = 20) {
 async function hybridSearch(query, filters = {}, limit = 20) {
   try {
     // Try Atlas-enhanced search first, fallback to local search
-    const atlasResults = await atlasVectorSearch.hybridSearch(query, filters, limit);
+    const atlasResults = await atlasVectorSearch.search(query, filters, limit);
     
     // If Atlas returned good results, use them
     if (atlasResults && atlasResults.length > 0) {
