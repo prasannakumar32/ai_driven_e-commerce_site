@@ -190,6 +190,14 @@ const productImageMap = {
       'https://images.unsplash.com/photo-1460353581641-694a0c2d7c2f?w=300&h=300&fit=crop'
     ]
   },
+  'Adidas Stan Smith': {
+    main: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=500&h=500&fit=crop',
+    thumbnails: [
+      'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=300&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=300&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&h=300&fit=crop'
+    ]
+  },
   'Puma Running Shoes': {
     main: 'https://images.unsplash.com/photo-1542640244-7e0d2c29d4ee?w=500&h=500&fit=crop',
     thumbnails: [
@@ -368,24 +376,27 @@ const productImageMap = {
     ]
   },
   'Duke Cricket Ball': {
-    main: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=500&h=500&fit=crop',
+    main: 'https://images.unsplash.com/photo-1614632537193-23e1a0f91d5b?w=500&h=500&fit=crop',
     thumbnails: [
-      'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1599122235597-cf85dbe7dc00?w=300&h=300&fit=crop'
+      'https://images.unsplash.com/photo-1614632537193-23e1a0f91d5b?w=300&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1599122235597-cf85dbe7dc00?w=300&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1588622772073-4e37dbd8fcc5?w=300&h=300&fit=crop'
     ]
   },
   'Kookaburra Cricket Ball': {
-    main: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=500&h=500&fit=crop',
+    main: 'https://images.unsplash.com/photo-1614632537193-23e1a0f91d5b?w=500&h=500&fit=crop',
     thumbnails: [
-      'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1616076970620-444a42d1fcac?w=300&h=300&fit=crop'
+      'https://images.unsplash.com/photo-1614632537193-23e1a0f91d5b?w=300&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1616076970620-444a42d1fcac?w=300&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1588622772073-4e37dbd8fcc5?w=300&h=300&fit=crop'
     ]
   },
   'SG Cricket Ball': {
-    main: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=500&h=500&fit=crop',
+    main: 'https://images.unsplash.com/photo-1614632537193-23e1a0f91d5b?w=500&h=500&fit=crop',
     thumbnails: [
-      'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1588622772073-4e37dbd8fcc5?w=300&h=300&fit=crop'
+      'https://images.unsplash.com/photo-1614632537193-23e1a0f91d5b?w=300&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1588622772073-4e37dbd8fcc5?w=300&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1599122235597-cf85dbe7dc00?w=300&h=300&fit=crop'
     ]
   },
   
