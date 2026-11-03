@@ -22,8 +22,28 @@ setInterval(() => {
 // Helper function to get mock session data
 const getMockSessionData = (sessionId) => {
   const storedData = mockSessionStore.get(sessionId);
-  
+
   if (storedData) {
+    // Ensure items have all required fields including productId
+    const items = (storedData.items || []).map(item => {
+      const productId = item.productId || item.product;
+      if (!productId || productId === 'unknown') {
+        console.error('❌ Invalid productId in mock session data:', item);
+        throw new Error(`Invalid product ID for "${item.name}". Product ID is required.`);
+      }
+      return {
+        name: item.name || 'Unknown Product',
+        price: item.price || 0,
+        quantity: item.quantity || 1,
+        image: item.image || '',
+        productId: productId,
+        seller: item.seller || 'unknown',
+        sellerName: item.sellerName || 'Unknown',
+        sellerBusinessName: item.sellerBusinessName || 'Unknown',
+        sellerLocation: item.sellerLocation || null
+      };
+    });
+
     return {
       id: sessionId,
       payment_status: 'paid',
@@ -43,14 +63,15 @@ const getMockSessionData = (sessionId) => {
         }
       },
       metadata: {
-        items: JSON.stringify(storedData.items || []),
+        items: JSON.stringify(items),
         shippingAddress: JSON.stringify(storedData.shippingAddress || {}),
         total: (storedData.amount_total || 0).toString(),
-        itemCount: (storedData.items || []).length.toString()
+        itemCount: (storedData.items || []).length.toString(),
+        productIds: items.map(item => item.productId || 'unknown').join(',')
       }
     };
   }
-  
+
   // Fallback if no stored data
   return {
     id: sessionId,
@@ -74,7 +95,8 @@ const getMockSessionData = (sessionId) => {
       items: JSON.stringify([]),
       shippingAddress: JSON.stringify({}),
       total: '0',
-      itemCount: '0'
+      itemCount: '0',
+      productIds: ''
     }
   };
 };
@@ -123,17 +145,24 @@ router.post('/create-checkout-session', async (req, res) => {
             postal_code: shippingAddress.postalCode || ''
           }
         },
-        items: orderItems.map(item => ({
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          image: item.image || '',
-          productId: item.productId || item.product || 'unknown',
-          seller: item.seller || 'unknown',
-          sellerName: item.sellerName || 'Unknown',
-          sellerBusinessName: item.sellerBusinessName || 'Unknown',
-          sellerLocation: item.sellerLocation || null
-        })),
+        items: orderItems.map(item => {
+          const productId = item.productId || item.product;
+          if (!productId || productId === 'unknown') {
+            console.error('❌ Invalid productId in checkout item:', item);
+            throw new Error(`Invalid product ID for "${item.name}". Product ID is required.`);
+          }
+          return {
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            image: item.image || '',
+            productId: productId,
+            seller: item.seller || 'unknown',
+            sellerName: item.sellerName || 'Unknown',
+            sellerBusinessName: item.sellerBusinessName || 'Unknown',
+            sellerLocation: item.sellerLocation || null
+          };
+        }),
         productIds: orderItems.map(item => item.productId || item.product || 'unknown'),
         shippingAddress: shippingAddress
       });
@@ -189,16 +218,29 @@ router.post('/create-checkout-session', async (req, res) => {
           shippingAddress: JSON.stringify(shippingAddress),
           total: total.toString(),
           itemCount: orderItems.length.toString(),
-          items: JSON.stringify(orderItems.map(item => ({
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity,
-            image: item.image || '',
-            productId: item.productId || item.product || 'unknown',
-            seller: item.seller || 'unknown',
-            sellerName: item.sellerName || 'Unknown'
-          }))),
-          productIds: orderItems.map(item => item.productId || item.product || 'unknown').join(',')
+          items: JSON.stringify(orderItems.map(item => {
+            const productId = item.productId || item.product;
+            if (!productId || productId === 'unknown') {
+              console.error('❌ Invalid productId in metadata:', item);
+              throw new Error(`Invalid product ID for "${item.name}". Product ID is required.`);
+            }
+            return {
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity,
+              image: item.image || '',
+              productId: productId,
+              seller: item.seller || 'unknown',
+              sellerName: item.sellerName || 'Unknown'
+            };
+          })),
+          productIds: orderItems.map(item => {
+            const productId = item.productId || item.product;
+            if (!productId || productId === 'unknown') {
+              throw new Error(`Invalid product ID for "${item.name}". Product ID is required.`);
+            }
+            return productId;
+          }).join(',')
         }
       });
 

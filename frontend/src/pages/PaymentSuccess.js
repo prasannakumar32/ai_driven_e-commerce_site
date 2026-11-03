@@ -198,39 +198,62 @@ const PaymentSuccess = () => {
           console.log('PaymentSuccess: Processing successful payment with items:', items);
           console.log('PaymentSuccess: Calculated total:', total);
 
-        // Check if user is authenticated
-        if (!isAuthenticated) {
-          console.error('PaymentSuccess: User not authenticated');
-          setError('You must be logged in to complete this order. Please login and try again.');
-          setLoading(false);
-          return;
-        }
+          // Check if user is authenticated
+          if (!isAuthenticated) {
+            console.error('PaymentSuccess: User not authenticated');
+            setError('You must be logged in to complete this order. Please login and try again.');
+            setLoading(false);
+            return;
+          }
+
+          // Validate all items have valid productIds before proceeding
+          const invalidItems = items.filter(item => !item.productId || item.productId === 'unknown');
+          if (invalidItems.length > 0) {
+            console.error('PaymentSuccess: Items with invalid productIds:', invalidItems);
+            setError(`Order data is corrupted. Some products have invalid IDs. Please contact support with your session ID: ${sessionId}`);
+            setLoading(false);
+            return;
+          }
 
           // Prepare order items with proper structure
-          const orderItems = items.map(item => ({
-            name: item.name || 'Unknown Product',
-            quantity: parseInt(item.quantity) || 1,
-            price: parseFloat(item.price) || 0,
-            product: item.productId || item.product || 'unknown',
-            image: item.image || item.images?.[0] || '',
-            seller: item.seller || 'unknown',
-            sellerName: item.sellerName || 'Unknown',
-            sellerBusinessName: item.sellerBusinessName || 'Unknown',
-            sellerLocation: item.sellerLocation || null
-          }));
+          const orderItems = items.map(item => {
+            // Convert price from cents to rupees if it's a large number
+            const priceValue = parseFloat(item.price) || 0;
+            const priceInRupees = priceValue > 10000 ? priceValue / 100 : priceValue;
 
-          // Calculate order totals
-          const subtotal = total;
-          const taxPrice = Number((subtotal * 0.08).toFixed(2)); // 8% tax
-          const shippingPrice = subtotal > 100 ? 0 : 10; // Free shipping for orders over ₹100
-          const orderTotal = Number((subtotal + taxPrice + shippingPrice).toFixed(2));
+            const productId = item.productId || item.product;
+
+            // Validate productId is not 'unknown' - if it is, we need to fetch the product by name
+            if (!productId || productId === 'unknown') {
+              console.error('PaymentSuccess: Invalid productId for item:', item.name);
+              throw new Error(`Invalid product ID for "${item.name}". Please contact support.`);
+            }
+
+            return {
+              name: item.name || 'Unknown Product',
+              quantity: parseInt(item.quantity) || 1,
+              price: priceInRupees,
+              product: productId,
+              image: item.image || item.images?.[0] || '',
+              seller: item.seller || 'unknown',
+              sellerName: item.sellerName || 'Unknown',
+              sellerBusinessName: item.sellerBusinessName || 'Unknown',
+              sellerLocation: item.sellerLocation || null
+            };
+          });
+
+          // Calculate order totals - convert from cents to rupees if needed
+          const subtotalInRupees = total > 10000 ? total / 100 : total;
+          const taxPrice = Number((subtotalInRupees * 0.08).toFixed(2)); // 8% tax
+          const shippingPrice = subtotalInRupees > 100 ? 0 : 10; // Free shipping for orders over ₹100
+          const orderTotal = Number((subtotalInRupees + taxPrice + shippingPrice).toFixed(2));
 
           // Create order in database
           try {
             const orderPayload = {
               orderItems: orderItems,
               total: orderTotal,
-              subtotal: subtotal,
+              subtotal: subtotalInRupees,
               taxPrice: taxPrice,
               shippingPrice: shippingPrice,
               paymentMethod: 'stripe',
