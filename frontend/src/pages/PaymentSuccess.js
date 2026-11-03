@@ -125,6 +125,7 @@ const PaymentSuccess = () => {
             // First try to get items from metadata (stored during checkout)
             if (sessionData.metadata?.items) {
               items = JSON.parse(sessionData.metadata.items);
+              console.log('PaymentSuccess: Items parsed from metadata:', items);
             } else if (sessionData.line_items?.data) {
               // Fallback to line items if available
               items = sessionData.line_items.data.map(item => ({
@@ -133,10 +134,20 @@ const PaymentSuccess = () => {
                 quantity: item.quantity || 1,
                 image: item.price?.product_data?.images?.[0] || ''
               }));
+              console.log('PaymentSuccess: Items parsed from line_items:', items);
+            } else {
+              console.error('PaymentSuccess: No items found in session data');
             }
           } catch (err) {
-            console.error('Error parsing items:', err);
+            console.error('PaymentSuccess: Error parsing items:', err);
             items = [];
+          }
+
+          if (items.length === 0) {
+            console.error('PaymentSuccess: No items to process');
+            setError('No items found in this order. Please contact support.');
+            setLoading(false);
+            return;
           }
 
           // Parse shipping address
@@ -200,8 +211,8 @@ const PaymentSuccess = () => {
             name: item.name || 'Unknown Product',
             quantity: parseInt(item.quantity) || 1,
             price: parseFloat(item.price) || 0,
-            product: item.productId || 'unknown',
-            image: item.image || '',
+            product: item.productId || item.product || 'unknown',
+            image: item.image || item.images?.[0] || '',
             seller: item.seller || 'unknown',
             sellerName: item.sellerName || 'Unknown',
             sellerBusinessName: item.sellerBusinessName || 'Unknown',
@@ -223,12 +234,11 @@ const PaymentSuccess = () => {
               taxPrice: taxPrice,
               shippingPrice: shippingPrice,
               paymentMethod: 'stripe',
-              paymentStatus: 'Paid',
               isPaid: true,
               shippingAddress: shippingAddress
             };
 
-            console.log('PaymentSuccess: Creating order in database:', orderPayload);
+            console.log('PaymentSuccess: Creating order in database:', JSON.stringify(orderPayload, null, 2));
             const orderResponse = await orderAPI.createOrder(orderPayload);
             console.log('PaymentSuccess: Order created successfully:', orderResponse.data);
 
@@ -240,24 +250,14 @@ const PaymentSuccess = () => {
               paymentMethod: 'stripe',
               totalPrice: orderTotal
             });
+
+            console.log('PaymentSuccess: Order data set successfully');
           } catch (orderError) {
             console.error('PaymentSuccess: Failed to create order in database:', orderError);
-            // Fallback: display data without database save
-            setOrderData({
-              _id: `stripe_${sessionId.slice(-8)}`,
-              sessionId: sessionId,
-              paymentIntentId: sessionData.payment_intent,
-              totalPrice: total,
-              paymentMethod: 'stripe',
-              paymentStatus: 'Completed',
-              orderStatus: 'Confirmed',
-              isPaid: true,
-              paidAt: new Date().toLocaleString('en-IN'),
-              orderItems: orderItems,
-              shippingAddress: shippingAddress,
-              taxPrice: taxPrice,
-              shippingPrice: shippingPrice
-            });
+            console.error('PaymentSuccess: Error response:', orderError.response?.data);
+            setError(orderError.response?.data?.message || 'Failed to create order. Please contact support.');
+            setLoading(false);
+            return;
           }
 
           calculateDeliveryDate();

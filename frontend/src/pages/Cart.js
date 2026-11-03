@@ -229,28 +229,28 @@ const Cart = () => {
                         </Box>
                       </Grid>
 
-                      <Grid size={{ xs: 12, sm: 2 }}>
-                        <Typography variant="h6" color="#2874F0" fontWeight="bold">
+                      <Grid size={{ xs: 12, sm: 3 }}>
+                        <Typography variant="h6" color="#2874F0" fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
                           ₹{item.product.price.toLocaleString('en-IN')}
                         </Typography>
                         {item.product.originalPrice && item.product.originalPrice > item.product.price && (
-                          <Typography 
-                            variant="body2" 
+                          <Typography
+                            variant="body2"
                             color="#757575"
-                            sx={{ textDecoration: 'line-through' }}
+                            sx={{ textDecoration: 'line-through', whiteSpace: 'nowrap' }}
                           >
                             ₹{item.product.originalPrice.toLocaleString('en-IN')}
                           </Typography>
                         )}
                       </Grid>
 
-                      <Grid size={{ xs: 12, sm: 3 }}>
+                      <Grid size={{ xs: 12, sm: 2 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <IconButton
                             size="small"
                             onClick={() => handleQuantityChange(item.product._id, item.quantity - 1)}
                             disabled={item.quantity <= 1}
-                            sx={{ 
+                            sx={{
                               border: '1px solid #e0e0e0',
                               '&:hover': { borderColor: '#2874F0' }
                             }}
@@ -260,14 +260,14 @@ const Cart = () => {
                           <TextField
                             value={item.quantity}
                             size="small"
-                            sx={{ 
+                            sx={{
                               width: 60,
                               '& .MuiOutlinedInput-input': {
                                 textAlign: 'center',
                                 fontWeight: 'bold'
                               }
                             }}
-                            inputProps={{ 
+                            inputProps={{
                               min: 1,
                               max: item.product.stock
                             }}
@@ -282,7 +282,7 @@ const Cart = () => {
                             size="small"
                             onClick={() => handleQuantityChange(item.product._id, item.quantity + 1)}
                             disabled={item.quantity >= item.product.stock}
-                            sx={{ 
+                            sx={{
                               border: '1px solid #e0e0e0',
                               '&:hover': { borderColor: '#2874F0' }
                             }}
@@ -292,17 +292,17 @@ const Cart = () => {
                         </Box>
                       </Grid>
 
-                      <Grid size={{ xs: 12, sm: 1 }}>
+                      <Grid size={{ xs: 12, sm: 2 }}>
                         <Box sx={{ textAlign: 'right' }}>
-                          <Typography variant="h6" color="#2874F0" fontWeight="bold">
+                          <Typography variant="h6" color="#2874F0" fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
                             ₹{(item.product.price * item.quantity).toLocaleString('en-IN')}
                           </Typography>
                           <IconButton
                             size="small"
                             color="error"
                             onClick={() => handleRemoveItem(item.product._id)}
-                            sx={{ 
-                              '&:hover': { 
+                            sx={{
+                              '&:hover': {
                                 backgroundColor: 'rgba(244, 67, 54, 0.1)'
                               }
                             }}

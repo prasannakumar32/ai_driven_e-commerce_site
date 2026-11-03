@@ -52,10 +52,11 @@ router.post('/', auth, async (req, res) => {
     for (const item of orderItems) {
       // Handle both string ID and ObjectId
       const productId = typeof item.product === 'string' ? item.product : item.product._id;
-      
+
       const product = await Product.findById(productId);
       if (!product) {
-        return res.status(404).json({ message: `Product not found` });
+        console.error('❌ Product not found:', productId);
+        return res.status(404).json({ message: `Product not found with ID: ${productId}` });
       }
 
       if (product.stock < item.quantity) {
@@ -65,7 +66,7 @@ router.post('/', auth, async (req, res) => {
       verifiedOrderItems.push({
         name: product.name,
         quantity: item.quantity,
-        image: product.images?.[0] || '',
+        image: item.image || product.images?.[0] || '',
         price: product.price,
         product: product._id
       });

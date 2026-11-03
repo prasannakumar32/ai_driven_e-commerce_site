@@ -134,6 +134,7 @@ router.post('/create-checkout-session', async (req, res) => {
           sellerBusinessName: item.sellerBusinessName || 'Unknown',
           sellerLocation: item.sellerLocation || null
         })),
+        productIds: orderItems.map(item => item.productId || item.product || 'unknown'),
         shippingAddress: shippingAddress
       });
       
@@ -196,7 +197,8 @@ router.post('/create-checkout-session', async (req, res) => {
             productId: item.productId || item.product || 'unknown',
             seller: item.seller || 'unknown',
             sellerName: item.sellerName || 'Unknown'
-          })))
+          }))),
+          productIds: orderItems.map(item => item.productId || item.product || 'unknown').join(',')
         }
       });
 

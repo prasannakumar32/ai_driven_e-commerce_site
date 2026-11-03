@@ -309,12 +309,19 @@ const Checkout = () => {
       const orderItems = items.map((i, index) => {
         const product = productsWithSellers[index];
         const deliveryEst = deliveryEstimates[i.product._id];
-        
+
+        console.log('Checkout: Processing item:', {
+          name: i.product.name,
+          productId: i.product._id,
+          seller: product?.seller?._id
+        });
+
         return {
           name: i.product.name,
           price: i.product.price,
           quantity: i.quantity,
           productId: i.product._id,
+          product: i.product._id, // Add both for compatibility
           image: i.product.image,
           seller: product?.seller?._id,
           sellerName: product?.seller?.name,
