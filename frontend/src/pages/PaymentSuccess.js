@@ -29,7 +29,7 @@ import {
   Store
 } from '@mui/icons-material';
 import { useCart } from '../contexts/CartContext';
-import api from '../utils/api';
+import api, { orderAPI } from '../utils/api';
 import { generatePDFInvoice, generateCSVInvoice } from '../utils/invoiceGenerator';
 
 const PaymentSuccess = () => {
@@ -167,34 +167,76 @@ const PaymentSuccess = () => {
           console.log('PaymentSuccess: Processing successful payment with items:', items);
           console.log('PaymentSuccess: Calculated total:', total);
 
-          setOrderData({
-            _id: sessionData.metadata?.orderId || `stripe_${sessionId.slice(-8)}`,
-            sessionId: sessionId,
-            paymentIntentId: sessionData.payment_intent,
-            totalPrice: total,
-            paymentMethod: 'Card Payment (Stripe)',
-            paymentStatus: 'Completed',
-            orderStatus: 'Confirmed',
-            isPaid: true,
-            paidAt: new Date().toLocaleString('en-IN'),
-            orderItems: items.map(item => ({
-              name: item.name || 'Unknown Product',
-              quantity: parseInt(item.quantity) || 1,
-              price: parseFloat(item.price) || 0,
-              image: item.image || '',
-              sellerName: item.sellerName || 'Unknown',
-              sellerBusinessName: item.sellerName || 'Unknown'
-            })),
-            shippingAddress: shippingAddress,
-            taxPrice: 0, // Will be calculated in invoice generator
-            shippingPrice: 0 // Will be calculated in invoice generator
-          });
+          // Prepare order items with proper structure
+          const orderItems = items.map(item => ({
+            name: item.name || 'Unknown Product',
+            quantity: parseInt(item.quantity) || 1,
+            price: parseFloat(item.price) || 0,
+            product: item.productId || 'unknown',
+            image: item.image || '',
+            seller: item.seller || 'unknown',
+            sellerName: item.sellerName || 'Unknown',
+            sellerBusinessName: item.sellerBusinessName || 'Unknown',
+            sellerLocation: item.sellerLocation || null
+          }));
+
+          // Calculate order totals
+          const subtotal = total;
+          const taxPrice = Number((subtotal * 0.08).toFixed(2)); // 8% tax
+          const shippingPrice = subtotal > 100 ? 0 : 10; // Free shipping for orders over ₹100
+          const orderTotal = Number((subtotal + taxPrice + shippingPrice).toFixed(2));
+
+          // Create order in database
+          try {
+            const orderPayload = {
+              orderItems: orderItems,
+              total: orderTotal,
+              subtotal: subtotal,
+              taxPrice: taxPrice,
+              shippingPrice: shippingPrice,
+              paymentMethod: 'Card',
+              paymentStatus: 'Paid',
+              isPaid: true,
+              shippingAddress: shippingAddress
+            };
+
+            console.log('PaymentSuccess: Creating order in database:', orderPayload);
+            const orderResponse = await orderAPI.createOrder(orderPayload);
+            console.log('PaymentSuccess: Order created successfully:', orderResponse.data);
+
+            // Set order data from database response
+            setOrderData({
+              ...orderResponse.data,
+              sessionId: sessionId,
+              paymentIntentId: sessionData.payment_intent,
+              paymentMethod: 'Card Payment (Stripe)',
+              totalPrice: orderTotal
+            });
+          } catch (orderError) {
+            console.error('PaymentSuccess: Failed to create order in database:', orderError);
+            // Fallback: display data without database save
+            setOrderData({
+              _id: `stripe_${sessionId.slice(-8)}`,
+              sessionId: sessionId,
+              paymentIntentId: sessionData.payment_intent,
+              totalPrice: total,
+              paymentMethod: 'Card Payment (Stripe)',
+              paymentStatus: 'Completed',
+              orderStatus: 'Confirmed',
+              isPaid: true,
+              paidAt: new Date().toLocaleString('en-IN'),
+              orderItems: orderItems,
+              shippingAddress: shippingAddress,
+              taxPrice: taxPrice,
+              shippingPrice: shippingPrice
+            });
+          }
 
           calculateDeliveryDate();
-          
+
           // Clear cart
           await clearCart();
-          
+
           console.log('PaymentSuccess: Payment processed successfully');
         } else {
           console.error('PaymentSuccess: Payment not completed. Status:', sessionData.payment_status);

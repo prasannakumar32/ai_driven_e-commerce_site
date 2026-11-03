@@ -130,14 +130,20 @@ router.post('/create-checkout-session', async (req, res) => {
           image: item.image || '',
           productId: item.productId || item.product || 'unknown',
           seller: item.seller || 'unknown',
-          sellerName: item.sellerName || 'Unknown'
+          sellerName: item.sellerName || 'Unknown',
+          sellerBusinessName: item.sellerBusinessName || 'Unknown',
+          sellerLocation: item.sellerLocation || null
         })),
         shippingAddress: shippingAddress
       });
       
+      // Return redirect URL to payment success page with session_id
+      const successUrl = success_url || `${process.env.REACT_APP_URL || 'http://localhost:3000'}/payment-success`;
+      const redirectUrl = successUrl.replace('{CHECKOUT_SESSION_ID}', mockSessionId);
+      
       return res.json({
         sessionId: mockSessionId,
-        url: `https://checkout.stripe.com/pay/${mockSessionId}`
+        url: redirectUrl
       });
     }
 
