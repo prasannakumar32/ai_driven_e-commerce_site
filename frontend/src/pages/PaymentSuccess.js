@@ -29,6 +29,7 @@ import {
   Store
 } from '@mui/icons-material';
 import { useCart } from '../contexts/CartContext';
+import { useAuth } from '../contexts/AuthContext';
 import api, { orderAPI } from '../utils/api';
 import { generatePDFInvoice, generateCSVInvoice } from '../utils/invoiceGenerator';
 
@@ -36,7 +37,8 @@ const PaymentSuccess = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { clearCart } = useCart();
-  
+  const { isAuthenticated } = useAuth();
+
   const [loading, setLoading] = useState(true);
   const [orderData, setOrderData] = useState(null);
   const [error, setError] = useState(null);
@@ -44,6 +46,24 @@ const PaymentSuccess = () => {
   const [processed, setProcessed] = useState(false); // Add processing flag
   const [showInvoiceSuccess, setShowInvoiceSuccess] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null); // Menu state
+
+  // Helper function to format payment method for display
+  const formatPaymentMethod = (method) => {
+    switch (method) {
+      case 'stripe':
+        return 'Card Payment (Stripe)';
+      case 'COD':
+        return 'Cash on Delivery';
+      case 'credit_card':
+        return 'Credit Card';
+      case 'debit_card':
+        return 'Debit Card';
+      case 'paypal':
+        return 'PayPal';
+      default:
+        return method?.replace('_', ' ').toUpperCase() || 'CARD';
+    }
+  };
 
   useEffect(() => {
     console.log('PaymentSuccess: useEffect triggered');
@@ -167,6 +187,14 @@ const PaymentSuccess = () => {
           console.log('PaymentSuccess: Processing successful payment with items:', items);
           console.log('PaymentSuccess: Calculated total:', total);
 
+        // Check if user is authenticated
+        if (!isAuthenticated) {
+          console.error('PaymentSuccess: User not authenticated');
+          setError('You must be logged in to complete this order. Please login and try again.');
+          setLoading(false);
+          return;
+        }
+
           // Prepare order items with proper structure
           const orderItems = items.map(item => ({
             name: item.name || 'Unknown Product',
@@ -194,7 +222,7 @@ const PaymentSuccess = () => {
               subtotal: subtotal,
               taxPrice: taxPrice,
               shippingPrice: shippingPrice,
-              paymentMethod: 'Card',
+              paymentMethod: 'stripe',
               paymentStatus: 'Paid',
               isPaid: true,
               shippingAddress: shippingAddress
@@ -209,7 +237,7 @@ const PaymentSuccess = () => {
               ...orderResponse.data,
               sessionId: sessionId,
               paymentIntentId: sessionData.payment_intent,
-              paymentMethod: 'Card Payment (Stripe)',
+              paymentMethod: 'stripe',
               totalPrice: orderTotal
             });
           } catch (orderError) {
@@ -220,7 +248,7 @@ const PaymentSuccess = () => {
               sessionId: sessionId,
               paymentIntentId: sessionData.payment_intent,
               totalPrice: total,
-              paymentMethod: 'Card Payment (Stripe)',
+              paymentMethod: 'stripe',
               paymentStatus: 'Completed',
               orderStatus: 'Confirmed',
               isPaid: true,
@@ -253,7 +281,7 @@ const PaymentSuccess = () => {
     };
 
     handlePaymentSuccess();
-  }, [searchParams, processed, clearCart]); // Include processed flag and clearCart dependency
+  }, [searchParams, processed, clearCart, isAuthenticated]); // Include processed flag, clearCart, and isAuthenticated dependency
 
   const calculateDeliveryDate = () => {
     const today = new Date();
@@ -587,7 +615,7 @@ const PaymentSuccess = () => {
             <Box sx={{ mt: 2, p: 2, bgcolor: '#f0f7f0', borderRadius: 1 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="body2">Payment Method:</Typography>
-                <Typography variant="body2" fontWeight="600">{orderData.paymentMethod}</Typography>
+                <Typography variant="body2" fontWeight="600">{formatPaymentMethod(orderData.paymentMethod)}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="body2">Amount:</Typography>

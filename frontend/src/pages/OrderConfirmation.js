@@ -163,6 +163,24 @@ const OrderConfirmation = () => {
     }
   };
 
+  // Helper function to format payment method for display
+  const formatPaymentMethod = (method) => {
+    switch (method) {
+      case 'stripe':
+        return 'Card Payment (Stripe)';
+      case 'COD':
+        return 'Cash on Delivery';
+      case 'credit_card':
+        return 'Credit Card';
+      case 'debit_card':
+        return 'Debit Card';
+      case 'paypal':
+        return 'PayPal';
+      default:
+        return method?.replace('_', ' ').toUpperCase() || 'CARD';
+    }
+  };
+
   const getTimelineDates = () => {
     const today = new Date();
     const orderDate = new Date(orderData?.createdAt || today);
@@ -536,7 +554,7 @@ const OrderConfirmation = () => {
                 <Payment color="action" sx={{ mr: 2 }} />
                 <Box>
                   <Typography variant="subtitle1">
-                    {orderData.paymentMethod?.replace('_', ' ').toUpperCase() || 'CREDIT CARD'}
+                    {formatPaymentMethod(orderData.paymentMethod)}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Payment successful

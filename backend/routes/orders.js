@@ -106,6 +106,12 @@ router.post('/', auth, async (req, res) => {
       shippingPrice: finalShippingPrice,
       totalPrice: finalTotal,
       isPaid: paymentMethod !== 'COD',
+      paidAt: paymentMethod !== 'COD' ? Date.now() : undefined,
+      paymentResult: paymentMethod !== 'COD' ? {
+        id: paymentMethod === 'stripe' ? `stripe_${Date.now()}` : 'payment_id',
+        status: 'completed',
+        update_time: new Date().toISOString()
+      } : undefined,
       isDelivered: false,
       status: paymentMethod === 'COD' ? 'pending' : 'processing',
       // Set estimated delivery date automatically (3-5 days from now)
