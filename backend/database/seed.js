@@ -3105,7 +3105,8 @@ const sampleUsers = [
     preferences: {
       categories: ['electronics', 'sports'],
       brands: ['Apple', 'Nike'],
-      priceRange: { min: 50, max: 1000 }
+      priceRange: { min: 50, max: 1000 },
+      location: 'Mumbai, India'
     },
     aiProfile: {
       interests: ['technology', 'fitness', 'photography'],
@@ -3275,7 +3276,9 @@ async function seedDatabase() {
     // Add seller to each product
     const productsWithSeller = productsWithProductionImages.map(product => ({
       ...product,
-      seller: createdUsers[0]._id // Use first user as seller
+      seller: createdUsers[0]._id, // Use first user as seller
+      sellerBusinessName: createdUsers[0].name + "'s Store",
+      sellerLocation: createdUsers[0].preferences?.location || 'Mumbai, India'
     }));
 
     // Insert products
