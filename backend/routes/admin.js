@@ -26,7 +26,7 @@ router.get('/stats', auth, adminAuth, async (req, res) => {
       pendingDeliveryPartners,
       recentOrders
     ] = await Promise.all([
-      User.countDocuments({ role: 'customer' }),
+      User.countDocuments({ role: { $in: ['customer', 'admin'] } }),
       User.countDocuments({ role: 'seller' }),
       User.countDocuments({ role: 'delivery_partner' }),
       Order.countDocuments(),
@@ -287,6 +287,38 @@ router.delete('/users/:id', auth, adminAuth, async (req, res) => {
     }
 
     res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Create new user
+router.post('/users', auth, adminAuth, async (req, res) => {
+  try {
+    const { name, email, password, role, phone } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User with this email already exists' });
+    }
+
+    // Create new user
+    const user = new User({
+      name,
+      email,
+      password,
+      role: role || 'customer',
+      phone: phone || ''
+    });
+
+    await user.save();
+
+    // Return user without password
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
+    res.status(201).json(userResponse);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

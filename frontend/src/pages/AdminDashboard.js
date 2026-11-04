@@ -29,7 +29,9 @@ import {
   InputLabel,
   Avatar,
   IconButton,
-  LinearProgress
+  LinearProgress,
+  TextField,
+  Stack
 } from '@mui/material';
 import {
   People,
@@ -47,7 +49,11 @@ import {
   Verified,
   Pending,
   Business,
-  MoreVert
+  MoreVert,
+  PersonAdd,
+  Email,
+  Phone,
+  Key
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../utils/api';
@@ -64,6 +70,14 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [statusDialog, setStatusDialog] = useState({ open: false, type: '', id: '', status: '' });
+  const [createUserDialog, setCreateUserDialog] = useState({ open: false });
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'customer',
+    phone: ''
+  });
 
   useEffect(() => {
     if (user?.role === 'admin') {
@@ -196,6 +210,20 @@ const AdminDashboard = () => {
         console.error('Error deleting user:', err);
         alert('Failed to delete user. Please try again.');
       }
+    }
+  };
+
+  const handleCreateUser = async () => {
+    try {
+      await api.post('/admin/users', newUser);
+      setCreateUserDialog({ open: false });
+      setNewUser({ name: '', email: '', password: '', role: 'customer', phone: '' });
+      fetchUsers();
+      fetchStats();
+      alert('User created successfully!');
+    } catch (err) {
+      console.error('Error creating user:', err);
+      alert('Failed to create user. Please try again.');
     }
   };
 
@@ -823,9 +851,25 @@ const AdminDashboard = () => {
       {/* Users Tab */}
       {activeTab === 5 && (
         <Box sx={{ p: 4 }}>
-          <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ mb: 3 }}>
-            Users Management
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6" fontWeight="bold">
+              Users Management
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<PersonAdd />}
+              onClick={() => setCreateUserDialog({ open: true })}
+              sx={{
+                bgcolor: '#1976d2',
+                '&:hover': { bgcolor: '#1565c0' },
+                px: 3,
+                py: 1.5,
+                borderRadius: 2
+              }}
+            >
+              Create User
+            </Button>
+          </Box>
           <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
             <Table>
               <TableHead sx={{ bgcolor: '#fafbfc' }}>
@@ -887,6 +931,97 @@ const AdminDashboard = () => {
           </Button>
           <Button variant="contained" onClick={handleStatusUpdate}>
             Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Create User Dialog */}
+      <Dialog 
+        open={createUserDialog.open} 
+        onClose={() => setCreateUserDialog({ open: false })}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <PersonAdd sx={{ color: '#1976d2' }} />
+            Create New User
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={3} sx={{ mt: 2 }}>
+            <TextField
+              fullWidth
+              label="Full Name"
+              value={newUser.name}
+              onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+              InputProps={{
+                startAdornment: <People sx={{ mr: 1, color: '#666' }} />
+              }}
+            />
+            <TextField
+              fullWidth
+              label="Email"
+              type="email"
+              value={newUser.email}
+              onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+              InputProps={{
+                startAdornment: <Email sx={{ mr: 1, color: '#666' }} />
+              }}
+            />
+            <TextField
+              fullWidth
+              label="Password"
+              type="password"
+              value={newUser.password}
+              onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+              InputProps={{
+                startAdornment: <Key sx={{ mr: 1, color: '#666' }} />
+              }}
+            />
+            <TextField
+              fullWidth
+              label="Phone (Optional)"
+              value={newUser.phone}
+              onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+              InputProps={{
+                startAdornment: <Phone sx={{ mr: 1, color: '#666' }} />
+              }}
+            />
+            <FormControl fullWidth>
+              <InputLabel>Role</InputLabel>
+              <Select
+                value={newUser.role}
+                label="Role"
+                onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+              >
+                <MenuItem value="customer">Customer</MenuItem>
+                <MenuItem value="seller">Seller</MenuItem>
+                <MenuItem value="delivery_partner">Delivery Partner</MenuItem>
+                <MenuItem value="admin">Admin</MenuItem>
+              </Select>
+            </FormControl>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button 
+            onClick={() => setCreateUserDialog({ open: false })}
+            sx={{ px: 3 }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleCreateUser}
+            disabled={!newUser.name || !newUser.email || !newUser.password}
+            sx={{ 
+              px: 3,
+              bgcolor: '#1976d2',
+              '&:hover': { bgcolor: '#1565c0' },
+              '&:disabled': { bgcolor: '#ccc' }
+            }}
+          >
+            Create User
           </Button>
         </DialogActions>
       </Dialog>
