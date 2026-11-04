@@ -50,43 +50,94 @@ router.post('/', auth, async (req, res) => {
     const verifiedOrderItems = [];
 
     for (const item of orderItems) {
-      // Handle both string ID and ObjectId
-      const productId = typeof item.product === 'string' ? item.product : item.product._id;
+      try {
+        // Handle both string ID and ObjectId
+        const productId = typeof item.product === 'string' ? item.product : item.product._id;
 
-      let product;
+        let product;
 
-      // Fallback: If productId is "unknown", try to find product by name
-      if (productId === 'unknown' || !productId) {
-        console.warn('⚠️ Product ID is unknown, attempting to find by name:', item.name);
-        product = await Product.findOne({ name: item.name });
-        if (!product) {
-          console.error('❌ Product not found by name:', item.name);
-          return res.status(404).json({ 
-            message: `Product not found with name: ${item.name}. Please contact support with session details.` 
+        // Fallback: If productId is "unknown" or invalid, try to find product by name
+        if (!productId || productId === 'unknown' || productId === 'null' || productId === 'undefined') {
+          console.warn('⚠️ Product ID is invalid, attempting to find by name:', item.name);
+          
+          // Try exact match first
+          product = await Product.findOne({ name: item.name });
+          
+          // If not found, try case-insensitive match
+          if (!product) {
+            product = await Product.findOne({ 
+              name: { $regex: new RegExp(`^${item.name}$`, 'i') } 
+            });
+          }
+          
+          // If still not found, try partial match
+          if (!product) {
+            product = await Product.findOne({ 
+              name: { $regex: item.name, $options: 'i' } 
+            });
+          }
+          
+          if (!product) {
+            console.error('❌ Product not found by name:', item.name);
+            return res.status(404).json({ 
+              message: `Product not found: ${item.name}. Please contact support with order details.`,
+              error: 'PRODUCT_NOT_FOUND',
+              productName: item.name
+            });
+          }
+          console.log('✅ Found product by name:', product.name, 'ID:', product._id);
+        } else {
+          // Try to convert to ObjectId if it's a string
+          try {
+            product = await Product.findById(productId);
+            if (!product) {
+              console.error('❌ Product not found by ID:', productId);
+              // Fallback to name search if ID lookup fails
+              console.warn('⚠️ ID lookup failed, trying name fallback for:', item.name);
+              product = await Product.findOne({ name: item.name });
+              if (!product) {
+                return res.status(404).json({ 
+                  message: `Product not found with ID: ${productId}` 
+                });
+              }
+              console.log('✅ Found product by name fallback:', product.name, 'ID:', product._id);
+            }
+          } catch (idError) {
+            console.error('❌ Invalid ObjectId format:', productId, idError);
+            // Fallback to name search
+            console.warn('⚠️ Invalid ObjectId, trying name fallback for:', item.name);
+            product = await Product.findOne({ name: item.name });
+            if (!product) {
+              return res.status(400).json({ 
+                message: `Invalid product ID: ${productId}` 
+              });
+            }
+            console.log('✅ Found product by name fallback:', product.name, 'ID:', product._id);
+          }
+        }
+
+        if (product.stock < item.quantity) {
+          return res.status(400).json({ 
+            message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}` 
           });
         }
-        console.log('✅ Found product by name:', product.name, 'ID:', product._id);
-      } else {
-        product = await Product.findById(productId);
-        if (!product) {
-          console.error('❌ Product not found:', productId);
-          return res.status(404).json({ message: `Product not found with ID: ${productId}` });
-        }
+
+        verifiedOrderItems.push({
+          name: product.name,
+          quantity: item.quantity,
+          image: item.image || product.images?.[0] || '',
+          price: product.price,
+          product: product._id
+        });
+
+        calculatedTotal += product.price * item.quantity;
+      } catch (itemError) {
+        console.error('❌ Error processing order item:', item, itemError);
+        return res.status(500).json({ 
+          message: `Error processing item: ${item.name || 'Unknown'}`,
+          error: itemError.message 
+        });
       }
-
-      if (product.stock < item.quantity) {
-        return res.status(400).json({ message: `Insufficient stock for ${product.name}. Available: ${product.stock}` });
-      }
-
-      verifiedOrderItems.push({
-        name: product.name,
-        quantity: item.quantity,
-        image: item.image || product.images?.[0] || '',
-        price: product.price,
-        product: product._id
-      });
-
-      calculatedTotal += product.price * item.quantity;
     }
 
     // Use provided totals if available, otherwise calculate

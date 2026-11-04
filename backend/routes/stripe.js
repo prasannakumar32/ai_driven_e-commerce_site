@@ -27,7 +27,7 @@ const getMockSessionData = (sessionId) => {
     // Ensure items have all required fields including productId
     const items = (storedData.items || []).map(item => {
       const productId = item.productId || item.product;
-      if (!productId || productId === 'unknown') {
+      if (!productId || productId === 'unknown' || productId === 'null' || productId === 'undefined') {
         console.error('❌ Invalid productId in mock session data:', item);
         throw new Error(`Invalid product ID for "${item.name}". Product ID is required.`);
       }
@@ -147,7 +147,7 @@ router.post('/create-checkout-session', async (req, res) => {
         },
         items: orderItems.map(item => {
           const productId = item.productId || item.product;
-          if (!productId || productId === 'unknown') {
+          if (!productId || productId === 'unknown' || productId === 'null' || productId === 'undefined') {
             console.error('❌ Invalid productId in checkout item:', item);
             throw new Error(`Invalid product ID for "${item.name}". Product ID is required.`);
           }
@@ -163,7 +163,13 @@ router.post('/create-checkout-session', async (req, res) => {
             sellerLocation: item.sellerLocation || null
           };
         }),
-        productIds: orderItems.map(item => item.productId || item.product || 'unknown'),
+        productIds: orderItems.map(item => {
+          const productId = item.productId || item.product;
+          if (!productId || productId === 'unknown' || productId === 'null' || productId === 'undefined') {
+            throw new Error(`Invalid product ID for "${item.name}"`);
+          }
+          return productId;
+        }),
         shippingAddress: shippingAddress
       });
       
@@ -220,7 +226,7 @@ router.post('/create-checkout-session', async (req, res) => {
           itemCount: orderItems.length.toString(),
           items: JSON.stringify(orderItems.map(item => {
             const productId = item.productId || item.product;
-            if (!productId || productId === 'unknown') {
+            if (!productId || productId === 'unknown' || productId === 'null' || productId === 'undefined') {
               console.error('❌ Invalid productId in metadata:', item);
               throw new Error(`Invalid product ID for "${item.name}". Product ID is required.`);
             }
@@ -236,7 +242,7 @@ router.post('/create-checkout-session', async (req, res) => {
           })),
           productIds: orderItems.map(item => {
             const productId = item.productId || item.product;
-            if (!productId || productId === 'unknown') {
+            if (!productId || productId === 'unknown' || productId === 'null' || productId === 'undefined') {
               throw new Error(`Invalid product ID for "${item.name}". Product ID is required.`);
             }
             return productId;
