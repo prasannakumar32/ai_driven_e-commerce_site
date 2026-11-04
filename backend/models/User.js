@@ -49,6 +49,11 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  sellerStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected', 'suspended'],
+    default: 'pending'
+  },
   // Delivery partner specific fields
   vehicleType: {
     type: String,

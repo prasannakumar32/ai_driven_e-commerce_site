@@ -91,6 +91,7 @@ app.use('/api/orders', requireDB, require('./routes/orders'));
 app.use('/api/delivery-partner', requireDB, require('./routes/deliveryPartner'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/stripe', requireDB, require('./routes/stripe'));
+app.use('/api/admin', requireDB, require('./routes/admin'));
 
 // SPA Catch-all: Serve React app for all non-API routes
 // This allows React Router to handle client-side routing

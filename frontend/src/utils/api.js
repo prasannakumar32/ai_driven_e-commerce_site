@@ -159,4 +159,22 @@ export const deliveryPartnerAPI = {
   updateLocation: (coordinates) => api.put('/delivery-partner/location', { coordinates })
 };
 
+// Admin API
+export const adminAPI = {
+  getStats: () => api.get('/admin/stats'),
+  getSellers: () => api.get('/admin/sellers'),
+  approveSeller: (id) => api.put(`/admin/sellers/${id}/approve`),
+  rejectSeller: (id) => api.put(`/admin/sellers/${id}/reject`),
+  getDeliveryPartners: () => api.get('/admin/delivery-partners'),
+  approveDeliveryPartner: (id) => api.put(`/admin/delivery-partners/${id}/approve`),
+  rejectDeliveryPartner: (id) => api.put(`/admin/delivery-partners/${id}/reject`),
+  getOrders: (params) => api.get('/admin/orders', { params }),
+  updateOrderStatus: (id, data) => api.put(`/admin/orders/${id}/status`, data),
+  getProducts: (params) => api.get('/admin/products', { params }),
+  deleteProduct: (id) => api.delete(`/admin/products/${id}`),
+  getUsers: (params) => api.get('/admin/users', { params }),
+  updateUserRole: (id, data) => api.put(`/admin/users/${id}/role`, data),
+  deleteUser: (id) => api.delete(`/admin/users/${id}`)
+};
+
 export default api;

@@ -14,6 +14,7 @@ import BecomeSeller from './pages/BecomeSeller';
 import BecomeDeliveryPartner from './pages/BecomeDeliveryPartner';
 import SellerDashboard from './pages/SellerDashboard';
 import DeliveryPartnerDashboard from './pages/DeliveryPartnerDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import Checkout from './pages/Checkout';
 import CheckoutSuccess from './pages/CheckoutSuccess';
 import PaymentSuccess from './pages/PaymentSuccess';
@@ -161,6 +162,14 @@ function App() {
                 element={
                   <ProtectedRoute requiredRole="delivery_partner">
                     <DeliveryPartnerDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin-dashboard"
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <AdminDashboard />
                   </ProtectedRoute>
                 }
               />

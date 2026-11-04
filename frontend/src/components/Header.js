@@ -325,6 +325,11 @@ const Header = () => {
                           Delivery Partner
                         </Typography>
                       )}
+                      {user?.role === 'admin' && (
+                        <Typography variant="caption" color="error" display="block">
+                          Admin
+                        </Typography>
+                      )}
                     </Box>
                   </MenuItem>
                   {user?.role === 'seller' && (
@@ -340,6 +345,14 @@ const Header = () => {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Store fontSize="small" />
                         Delivery Dashboard
+                      </Box>
+                    </MenuItem>
+                  )}
+                  {user?.role === 'admin' && (
+                    <MenuItem onClick={() => { navigate('/admin-dashboard'); handleMenuClose(); }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <BusinessCenter fontSize="small" />
+                        Admin Dashboard
                       </Box>
                     </MenuItem>
                   )}
@@ -502,6 +515,11 @@ const Header = () => {
                           Delivery Partner
                         </Typography>
                       )}
+                      {user?.role === 'admin' && (
+                        <Typography variant="caption" color="error" display="block">
+                          Admin
+                        </Typography>
+                      )}
                     </Box>
                   </Box>
                 </ListItem>
@@ -516,6 +534,12 @@ const Header = () => {
                   <ListItem button onClick={() => { navigate('/delivery-partner-dashboard'); setMobileMenuOpen(false); }}>
                     <ListItemIcon><Store /></ListItemIcon>
                     <ListItemText primary="Delivery Dashboard" />
+                  </ListItem>
+                )}
+                {user?.role === 'admin' && (
+                  <ListItem button onClick={() => { navigate('/admin-dashboard'); setMobileMenuOpen(false); }}>
+                    <ListItemIcon><BusinessCenter /></ListItemIcon>
+                    <ListItemText primary="Admin Dashboard" />
                   </ListItem>
                 )}
                 <ListItem button onClick={() => { navigate('/profile'); setMobileMenuOpen(false); }}>

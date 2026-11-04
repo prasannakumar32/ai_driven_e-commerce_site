@@ -3128,6 +3128,30 @@ const sampleProducts = [
 // Sample user data
 const sampleUsers = [
   {
+    name: 'Admin User',
+    username: 'admin',
+    email: 'admin@pks.com',
+    password: 'admin123',
+    role: 'admin',
+    avatar: 'https://picsum.photos/seed/admin/100/100.jpg',
+    preferences: {
+      categories: ['electronics', 'sports'],
+      brands: ['Apple', 'Nike'],
+      priceRange: { min: 50, max: 1000 },
+      location: 'Mumbai, India'
+    },
+    aiProfile: {
+      interests: ['technology', 'fitness', 'photography'],
+      personalityTraits: ['tech-savvy', 'active', 'quality-conscious'],
+      recommendationWeights: {
+        price: 0.2,
+        brand: 0.3,
+        category: 0.3,
+        popularity: 0.2
+      }
+    }
+  },
+  {
     name: 'John Doe',
     email: 'john.doe@example.com',
     password: 'password123',
