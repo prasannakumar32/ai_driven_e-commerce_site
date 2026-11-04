@@ -11,7 +11,9 @@ import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import BecomeSeller from './pages/BecomeSeller';
+import BecomeDeliveryPartner from './pages/BecomeDeliveryPartner';
 import SellerDashboard from './pages/SellerDashboard';
+import DeliveryPartnerDashboard from './pages/DeliveryPartnerDashboard';
 import Checkout from './pages/Checkout';
 import CheckoutSuccess from './pages/CheckoutSuccess';
 import PaymentSuccess from './pages/PaymentSuccess';
@@ -137,6 +139,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/become-seller" element={<BecomeSeller />} />
+              <Route path="/become-delivery-partner" element={<BecomeDeliveryPartner />} />
               <Route 
                 path="/profile" 
                 element={
@@ -145,13 +148,21 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
-              <Route 
-                path="/seller-dashboard" 
+              <Route
+                path="/seller-dashboard"
                 element={
                   <ProtectedRoute requiredRole="seller">
                     <SellerDashboard />
                   </ProtectedRoute>
-                } 
+                }
+              />
+              <Route
+                path="/delivery-partner-dashboard"
+                element={
+                  <ProtectedRoute requiredRole="delivery_partner">
+                    <DeliveryPartnerDashboard />
+                  </ProtectedRoute>
+                }
               />
             </Routes>
           </Router>

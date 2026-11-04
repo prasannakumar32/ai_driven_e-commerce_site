@@ -113,6 +113,14 @@ const orderSchema = new mongoose.Schema({
   deliveredAt: {
     type: Date
   },
+  // Delivery partner assignment
+  deliveryPartner: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  deliveryPartnerAssignedAt: {
+    type: Date
+  },
   status: {
     type: String,
     required: true,

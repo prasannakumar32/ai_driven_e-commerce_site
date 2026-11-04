@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['customer', 'seller'],
+    enum: ['customer', 'seller', 'delivery_partner', 'admin'],
     default: 'customer'
   },
   // Seller-specific fields
@@ -48,6 +48,52 @@ const userSchema = new mongoose.Schema({
   phone: {
     type: String,
     trim: true
+  },
+  // Delivery partner specific fields
+  vehicleType: {
+    type: String,
+    enum: ['bike', 'scooter', 'car', 'van', 'truck']
+  },
+  vehicleNumber: {
+    type: String,
+    trim: true
+  },
+  licenseNumber: {
+    type: String,
+    trim: true
+  },
+  operatingArea: {
+    type: String,
+    trim: true
+  },
+  isAvailable: {
+    type: Boolean,
+    default: true
+  },
+  currentLocation: {
+    type: {
+      type: String,
+      enum: ['Point']
+    },
+    coordinates: {
+      type: [Number],
+      default: [0, 0]
+    }
+  },
+  totalDeliveries: {
+    type: Number,
+    default: 0
+  },
+  rating: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 5
+  },
+  deliveryPartnerStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'active', 'suspended'],
+    default: 'pending'
   },
   avatar: {
     type: String,

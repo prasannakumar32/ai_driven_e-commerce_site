@@ -88,6 +88,7 @@ app.use('/api/auth', requireDB, require('./routes/auth'));
 app.use('/api/products', require('./routes/products')); // Products can be read without strict DB check
 app.use('/api/cart', requireDB, require('./routes/cart'));
 app.use('/api/orders', requireDB, require('./routes/orders'));
+app.use('/api/delivery-partner', requireDB, require('./routes/deliveryPartner'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/stripe', requireDB, require('./routes/stripe'));
 

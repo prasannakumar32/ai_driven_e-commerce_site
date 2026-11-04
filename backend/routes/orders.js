@@ -328,7 +328,8 @@ router.get('/:id', auth, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
       .populate('user', 'name email')
-      .populate('orderItems.product', 'name images');
+      .populate('orderItems.product', 'name images')
+      .populate('deliveryPartner', 'name phone vehicleType vehicleNumber');
 
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });

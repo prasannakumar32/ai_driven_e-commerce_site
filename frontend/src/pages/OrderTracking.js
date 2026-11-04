@@ -268,6 +268,35 @@ const OrderTracking = () => {
         </Typography>
       </Paper>
 
+      {/* Delivery Partner Information */}
+      {order.deliveryPartner && (
+        <Paper sx={{ p: 3, mb: 4, bgcolor: '#e3f2fd', border: '2px solid #1976d2' }}>
+          <Typography variant="h6" gutterBottom sx={{ color: '#1976d2' }}>
+            🚚 Delivery Partner Assigned
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Typography variant="body1" fontWeight="600">
+              Name: {order.deliveryPartnerName || 'N/A'}
+            </Typography>
+            {order.deliveryPartnerPhone && (
+              <Button
+                variant="contained"
+                size="small"
+                href={`tel:${order.deliveryPartnerPhone}`}
+                startIcon={<LocalShipping />}
+              >
+                Call Delivery Partner
+              </Button>
+            )}
+          </Box>
+          {order.deliveryPartnerAssignedAt && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Assigned on: {new Date(order.deliveryPartnerAssignedAt).toLocaleString()}
+            </Typography>
+          )}
+        </Paper>
+      )}
+
       {/* Order Items */}
       <Paper sx={{ p: 3, mb: 4 }}>
         <Typography variant="h6" gutterBottom>

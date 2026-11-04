@@ -148,4 +148,15 @@ export const authAPI = {
   setDefaultAddress: (id) => api.put(`/auth/addresses/${id}/set-default`)
 };
 
+// Delivery Partner API
+export const deliveryPartnerAPI = {
+  getAvailableOrders: () => api.get('/delivery-partner/available-orders'),
+  getMyOrders: () => api.get('/delivery-partner/my-orders'),
+  getStats: () => api.get('/delivery-partner/stats'),
+  acceptOrder: (orderId) => api.put(`/delivery-partner/accept-order/${orderId}`),
+  updateOrderStatus: (orderId, data) => api.put(`/delivery-partner/update-status/${orderId}`, data),
+  updateAvailability: (isAvailable) => api.put('/delivery-partner/availability', { isAvailable }),
+  updateLocation: (coordinates) => api.put('/delivery-partner/location', { coordinates })
+};
+
 export default api;
