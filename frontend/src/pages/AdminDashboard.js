@@ -31,7 +31,8 @@ import {
   IconButton,
   LinearProgress,
   TextField,
-  Stack
+  Stack,
+  Skeleton
 } from '@mui/material';
 import {
   People,
@@ -84,6 +85,16 @@ const AdminDashboard = () => {
       fetchStats();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      if (activeTab === 1) fetchSellers();
+      if (activeTab === 2) fetchDeliveryPartners();
+      if (activeTab === 3) fetchOrders();
+      if (activeTab === 4) fetchProducts();
+      if (activeTab === 5) fetchUsers();
+    }
+  }, [activeTab, user]);
 
   const fetchStats = async () => {
     try {
@@ -310,7 +321,15 @@ const AdminDashboard = () => {
         )}
 
         {/* Stats Cards */}
-        {stats && (
+        {loading ? (
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Grid item xs={12} sm={6} md={2.4} key={i}>
+                <Skeleton variant="rectangular" height={140} sx={{ borderRadius: 3 }} />
+              </Grid>
+            ))}
+          </Grid>
+        ) : stats ? (
           <Grid container spacing={3} sx={{ mb: 4 }}>
             <Grid item xs={12} sm={6} md={2.4}>
               <Card sx={{ 
@@ -328,7 +347,7 @@ const AdminDashboard = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box>
                       <Typography variant="h3" fontWeight="bold" sx={{ fontSize: '2.5rem' }}>
-                        {stats.users}
+                        {stats.users || 0}
                       </Typography>
                       <Typography variant="body2" sx={{ opacity: 0.9, mt: 1 }}>
                         Total Users
@@ -361,7 +380,7 @@ const AdminDashboard = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box>
                       <Typography variant="h3" fontWeight="bold" sx={{ fontSize: '2.5rem' }}>
-                        {stats.sellers}
+                        {stats.sellers || 0}
                       </Typography>
                       <Typography variant="body2" sx={{ opacity: 0.9, mt: 1 }}>
                         Sellers
@@ -394,7 +413,7 @@ const AdminDashboard = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box>
                       <Typography variant="h3" fontWeight="bold" sx={{ fontSize: '2.5rem' }}>
-                        {stats.deliveryPartners}
+                        {stats.deliveryPartners || 0}
                       </Typography>
                       <Typography variant="body2" sx={{ opacity: 0.9, mt: 1 }}>
                         Delivery Partners
@@ -427,7 +446,7 @@ const AdminDashboard = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box>
                       <Typography variant="h3" fontWeight="bold" sx={{ fontSize: '2.5rem' }}>
-                        {stats.orders}
+                        {stats.orders || 0}
                       </Typography>
                       <Typography variant="body2" sx={{ opacity: 0.9, mt: 1 }}>
                         Orders
@@ -460,7 +479,7 @@ const AdminDashboard = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box>
                       <Typography variant="h3" fontWeight="bold" sx={{ fontSize: '2.5rem' }}>
-                        {stats.products}
+                        {stats.products || 0}
                       </Typography>
                       <Typography variant="body2" sx={{ opacity: 0.9, mt: 1 }}>
                         Products
@@ -511,7 +530,7 @@ const AdminDashboard = () => {
               </Card>
             </Grid>
           </Grid>
-        )}
+        ) : null}
 
         {/* Pending Approvals Alert */}
         {(stats?.pendingSellers > 0 || stats?.pendingDeliveryPartners > 0) && (
