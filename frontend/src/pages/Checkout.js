@@ -23,7 +23,8 @@ import {
   CheckCircle,
   Security,
   ArrowBack,
-  LocationOn
+  LocationOn,
+  CreditCard
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
