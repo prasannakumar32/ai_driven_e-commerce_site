@@ -45,7 +45,7 @@ router.get('/my-orders', auth, async (req, res) => {
 
     const myOrders = await Order.find({
       deliveryPartner: req.user._id,
-      status: { $in: ['shipped', 'in-transit', 'out-for-delivery'] }
+      status: { $in: ['shipped', 'in-transit', 'out-for-delivery', 'delivered'] }
     })
       .populate('user', 'name email phone')
       .populate('orderItems.product', 'name images')
