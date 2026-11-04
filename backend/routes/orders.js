@@ -5,6 +5,7 @@ const Order = require('../models/Order');
 const Product = require('../models/Product');
 const User = require('../models/User');
 const { getRecommendations } = require('../utils/aiRecommendations');
+const { assignDeliveryPartner } = require('../utils/deliveryPartnerAssignment');
 const auth = require('../middleware/auth');
 
 // Create new order (authenticated users only)
@@ -244,6 +245,13 @@ router.post('/', auth, async (req, res) => {
     const order = new Order(orderData);
     const createdOrder = await order.save();
 
+    // Auto-assign delivery partner if order status is shipped (rare case, but handle it)
+    if (createdOrder.status === 'shipped' && !createdOrder.deliveryPartner) {
+      assignDeliveryPartner(createdOrder._id).catch(err => {
+        console.error('Error in auto-assignment after order creation:', err);
+      });
+    }
+
     // Update product stock
     for (const item of verifiedOrderItems) {
       await Product.findByIdAndUpdate(item.product, {
@@ -408,6 +416,15 @@ router.put('/:id/status', auth, async (req, res) => {
       order.isDelivered = true;
       order.deliveredAt = new Date();
       order.actualDeliveryDate = new Date();
+    }
+
+    // Auto-assign delivery partner when order is shipped
+    if (status === 'shipped' && !order.deliveryPartner) {
+      console.log('📦 Order status changed to shipped, attempting auto-assignment...');
+      // Trigger auto-assignment in background (don't await to avoid slowing down response)
+      assignDeliveryPartner(order._id).catch(err => {
+        console.error('Error in auto-assignment:', err);
+      });
     }
 
     // Handle cancelled status
@@ -613,13 +630,102 @@ router.post('/admin/update-delivery-status', auth, async (req, res) => {
     const { updateDeliveredOrders } = require('../utils/deliveryStatusUpdater');
     const updatedCount = await updateDeliveredOrders();
 
-    res.json({ 
+    res.json({
       message: `Successfully updated ${updatedCount || 0} order(s) to delivered status`,
       ordersUpdated: updatedCount || 0
     });
   } catch (error) {
     console.error('❌ Error updating delivery status:', error);
     res.status(500).json({ message: error.message || 'Failed to update delivery status' });
+  }
+});
+
+// Auto-assign delivery partner to all unassigned shipped orders (admin only)
+router.post('/admin/auto-assign-partners', auth, async (req, res) => {
+  try {
+    if (!req.user?.isAdmin) {
+      return res.status(401).json({ message: 'Admin access required' });
+    }
+
+    // Find all shipped orders without delivery partners
+    const unassignedOrders = await Order.find({
+      status: 'shipped',
+      deliveryPartner: { $exists: false }
+    });
+
+    if (unassignedOrders.length === 0) {
+      return res.json({
+        message: 'No unassigned shipped orders found',
+        assignedCount: 0
+      });
+    }
+
+    console.log(`📋 Found ${unassignedOrders.length} unassigned shipped orders`);
+
+    let assignedCount = 0;
+    const assignmentResults = [];
+
+    for (const order of unassignedOrders) {
+      try {
+        const partnerId = await assignDeliveryPartner(order._id);
+        if (partnerId) {
+          assignedCount++;
+          assignmentResults.push({
+            orderId: order._id,
+            status: 'assigned',
+            partnerId: partnerId
+          });
+        } else {
+          assignmentResults.push({
+            orderId: order._id,
+            status: 'no-partner-available'
+          });
+        }
+      } catch (err) {
+        console.error(`Error assigning partner to order ${order._id}:`, err);
+        assignmentResults.push({
+          orderId: order._id,
+          status: 'error',
+          error: err.message
+        });
+      }
+    }
+
+    res.json({
+      message: `Successfully assigned delivery partners to ${assignedCount} out of ${unassignedOrders.length} orders`,
+      totalOrders: unassignedOrders.length,
+      assignedCount: assignedCount,
+      results: assignmentResults
+    });
+  } catch (error) {
+    console.error('❌ Error in auto-assigning partners:', error);
+    res.status(500).json({ message: error.message || 'Failed to auto-assign partners' });
+  }
+});
+
+// Reassign order to a different delivery partner (admin only)
+router.put('/:id/reassign-partner', auth, async (req, res) => {
+  try {
+    if (!req.user?.isAdmin) {
+      return res.status(401).json({ message: 'Admin access required' });
+    }
+
+    const { newPartnerId } = req.body;
+
+    if (!newPartnerId) {
+      return res.status(400).json({ message: 'New delivery partner ID is required' });
+    }
+
+    const { reassignDeliveryPartner } = require('../utils/deliveryPartnerAssignment');
+    const updatedOrder = await reassignDeliveryPartner(req.params.id, newPartnerId);
+
+    res.json({
+      message: 'Order reassigned successfully',
+      order: updatedOrder
+    });
+  } catch (error) {
+    console.error('❌ Error reassigning delivery partner:', error);
+    res.status(500).json({ message: error.message || 'Failed to reassign delivery partner' });
   }
 });
 
