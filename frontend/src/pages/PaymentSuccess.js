@@ -686,11 +686,11 @@ const PaymentSuccess = () => {
           {/* Action Buttons */}
           <Paper sx={{ p: 3, borderRadius: 2, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-              <Button 
+              <Button
                 variant="contained"
                 color="primary"
-                fullWidth 
-                onClick={() => navigate('/profile')}
+                fullWidth
+                onClick={() => navigate(`/order-tracking/${orderData._id}`)}
               >
                 Track Order
               </Button>

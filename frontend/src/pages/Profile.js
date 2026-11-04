@@ -514,7 +514,7 @@ const Profile = () => {
                 getFilteredAndSortedOrders={getFilteredAndSortedOrders}
                 onCancelOrder={(orderId) => handleOrderAction(orderId, 'cancel')}
                 onReorder={(orderId) => handleOrderAction(orderId, 'reorder')}
-                onTrack={(trackingNumber) => window.open(`https://track.delhivery.com/${trackingNumber}`, '_blank')}
+                onTrack={(orderId) => navigate(`/order-tracking/${orderId}`)}
               />
             </TabPanel>
           </Box>

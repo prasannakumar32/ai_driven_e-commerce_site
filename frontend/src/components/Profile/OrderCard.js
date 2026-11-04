@@ -30,11 +30,11 @@ const getStatusColor = (status) => {
   }
 };
 
-const OrderCard = ({ 
-  order, 
-  onCancel, 
-  onReorder, 
-  onTrack 
+const OrderCard = ({
+  order,
+  onCancel,
+  onReorder,
+  onTrack
 }) => {
   return (
     <Card sx={{ 
@@ -156,7 +156,7 @@ const OrderCard = ({
             variant="outlined"
             size="small"
             onClick={() => onReorder(order._id)}
-            sx={{ 
+            sx={{
               borderRadius: 1,
               textTransform: 'none',
               fontWeight: 600,
@@ -171,27 +171,25 @@ const OrderCard = ({
           >
             Reorder
           </Button>
-          
-          {order.deliveryInfo?.trackingNumber && (
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<LocalShipping />}
-              onClick={() => onTrack(order.deliveryInfo.trackingNumber)}
-              sx={{ 
-                borderRadius: 1,
-                textTransform: 'none',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                background: 'linear-gradient(90deg, #4caf50 0%, #388e3c 100%)',
-                '&:hover': {
-                  boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)'
-                }
-              }}
-            >
-              Track
-            </Button>
-          )}
+
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<LocalShipping />}
+            onClick={() => onTrack(order._id)}
+            sx={{
+              borderRadius: 1,
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              background: 'linear-gradient(90deg, #4caf50 0%, #388e3c 100%)',
+              '&:hover': {
+                boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)'
+              }
+            }}
+          >
+            Track Order
+          </Button>
         </Box>
       </CardContent>
     </Card>

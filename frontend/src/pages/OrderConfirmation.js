@@ -655,7 +655,18 @@ const OrderConfirmation = () => {
               >
                 Share Order
               </Button>
-              
+
+              <Button
+                variant="contained"
+                fullWidth
+                color="primary"
+                startIcon={<LocalShipping />}
+                onClick={() => navigate(`/order-tracking/${orderData._id}`)}
+                sx={{ mb: 2 }}
+              >
+                Track Order
+              </Button>
+
               <Button
                 variant="outlined"
                 fullWidth
@@ -665,7 +676,7 @@ const OrderConfirmation = () => {
               >
                 Continue Shopping
               </Button>
-              
+
               <Button
                 variant="text"
                 fullWidth

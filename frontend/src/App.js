@@ -17,6 +17,7 @@ import CheckoutSuccess from './pages/CheckoutSuccess';
 import PaymentSuccess from './pages/PaymentSuccess';
 import OrderConfirmation from './pages/OrderConfirmation';
 import Orders from './pages/Orders';
+import OrderTracking from './pages/OrderTracking';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
@@ -126,6 +127,11 @@ function App() {
               <Route path="/orders" element={
                 <ProtectedRoute>
                   <Orders />
+                </ProtectedRoute>
+              } />
+              <Route path="/order-tracking/:orderId" element={
+                <ProtectedRoute>
+                  <OrderTracking />
                 </ProtectedRoute>
               } />
               <Route path="/login" element={<Login />} />

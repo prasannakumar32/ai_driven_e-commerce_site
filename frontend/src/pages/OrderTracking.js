@@ -46,6 +46,7 @@ const OrderTracking = () => {
   const navigate = useNavigate();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [trackingDialog, setTrackingDialog] = useState(false);
   const [showStatusUpdate, setShowStatusUpdate] = useState(false);
   const [user, setUser] = useState(null);
@@ -59,10 +60,13 @@ const OrderTracking = () => {
   const fetchOrderDetails = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await orderAPI.getOrder(orderId);
       setOrder(response.data);
+      setLoading(false);
     } catch (error) {
       console.error('Error fetching order:', error);
+      setError('Failed to load order details. Please check the order ID and try again.');
       setLoading(false);
     }
   }, [orderId]);
@@ -143,9 +147,9 @@ const OrderTracking = () => {
   if (loading) {
     return (
       <Container maxWidth="md" sx={{ py: 6 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-          <LinearProgress sx={{ width: '300px' }} />
-          <Typography variant="h6" sx={{ mt: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 8 }}>
+          <LinearProgress sx={{ width: '300px', mb: 3 }} />
+          <Typography variant="h6" color="text.secondary">
             Loading order details...
           </Typography>
         </Box>
@@ -153,17 +157,25 @@ const OrderTracking = () => {
     );
   }
 
-  if (!order) {
+  if (error || !order) {
     return (
       <Container maxWidth="md" sx={{ py: 6 }}>
-        <Alert severity="error">
-          Order not found. Please check your order ID and try again.
-        </Alert>
-        <Box sx={{ mt: 2, textAlign: 'center' }}>
-          <Button variant="contained" onClick={() => navigate('/profile')}>
-            Back to Orders
-          </Button>
-        </Box>
+        <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 2 }}>
+          <Typography variant="h5" color="error.main" gutterBottom fontWeight="bold">
+            Order Not Found
+          </Typography>
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error || 'Order not found. Please check your order ID and try again.'}
+          </Alert>
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Button variant="contained" onClick={() => navigate('/orders')}>
+              View My Orders
+            </Button>
+            <Button variant="outlined" onClick={() => navigate('/')}>
+              Back to Home
+            </Button>
+          </Box>
+        </Paper>
       </Container>
     );
   }
@@ -532,7 +544,7 @@ const OrderTracking = () => {
 
       {/* Action Buttons */}
       <Box sx={{ mt: 4, display: 'flex', gap: 2, justifyContent: 'center' }}>
-        <Button variant="outlined" onClick={() => navigate('/profile')}>
+        <Button variant="outlined" onClick={() => navigate('/orders')}>
           Back to Orders
         </Button>
         <Button variant="contained" onClick={() => window.print()}>
