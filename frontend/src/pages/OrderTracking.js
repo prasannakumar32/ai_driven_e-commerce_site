@@ -31,7 +31,6 @@ import {
 import {
   LocalShipping,
   CheckCircle,
-  Truck,
   Inventory,
   Home,
   Refresh,
@@ -135,7 +134,7 @@ const OrderTracking = () => {
     {
       label: 'Shipped',
       description: 'Your order has been shipped and is on its way',
-      icon: <Truck />
+      icon: <LocalShipping />
     },
     {
       label: 'Delivered',
@@ -359,8 +358,8 @@ const OrderTracking = () => {
                 'pending': <Inventory />,
                 'processing': <Inventory />,
                 'shipped': <LocalShipping />,
-                'in-transit': <Truck />,
-                'out-for-delivery': <Truck />,
+                'in-transit': <LocalShipping />,
+                'out-for-delivery': <LocalShipping />,
                 'delivered': <Home />,
                 'cancelled': <CheckCircle />
               };

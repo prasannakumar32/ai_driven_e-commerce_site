@@ -31,7 +31,6 @@ import {
 import {
   LocalShipping,
   CheckCircle,
-  Truck,
   Inventory,
   Person,
   LocationOn,
@@ -133,9 +132,9 @@ const DeliveryPartnerDashboard = () => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'shipped': return <Truck />;
+      case 'shipped': return <LocalShipping />;
       case 'in-transit': return <LocalShipping />;
-      case 'out-for-delivery': return <Truck />;
+      case 'out-for-delivery': return <LocalShipping />;
       case 'delivered': return <CheckCircle />;
       default: return <Inventory />;
     }
