@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const router = express.Router();
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+const User = require('../models/User');
 const { getRecommendations } = require('../utils/aiRecommendations');
 const auth = require('../middleware/auth');
 
@@ -79,7 +80,7 @@ router.post('/', auth, async (req, res) => {
           
           if (!product) {
             console.error('❌ Product not found by name:', item.name);
-            return res.status(404).json({ 
+            return res.status(404).json({
               message: `Product not found: ${item.name}. Please contact support with order details.`,
               error: 'PRODUCT_NOT_FOUND',
               productName: item.name
@@ -117,9 +118,44 @@ router.post('/', auth, async (req, res) => {
         }
 
         if (product.stock < item.quantity) {
-          return res.status(400).json({ 
-            message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}` 
+          return res.status(400).json({
+            message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`
           });
+        }
+
+        // Use seller data from request or fetch from product
+        let sellerData = {
+          seller: product.seller?.toString() || item.seller || 'unknown',
+          sellerName: item.sellerName || 'Unknown',
+          sellerBusinessName: item.sellerBusinessName || 'Unknown',
+          sellerLocation: item.sellerLocation || null
+        };
+
+        // If seller information is missing from request, fetch it from User model
+        if (!item.seller || item.seller === 'unknown' || !item.sellerName || item.sellerName === 'Unknown') {
+          if (product.seller) {
+            try {
+              const sellerUser = await User.findById(product.seller);
+              if (sellerUser) {
+                sellerData.seller = product.seller.toString();
+                sellerData.sellerName = sellerUser.name || 'Unknown';
+                sellerData.sellerBusinessName = sellerUser.businessName || 'Unknown';
+                // Extract seller location from addresses if available
+                if (sellerUser.addresses && sellerUser.addresses.length > 0) {
+                  const defaultAddress = sellerUser.addresses.find(addr => addr.isDefault) || sellerUser.addresses[0];
+                  if (defaultAddress) {
+                    sellerData.sellerLocation = {
+                      city: defaultAddress.city,
+                      state: defaultAddress.state,
+                      country: defaultAddress.country
+                    };
+                  }
+                }
+              }
+            } catch (sellerError) {
+              console.warn('⚠️ Could not fetch seller details:', sellerError.message);
+            }
+          }
         }
 
         verifiedOrderItems.push({
@@ -127,7 +163,11 @@ router.post('/', auth, async (req, res) => {
           quantity: item.quantity,
           image: item.image || product.images?.[0] || '',
           price: product.price,
-          product: product._id
+          product: product._id,
+          seller: sellerData.seller,
+          sellerName: sellerData.sellerName,
+          sellerBusinessName: sellerData.sellerBusinessName,
+          sellerLocation: sellerData.sellerLocation
         });
 
         calculatedTotal += product.price * item.quantity;

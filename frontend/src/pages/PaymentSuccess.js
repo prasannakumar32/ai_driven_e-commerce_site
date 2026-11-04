@@ -224,17 +224,17 @@ const PaymentSuccess = () => {
 
             const productId = item.productId || item.product;
 
-            // Validate productId is not 'unknown' - if it is, we need to fetch the product by name
+            // If productId is 'unknown', we'll use it as-is and let the backend handle it
+            // The backend can search for products by name as a fallback
             if (!productId || productId === 'unknown') {
-              console.error('PaymentSuccess: Invalid productId for item:', item.name);
-              throw new Error(`Invalid product ID for "${item.name}". Please contact support.`);
+              console.warn('PaymentSuccess: Invalid productId for item:', item.name, '- will use name-based lookup on backend');
             }
 
             return {
               name: item.name || 'Unknown Product',
               quantity: parseInt(item.quantity) || 1,
               price: priceInRupees,
-              product: productId,
+              product: productId || 'unknown',
               image: item.image || item.images?.[0] || '',
               seller: item.seller || 'unknown',
               sellerName: item.sellerName || 'Unknown',
