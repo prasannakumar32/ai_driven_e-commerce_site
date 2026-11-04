@@ -202,6 +202,60 @@ router.put('/orders/:id/status', auth, adminAuth, async (req, res) => {
   }
 });
 
+// Assign delivery partner to order
+router.put('/orders/:id/assign-delivery-partner', auth, adminAuth, async (req, res) => {
+  try {
+    const { deliveryPartnerId } = req.body;
+
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    if (order.status !== 'shipped') {
+      return res.status(400).json({ message: 'Order must be in shipped status to assign delivery partner' });
+    }
+
+    if (order.deliveryPartner) {
+      return res.status(400).json({ message: 'Order already has a delivery partner assigned' });
+    }
+
+    const deliveryPartner = await User.findById(deliveryPartnerId);
+    if (!deliveryPartner || deliveryPartner.role !== 'delivery_partner') {
+      return res.status(404).json({ message: 'Delivery partner not found' });
+    }
+
+    if (deliveryPartner.deliveryPartnerStatus !== 'active' && deliveryPartner.deliveryPartnerStatus !== 'approved') {
+      return res.status(400).json({ message: 'Delivery partner is not active' });
+    }
+
+    order.deliveryPartner = deliveryPartnerId;
+    order.deliveryPartnerAssignedAt = new Date();
+    order.status = 'in-transit';
+    order.statusTimeline.push({
+      status: 'in-transit',
+      timestamp: new Date(),
+      location: 'Warehouse',
+      notes: `Order assigned to delivery partner: ${deliveryPartner.name} by admin`
+    });
+
+    await order.save();
+
+    // Update delivery partner stats
+    await User.findByIdAndUpdate(deliveryPartnerId, {
+      $inc: { totalDeliveries: 1 }
+    });
+
+    const updatedOrder = await Order.findById(order._id)
+      .populate('user', 'name email')
+      .populate('deliveryPartner', 'name');
+
+    res.json(updatedOrder);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Get all products
 router.get('/products', auth, adminAuth, async (req, res) => {
   try {

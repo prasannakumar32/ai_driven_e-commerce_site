@@ -73,6 +73,8 @@ const AdminDashboard = () => {
   const [error, setError] = useState(null);
   const [statusDialog, setStatusDialog] = useState({ open: false, type: '', id: '', status: '' });
   const [createUserDialog, setCreateUserDialog] = useState({ open: false });
+  const [assignDialog, setAssignDialog] = useState({ open: false, orderId: '' });
+  const [selectedDeliveryPartner, setSelectedDeliveryPartner] = useState('');
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
@@ -240,6 +242,21 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleAssignDeliveryPartner = async () => {
+    try {
+      await api.put(`/admin/orders/${assignDialog.orderId}/assign-delivery-partner`, { 
+        deliveryPartnerId: selectedDeliveryPartner 
+      });
+      setAssignDialog({ open: false, orderId: '' });
+      setSelectedDeliveryPartner('');
+      fetchOrders();
+      alert('Delivery partner assigned successfully!');
+    } catch (err) {
+      console.error('Error assigning delivery partner:', err);
+      alert('Failed to assign delivery partner. Please try again.');
+    }
+  };
+
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ py: 6 }}>
@@ -331,7 +348,7 @@ const AdminDashboard = () => {
               </Grid>
             ))}
           </Grid>
-        ) : stats ? (
+        ) : (
           <Grid container spacing={3} sx={{ mb: 4 }}>
             <Grid item xs={12} sm={6} md={2.4}>
               <Card sx={{ 
@@ -802,18 +819,31 @@ const AdminDashboard = () => {
                     </TableCell>
                     <TableCell>{order.deliveryPartner?.name || 'Unassigned'}</TableCell>
                     <TableCell>
-                      <FormControl size="small" sx={{ minWidth: 120 }}>
-                        <Select
-                          value={order.status}
-                          onChange={(e) => handleOrderStatusUpdate(order._id, e.target.value)}
-                        >
-                          <MenuItem value="pending">Pending</MenuItem>
-                          <MenuItem value="processing">Processing</MenuItem>
-                          <MenuItem value="shipped">Shipped</MenuItem>
-                          <MenuItem value="delivered">Delivered</MenuItem>
-                          <MenuItem value="cancelled">Cancelled</MenuItem>
-                        </Select>
-                      </FormControl>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <FormControl size="small" sx={{ minWidth: 120 }}>
+                          <Select
+                            value={order.status}
+                            onChange={(e) => handleOrderStatusUpdate(order._id, e.target.value)}
+                          >
+                            <MenuItem value="pending">Pending</MenuItem>
+                            <MenuItem value="processing">Processing</MenuItem>
+                            <MenuItem value="shipped">Shipped</MenuItem>
+                            <MenuItem value="delivered">Delivered</MenuItem>
+                            <MenuItem value="cancelled">Cancelled</MenuItem>
+                          </Select>
+                        </FormControl>
+                        {order.status === 'shipped' && !order.deliveryPartner && (
+                          <Button
+                            size="small"
+                            variant="contained"
+                            startIcon={<LocalShipping />}
+                            onClick={() => setAssignDialog({ open: true, orderId: order._id })}
+                            sx={{ bgcolor: '#1976d2', '&:hover': { bgcolor: '#1565c0' } }}
+                          >
+                            Assign
+                          </Button>
+                        )}
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -1043,6 +1073,62 @@ const AdminDashboard = () => {
             }}
           >
             Create User
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Assign Delivery Partner Dialog */}
+      <Dialog 
+        open={assignDialog.open} 
+        onClose={() => setAssignDialog({ open: false, orderId: '' })}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <LocalShipping sx={{ color: '#1976d2' }} />
+            Assign Delivery Partner
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={3} sx={{ mt: 2 }}>
+            <FormControl fullWidth>
+              <InputLabel>Select Delivery Partner</InputLabel>
+              <Select
+                value={selectedDeliveryPartner}
+                label="Select Delivery Partner"
+                onChange={(e) => setSelectedDeliveryPartner(e.target.value)}
+              >
+                {deliveryPartners
+                  .filter(dp => dp.deliveryPartnerStatus === 'active' || dp.deliveryPartnerStatus === 'approved')
+                  .map((dp) => (
+                    <MenuItem key={dp._id} value={dp._id}>
+                      {dp.name} - {dp.vehicleType} ({dp.operatingArea})
+                    </MenuItem>
+                  ))}
+              </Select>
+            </FormControl>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button 
+            onClick={() => setAssignDialog({ open: false, orderId: '' })}
+            sx={{ px: 3 }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleAssignDeliveryPartner}
+            disabled={!selectedDeliveryPartner}
+            sx={{ 
+              px: 3,
+              bgcolor: '#1976d2',
+              '&:hover': { bgcolor: '#1565c0' },
+              '&:disabled': { bgcolor: '#ccc' }
+            }}
+          >
+            Assign
           </Button>
         </DialogActions>
       </Dialog>

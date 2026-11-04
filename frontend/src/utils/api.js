@@ -170,6 +170,7 @@ export const adminAPI = {
   rejectDeliveryPartner: (id) => api.put(`/admin/delivery-partners/${id}/reject`),
   getOrders: (params) => api.get('/admin/orders', { params }),
   updateOrderStatus: (id, data) => api.put(`/admin/orders/${id}/status`, data),
+  assignDeliveryPartner: (id, data) => api.put(`/admin/orders/${id}/assign-delivery-partner`, data),
   getProducts: (params) => api.get('/admin/products', { params }),
   deleteProduct: (id) => api.delete(`/admin/products/${id}`),
   getUsers: (params) => api.get('/admin/users', { params }),
