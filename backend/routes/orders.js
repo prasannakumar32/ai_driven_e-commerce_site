@@ -53,10 +53,25 @@ router.post('/', auth, async (req, res) => {
       // Handle both string ID and ObjectId
       const productId = typeof item.product === 'string' ? item.product : item.product._id;
 
-      const product = await Product.findById(productId);
-      if (!product) {
-        console.error('❌ Product not found:', productId);
-        return res.status(404).json({ message: `Product not found with ID: ${productId}` });
+      let product;
+
+      // Fallback: If productId is "unknown", try to find product by name
+      if (productId === 'unknown' || !productId) {
+        console.warn('⚠️ Product ID is unknown, attempting to find by name:', item.name);
+        product = await Product.findOne({ name: item.name });
+        if (!product) {
+          console.error('❌ Product not found by name:', item.name);
+          return res.status(404).json({ 
+            message: `Product not found with name: ${item.name}. Please contact support with session details.` 
+          });
+        }
+        console.log('✅ Found product by name:', product.name, 'ID:', product._id);
+      } else {
+        product = await Product.findById(productId);
+        if (!product) {
+          console.error('❌ Product not found:', productId);
+          return res.status(404).json({ message: `Product not found with ID: ${productId}` });
+        }
       }
 
       if (product.stock < item.quantity) {
