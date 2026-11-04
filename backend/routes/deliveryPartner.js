@@ -188,6 +188,9 @@ router.put('/update-status/:orderId', auth, async (req, res) => {
     order.status = status;
 
     // Add to status timeline
+    if (!order.statusTimeline) {
+      order.statusTimeline = [];
+    }
     order.statusTimeline.push({
       status: status,
       timestamp: new Date(),
@@ -222,6 +225,11 @@ router.put('/update-status/:orderId', auth, async (req, res) => {
     res.json(updatedOrder);
   } catch (error) {
     console.error('Error updating order status:', error);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    });
     res.status(500).json({ message: error.message });
   }
 });
