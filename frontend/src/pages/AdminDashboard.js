@@ -69,6 +69,7 @@ const AdminDashboard = () => {
   const [products, setProducts] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [statusDialog, setStatusDialog] = useState({ open: false, type: '', id: '', status: '' });
   const [createUserDialog, setCreateUserDialog] = useState({ open: false });
@@ -83,6 +84,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (user?.role === 'admin') {
       fetchStats();
+      setLoading(false);
     }
   }, [user]);
 
@@ -98,7 +100,7 @@ const AdminDashboard = () => {
 
   const fetchStats = async () => {
     try {
-      setLoading(true);
+      setStatsLoading(true);
       setError(null);
       const response = await api.get('/admin/stats');
       setStats(response.data);
@@ -106,7 +108,7 @@ const AdminDashboard = () => {
       console.error('Error fetching admin stats:', err);
       setError('Failed to load admin data. Please try again.');
     } finally {
-      setLoading(false);
+      setStatsLoading(false);
     }
   };
 
@@ -321,7 +323,7 @@ const AdminDashboard = () => {
         )}
 
         {/* Stats Cards */}
-        {loading ? (
+        {statsLoading ? (
           <Grid container spacing={3} sx={{ mb: 4 }}>
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <Grid item xs={12} sm={6} md={2.4} key={i}>
