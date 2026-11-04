@@ -549,7 +549,7 @@ const AdminDashboard = () => {
               </Card>
             </Grid>
           </Grid>
-        ) : null}
+        )}
 
         {/* Pending Approvals Alert */}
         {(stats?.pendingSellers > 0 || stats?.pendingDeliveryPartners > 0) && (
