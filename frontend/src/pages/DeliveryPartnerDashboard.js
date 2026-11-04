@@ -41,11 +41,13 @@ import {
   Assignment,
   Refresh
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { deliveryPartnerAPI } from '../utils/api';
 
 const DeliveryPartnerDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
   const [availableOrders, setAvailableOrders] = useState([]);
   const [myOrders, setMyOrders] = useState([]);
@@ -156,6 +158,54 @@ const DeliveryPartnerDashboard = () => {
         <Alert severity="error">
           Access denied. This page is only for delivery partners.
         </Alert>
+      </Container>
+    );
+  }
+
+  // Show pending status message
+  if (user?.deliveryPartnerStatus === 'pending') {
+    return (
+      <Container maxWidth="md" sx={{ py: 6 }}>
+        <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 2 }}>
+          <Assignment sx={{ fontSize: 64, color: 'warning.main', mb: 2 }} />
+          <Typography variant="h5" gutterBottom fontWeight="bold" color="warning.main">
+            Application Under Review
+          </Typography>
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            Your delivery partner application is currently under review. Our team will verify your details and approve your account within 24-48 hours.
+          </Alert>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            You'll be able to access the delivery dashboard once your application is approved.
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+            <Button variant="outlined" onClick={() => navigate('/profile')}>
+              View Profile
+            </Button>
+            <Button variant="contained" onClick={() => navigate('/')}>
+              Back to Home
+            </Button>
+          </Box>
+        </Paper>
+      </Container>
+    );
+  }
+
+  // Show suspended status message
+  if (user?.deliveryPartnerStatus === 'suspended') {
+    return (
+      <Container maxWidth="md" sx={{ py: 6 }}>
+        <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 2 }}>
+          <Assignment sx={{ fontSize: 64, color: 'error.main', mb: 2 }} />
+          <Typography variant="h5" gutterBottom fontWeight="bold" color="error.main">
+            Account Suspended
+          </Typography>
+          <Alert severity="error" sx={{ mb: 3 }}>
+            Your delivery partner account has been suspended. Please contact support for more information.
+          </Alert>
+          <Button variant="contained" onClick={() => navigate('/')}>
+            Back to Home
+          </Button>
+        </Paper>
       </Container>
     );
   }
