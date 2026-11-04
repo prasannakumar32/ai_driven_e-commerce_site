@@ -213,6 +213,7 @@ const Header = () => {
                   border: '1px solid #FFD700',
                   borderRadius: 1,
                   px: 1,
+                  mr: 1,
                   '&:hover': {
                     backgroundColor: 'rgba(255, 215, 0, 0.1)',
                     color: '#FFC700'
@@ -221,6 +222,29 @@ const Header = () => {
                 onClick={() => navigate('/become-seller')}
               >
                 Become a Seller
+              </Button>
+            )}
+            {/* Show Become Delivery Partner button only for non-authenticated users or customers, but not during loading */}
+            {!loading && (!isAuthenticated || user?.role !== 'delivery_partner') && (
+              <Button
+                color="inherit"
+                startIcon={<Store />}
+                sx={{ 
+                  color: '#FFD700',
+                  fontSize: '0.8rem',
+                  textTransform: 'none',
+                  minWidth: 'auto',
+                  border: '1px solid #FFD700',
+                  borderRadius: 1,
+                  px: 1,
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                    color: '#FFC700'
+                  }
+                }}
+                onClick={() => navigate('/become-delivery-partner')}
+              >
+                Become a Delivery Partner
               </Button>
             )}
             <IconButton
@@ -296,6 +320,11 @@ const Header = () => {
                           Seller
                         </Typography>
                       )}
+                      {user?.role === 'delivery_partner' && (
+                        <Typography variant="caption" color="primary" display="block">
+                          Delivery Partner
+                        </Typography>
+                      )}
                     </Box>
                   </MenuItem>
                   {user?.role === 'seller' && (
@@ -303,6 +332,14 @@ const Header = () => {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <BusinessCenter fontSize="small" />
                         Seller Dashboard
+                      </Box>
+                    </MenuItem>
+                  )}
+                  {user?.role === 'delivery_partner' && (
+                    <MenuItem onClick={() => { navigate('/delivery-partner-dashboard'); handleMenuClose(); }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Store fontSize="small" />
+                        Delivery Dashboard
                       </Box>
                     </MenuItem>
                   )}
@@ -460,6 +497,11 @@ const Header = () => {
                           Seller
                         </Typography>
                       )}
+                      {user?.role === 'delivery_partner' && (
+                        <Typography variant="caption" color="primary" display="block">
+                          Delivery Partner
+                        </Typography>
+                      )}
                     </Box>
                   </Box>
                 </ListItem>
@@ -468,6 +510,12 @@ const Header = () => {
                   <ListItem button onClick={() => { navigate('/seller-dashboard'); setMobileMenuOpen(false); }}>
                     <ListItemIcon><BusinessCenter /></ListItemIcon>
                     <ListItemText primary="Seller Dashboard" />
+                  </ListItem>
+                )}
+                {user?.role === 'delivery_partner' && (
+                  <ListItem button onClick={() => { navigate('/delivery-partner-dashboard'); setMobileMenuOpen(false); }}>
+                    <ListItemIcon><Store /></ListItemIcon>
+                    <ListItemText primary="Delivery Dashboard" />
                   </ListItem>
                 )}
                 <ListItem button onClick={() => { navigate('/profile'); setMobileMenuOpen(false); }}>

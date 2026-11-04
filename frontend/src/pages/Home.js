@@ -274,7 +274,7 @@ const Home = () => {
           mb: 4,
           overflow: 'hidden',
           borderRadius: 2,
-          height: { xs: 200, md: 300 },
+          height: { xs: 250, md: 350 },
           background: 'linear-gradient(135deg, #2874F0 0%, #FF6B35 100%)'
         }}
       >
@@ -300,26 +300,49 @@ const Home = () => {
                     >
                       Mega Discounts | Top Brands | Fast Delivery
                     </Typography>
-                    <Button 
-                      variant="contained" 
-                      size="large"
-                      endIcon={<FlashOn />}
-                      sx={{ 
-                        backgroundColor: 'white', 
-                        color: '#2874F0',
-                        fontWeight: 'bold',
-                        px: 4,
-                        py: 1.5,
-                        '&:hover': { 
-                          backgroundColor: '#f5f5f5',
-                          transform: 'scale(1.05)'
-                        },
-                        transition: 'all 0.3s ease'
-                      }}
-                      onClick={() => navigate('/products')}
-                    >
-                      Shop Now
-                    </Button>
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                      <Button 
+                        variant="contained" 
+                        size="large"
+                        endIcon={<FlashOn />}
+                        sx={{ 
+                          backgroundColor: 'white', 
+                          color: '#2874F0',
+                          fontWeight: 'bold',
+                          px: 4,
+                          py: 1.5,
+                          '&:hover': { 
+                            backgroundColor: '#f5f5f5',
+                            transform: 'scale(1.05)'
+                          },
+                          transition: 'all 0.3s ease'
+                        }}
+                        onClick={() => navigate('/products')}
+                      >
+                        Shop Now
+                      </Button>
+                      {!isAuthenticated && (
+                        <Button 
+                          variant="outlined" 
+                          size="large"
+                          sx={{ 
+                            borderColor: 'white',
+                            color: 'white',
+                            fontWeight: 'bold',
+                            px: 4,
+                            py: 1.5,
+                            '&:hover': { 
+                              backgroundColor: 'rgba(255,255,255,0.1)',
+                              borderColor: 'white'
+                            },
+                            transition: 'all 0.3s ease'
+                          }}
+                          onClick={() => navigate('/become-delivery-partner')}
+                        >
+                          Become Delivery Partner
+                        </Button>
+                      )}
+                    </Box>
                   </Box>
                 </Slide>
               </Grid>

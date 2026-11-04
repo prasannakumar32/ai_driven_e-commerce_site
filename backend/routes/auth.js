@@ -226,7 +226,7 @@ router.get('/profile', auth, async (req, res) => {
 // Update user profile
 router.put('/profile', auth, async (req, res) => {
   try {
-    const { name, phone, username, preferences } = req.body;
+    const { name, phone, username, preferences, role, deliveryPartnerStatus, vehicleType, vehicleNumber, licenseNumber, operatingArea } = req.body;
     
     const user = await User.findById(req.user.id);
     
@@ -262,6 +262,16 @@ router.put('/profile', auth, async (req, res) => {
     if (preferences) {
       user.preferences = { ...user.preferences, ...preferences };
     }
+    
+    // Handle delivery partner registration
+    if (role === 'delivery_partner') {
+      user.role = 'delivery_partner';
+      user.deliveryPartnerStatus = deliveryPartnerStatus || 'pending';
+      if (vehicleType) user.vehicleType = vehicleType;
+      if (vehicleNumber) user.vehicleNumber = vehicleNumber;
+      if (licenseNumber) user.licenseNumber = licenseNumber;
+      if (operatingArea) user.operatingArea = operatingArea;
+    }
 
     await user.save();
 
@@ -273,7 +283,12 @@ router.put('/profile', auth, async (req, res) => {
       phone: user.phone,
       preferences: user.preferences,
       role: user.role,
-      addresses: user.addresses || []
+      addresses: user.addresses || [],
+      deliveryPartnerStatus: user.deliveryPartnerStatus,
+      vehicleType: user.vehicleType,
+      vehicleNumber: user.vehicleNumber,
+      licenseNumber: user.licenseNumber,
+      operatingArea: user.operatingArea
     });
   } catch (error) {
     console.error('Error updating profile:', error);

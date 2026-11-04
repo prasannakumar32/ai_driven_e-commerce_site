@@ -75,8 +75,12 @@ const ProfileCard = ({ user, orders, addresses }) => {
         </Typography>
         
         <Chip 
-          label={user.role === 'seller' ? 'Seller Account' : 'Customer'} 
-          color={user.role === 'seller' ? 'secondary' : 'primary'} 
+          label={
+            user.role === 'seller' ? 'Seller Account' :
+            user.role === 'delivery_partner' ? 'Delivery Partner' :
+            'Customer'
+          }
+          color={user.role === 'seller' ? 'secondary' : user.role === 'delivery_partner' ? 'success' : 'primary'}
           size="medium"
           sx={{ 
             fontWeight: 'bold',
@@ -90,6 +94,21 @@ const ProfileCard = ({ user, orders, addresses }) => {
             zIndex: 1
           }}
         />
+        {user.role === 'delivery_partner' && user.deliveryPartnerStatus && (
+          <Chip 
+            label={user.deliveryPartnerStatus.toUpperCase()}
+            size="small"
+            sx={{ 
+              mt: 1,
+              fontWeight: 'bold',
+              backgroundColor: user.deliveryPartnerStatus === 'approved' || user.deliveryPartnerStatus === 'active' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(255, 193, 7, 0.3)',
+              color: 'white',
+              border: '1px solid rgba(255,255,255,0.3)',
+              position: 'relative',
+              zIndex: 1
+            }}
+          />
+        )}
       </Paper>
       
       {/* Quick Stats */}
