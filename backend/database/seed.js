@@ -3152,56 +3152,99 @@ const sampleUsers = [
     }
   },
   {
-    name: 'John Doe',
-    email: 'john.doe@example.com',
+    name: 'Rahul Sharma',
+    username: 'rahulsharma',
+    email: 'rahul.sharma@example.com',
     password: 'password123',
-    avatar: 'https://picsum.photos/seed/johndoe/100/100.jpg',
+    role: 'seller',
+    businessName: 'Rahul Electronics',
+    businessType: 'individual',
+    gstNumber: '27AABCU9603R1ZM',
+    phone: '+91 98765 43210',
+    sellerStatus: 'approved',
+    avatar: 'https://picsum.photos/seed/rahul/100/100.jpg',
     preferences: {
-      categories: ['electronics', 'sports'],
-      brands: ['Apple', 'Nike'],
-      priceRange: { min: 50, max: 1000 },
-      location: 'Mumbai, India'
+      categories: ['electronics'],
+      brands: ['Apple', 'Samsung', 'Sony'],
+      priceRange: { min: 100, max: 50000 },
+      location: 'Delhi, India'
     },
     aiProfile: {
-      interests: ['technology', 'fitness', 'photography'],
-      personalityTraits: ['tech-savvy', 'active', 'quality-conscious'],
+      interests: ['technology', 'gadgets', 'smartphones'],
+      personalityTraits: ['tech-savvy', 'business-minded', 'quality-focused'],
       recommendationWeights: {
         price: 0.2,
-        brand: 0.3,
+        brand: 0.4,
         category: 0.3,
-        popularity: 0.2
+        popularity: 0.1
       }
     }
   },
   {
-    name: 'Jane Smith',
-    email: 'jane.smith@example.com',
+    name: 'Raja Kumar',
+    username: 'rajakumar',
+    email: 'raja.kumar@example.com',
     password: 'password123',
-    avatar: 'https://picsum.photos/seed/janesmith/100/100.jpg',
+    role: 'customer',
+    avatar: 'https://picsum.photos/seed/raja/100/100.jpg',
     preferences: {
-      categories: ['clothing', 'beauty', 'home'],
-      brands: ['Nike', 'NatureGlow', 'BasicWear'],
-      priceRange: { min: 20, max: 300 }
+      categories: ['clothing', 'sports'],
+      brands: ['Nike', 'Adidas', 'Puma'],
+      priceRange: { min: 50, max: 1000 },
+      location: 'Chennai, India'
     },
     aiProfile: {
-      interests: ['fashion', 'skincare', 'home decor', 'sustainability'],
-      personalityTraits: ['fashion-conscious', 'eco-friendly', 'budget-aware'],
+      interests: ['fitness', 'sports', 'activewear'],
+      personalityTraits: ['athletic', 'active', 'brand-conscious'],
       recommendationWeights: {
-        price: 0.4,
-        brand: 0.2,
+        price: 0.3,
+        brand: 0.4,
         category: 0.2,
-        popularity: 0.2
+        popularity: 0.1
       }
     }
   },
   {
-    name: 'Mike Johnson',
-    email: 'mike.johnson@example.com',
+    name: 'Praveen Reddy',
+    username: 'praveenreddy',
+    email: 'praveen.reddy@example.com',
     password: 'password123',
-    avatar: 'https://picsum.photos/seed/mikejohnson/100/100.jpg',
+    role: 'delivery_partner',
+    vehicleType: 'bike',
+    vehicleNumber: 'TS 09 EU 4321',
+    licenseNumber: 'DL-123456789',
+    operatingArea: 'Hyderabad',
+    deliveryPartnerStatus: 'active',
+    isAvailable: true,
+    phone: '+91 87654 32109',
+    avatar: 'https://picsum.photos/seed/praveen/100/100.jpg',
+    preferences: {
+      categories: ['electronics', 'home'],
+      brands: ['Samsung', 'LG', 'Sony'],
+      priceRange: { min: 100, max: 10000 },
+      location: 'Hyderabad, India'
+    },
+    aiProfile: {
+      interests: ['delivery', 'logistics', 'customer service'],
+      personalityTraits: ['reliable', 'punctual', 'service-oriented'],
+      recommendationWeights: {
+        price: 0.2,
+        brand: 0.2,
+        category: 0.3,
+        popularity: 0.3
+      }
+    }
+  },
+  {
+    name: 'Prasanna Kumar',
+    username: 'prasannakumar',
+    email: 'prasanna.kumar@example.com',
+    password: 'password123',
+    role: 'customer',
+    avatar: 'https://picsum.photos/seed/prasanna/100/100.jpg',
     preferences: {
       categories: ['electronics', 'books', 'toys'],
-      brands: ['Sony', 'Penguin Classics', 'LEGO'],
+      brands: ['Apple', 'Kindle', 'LEGO'],
       priceRange: { min: 10, max: 500 }
     },
     aiProfile: {
@@ -3216,18 +3259,77 @@ const sampleUsers = [
     }
   },
   {
-    name: 'Sarah Williams',
-    email: 'sarah.williams@example.com',
+    name: 'Sneha Patel',
+    username: 'snehapatel',
+    email: 'sneha.patel@example.com',
     password: 'password123',
-    avatar: 'https://picsum.photos/seed/sarahwilliams/100/100.jpg',
+    role: 'customer',
+    avatar: 'https://picsum.photos/seed/sneha/100/100.jpg',
+    preferences: {
+      categories: ['clothing', 'beauty', 'home'],
+      brands: ['Nike', 'NatureGlow', 'Adidas'],
+      priceRange: { min: 30, max: 400 }
+    },
+    aiProfile: {
+      interests: ['fashion', 'skincare', 'home decor', 'sustainability'],
+      personalityTraits: ['fashion-conscious', 'eco-friendly', 'budget-aware'],
+      recommendationWeights: {
+        price: 0.4,
+        brand: 0.2,
+        category: 0.2,
+        popularity: 0.2
+      }
+    }
+  },
+  {
+    name: 'Amit Singh',
+    username: 'amitsingh',
+    email: 'amit.singh@example.com',
+    password: 'password123',
+    role: 'seller',
+    businessName: 'Amit Sports World',
+    businessType: 'partnership',
+    gstNumber: '27AABCU9603R1ZN',
+    phone: '+91 91234 56789',
+    sellerStatus: 'pending',
+    avatar: 'https://picsum.photos/seed/amit/100/100.jpg',
+    preferences: {
+      categories: ['sports'],
+      brands: ['Nike', 'Adidas', 'Puma', 'Reebok'],
+      priceRange: { min: 100, max: 2000 }
+    },
+    aiProfile: {
+      interests: ['sports', 'fitness', 'business'],
+      personalityTraits: ['entrepreneur', 'fitness-enthusiast', 'customer-focused'],
+      recommendationWeights: {
+        price: 0.2,
+        brand: 0.4,
+        category: 0.3,
+        popularity: 0.1
+      }
+    }
+  },
+  {
+    name: 'Deepa Nair',
+    username: 'deepanair',
+    email: 'deepa.nair@example.com',
+    password: 'password123',
+    role: 'delivery_partner',
+    vehicleType: 'scooter',
+    vehicleNumber: 'KL 07 AB 5678',
+    licenseNumber: 'DL-987654321',
+    operatingArea: 'Kochi',
+    deliveryPartnerStatus: 'pending',
+    phone: '+91 76543 21098',
+    avatar: 'https://picsum.photos/seed/deepa/100/100.jpg',
     preferences: {
       categories: ['home', 'beauty', 'clothing'],
       brands: ['SmartHome', 'NatureGlow', 'Adidas'],
       priceRange: { min: 30, max: 400 }
     },
     aiProfile: {
-      interests: ['smart home', 'organic products', 'comfort', 'wellness'],
-      personalityTraits: ['health-conscious', 'modern', 'comfort-seeking'],
+      interests: ['delivery', 'customer service', 'logistics'],
+      personalityTraits: ['friendly', 'efficient', 'reliable'],
       recommendationWeights: {
         price: 0.3,
         brand: 0.2,
@@ -3237,13 +3339,61 @@ const sampleUsers = [
     }
   },
   {
-    name: 'David Brown',
-    email: 'david.brown@example.com',
+    name: 'Vikram Mehta',
+    username: 'vikrammehta',
+    email: 'vikram.mehta@example.com',
     password: 'password123',
-    avatar: 'https://picsum.photos/seed/davidbrown/100/100.jpg',
+    role: 'customer',
+    avatar: 'https://picsum.photos/seed/vikram/100/100.jpg',
+    preferences: {
+      categories: ['electronics', 'home'],
+      brands: ['Samsung', 'LG', 'SmartHome'],
+      priceRange: { min: 100, max: 2000 }
+    },
+    aiProfile: {
+      interests: ['smart home', 'technology', 'modern living'],
+      personalityTraits: ['modern', 'tech-savvy', 'comfort-seeking'],
+      recommendationWeights: {
+        price: 0.3,
+        brand: 0.2,
+        category: 0.3,
+        popularity: 0.2
+      }
+    }
+  },
+  {
+    name: 'Priya Sharma',
+    username: 'priyasharma',
+    email: 'priya.sharma@example.com',
+    password: 'password123',
+    role: 'customer',
+    avatar: 'https://picsum.photos/seed/priya/100/100.jpg',
+    preferences: {
+      categories: ['beauty', 'clothing', 'home'],
+      brands: ['NatureGlow', 'Lululemon', 'Dyson'],
+      priceRange: { min: 50, max: 500 }
+    },
+    aiProfile: {
+      interests: ['skincare', 'wellness', 'yoga', 'sustainability'],
+      personalityTraits: ['health-conscious', 'eco-friendly', 'quality-focused'],
+      recommendationWeights: {
+        price: 0.3,
+        brand: 0.3,
+        category: 0.3,
+        popularity: 0.1
+      }
+    }
+  },
+  {
+    name: 'Suresh Yadav',
+    username: 'sureshyadav',
+    email: 'suresh.yadav@example.com',
+    password: 'password123',
+    role: 'customer',
+    avatar: 'https://picsum.photos/seed/suresh/100/100.jpg',
     preferences: {
       categories: ['sports', 'electronics'],
-      brands: ['FitGear', 'Apple', 'Samsung'],
+      brands: ['FitGear', 'Apple', 'Sony'],
       priceRange: { min: 100, max: 2000 }
     },
     aiProfile: {
