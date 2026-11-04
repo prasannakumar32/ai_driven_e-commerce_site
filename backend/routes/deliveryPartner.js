@@ -187,10 +187,12 @@ router.put('/update-status/:orderId', auth, async (req, res) => {
     const previousStatus = order.status;
     order.status = status;
 
-    // Add to status timeline
+    // Initialize statusTimeline if it doesn't exist
     if (!order.statusTimeline) {
       order.statusTimeline = [];
     }
+
+    // Add to status timeline
     order.statusTimeline.push({
       status: status,
       timestamp: new Date(),
@@ -219,6 +221,10 @@ router.put('/update-status/:orderId', auth, async (req, res) => {
       order.actualDeliveryDate = new Date();
     }
 
+    // Mark as modified to ensure save works
+    order.markModified('statusTimeline');
+    order.markModified('status');
+
     const updatedOrder = await order.save();
 
     console.log(`✅ Order status updated by delivery partner: ${previousStatus} → ${status}`);
@@ -228,9 +234,16 @@ router.put('/update-status/:orderId', auth, async (req, res) => {
     console.error('Error details:', {
       message: error.message,
       name: error.name,
-      stack: error.stack
+      stack: error.stack,
+      errors: error.errors
     });
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      message: error.message,
+      details: error.errors ? Object.keys(error.errors).map(key => ({
+        field: key,
+        message: error.errors[key].message
+      })) : null
+    });
   }
 });
 
