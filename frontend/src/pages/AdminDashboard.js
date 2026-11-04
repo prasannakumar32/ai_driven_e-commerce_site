@@ -553,41 +553,42 @@ const AdminDashboard = () => {
 
       {/* Overview Tab */}
       {activeTab === 0 && stats && (
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom fontWeight="bold">
-                Recent Orders
-              </Typography>
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Order ID</TableCell>
-                      <TableCell>Customer</TableCell>
-                      <TableCell>Total</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell>Date</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {stats.recentOrders?.map((order) => (
-                      <TableRow key={order._id}>
-                        <TableCell>#{order._id?.slice(-8).toUpperCase()}</TableCell>
-                        <TableCell>{order.user?.name}</TableCell>
-                        <TableCell>₹{order.totalPrice?.toLocaleString('en-IN')}</TableCell>
-                        <TableCell>
-                          <Chip label={order.status} size="small" color={order.status === 'delivered' ? 'success' : 'default'} />
-                        </TableCell>
-                        <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
-          </Grid>
-        </Grid>
+        <Box sx={{ p: 4 }}>
+          <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ mb: 3 }}>
+            Recent Orders
+          </Typography>
+          <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+            <Table>
+              <TableHead sx={{ bgcolor: '#fafbfc' }}>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600 }}>Order ID</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Customer</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Total</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {stats.recentOrders?.map((order) => (
+                  <TableRow key={order._id} hover sx={{ '&:hover': { bgcolor: '#f5f5f5' } }}>
+                    <TableCell sx={{ fontWeight: 500 }}>#{order._id?.slice(-8).toUpperCase()}</TableCell>
+                    <TableCell>{order.user?.name}</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>₹{order.totalPrice?.toLocaleString('en-IN')}</TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={order.status} 
+                        size="small" 
+                        color={order.status === 'delivered' ? 'success' : order.status === 'pending' ? 'warning' : 'default'}
+                        sx={{ fontWeight: 500 }}
+                      />
+                    </TableCell>
+                    <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
       )}
 
       {/* Sellers Tab */}
@@ -655,26 +656,26 @@ const AdminDashboard = () => {
 
       {/* Delivery Partners Tab */}
       {activeTab === 2 && (
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom fontWeight="bold">
+        <Box sx={{ p: 4 }}>
+          <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ mb: 3 }}>
             Delivery Partners Management
           </Typography>
-          <TableContainer>
+          <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
             <Table>
-              <TableHead>
+              <TableHead sx={{ bgcolor: '#fafbfc' }}>
                 <TableRow>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Email</TableCell>
-                  <TableCell>Vehicle</TableCell>
-                  <TableCell>Operating Area</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Actions</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Vehicle</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Operating Area</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {deliveryPartners.map((partner) => (
-                  <TableRow key={partner._id}>
-                    <TableCell>{partner.name}</TableCell>
+                  <TableRow key={partner._id} hover sx={{ '&:hover': { bgcolor: '#f5f5f5' } }}>
+                    <TableCell sx={{ fontWeight: 500 }}>{partner.name}</TableCell>
                     <TableCell>{partner.email}</TableCell>
                     <TableCell>{partner.vehicleType}</TableCell>
                     <TableCell>{partner.operatingArea}</TableCell>
@@ -682,27 +683,32 @@ const AdminDashboard = () => {
                       <Chip
                         label={partner.deliveryPartnerStatus || 'pending'}
                         size="small"
-                        color={partner.deliveryPartnerStatus === 'active' ? 'success' : partner.deliveryPartnerStatus === 'suspended' ? 'error' : 'default'}
+                        color={partner.deliveryPartnerStatus === 'active' ? 'success' : partner.deliveryPartnerStatus === 'suspended' ? 'error' : 'warning'}
+                        sx={{ fontWeight: 500 }}
                       />
                     </TableCell>
                     <TableCell>
                       {partner.deliveryPartnerStatus !== 'active' && (
-                        <>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
                           <Button
                             size="small"
+                            variant="contained"
                             startIcon={<CheckCircle />}
                             onClick={() => setStatusDialog({ open: true, type: 'deliveryPartner', id: partner._id, status: 'approved' })}
+                            sx={{ bgcolor: '#4caf50', '&:hover': { bgcolor: '#45a049' } }}
                           >
                             Approve
                           </Button>
                           <Button
                             size="small"
+                            variant="contained"
                             startIcon={<Cancel />}
                             onClick={() => setStatusDialog({ open: true, type: 'deliveryPartner', id: partner._id, status: 'rejected' })}
+                            sx={{ bgcolor: '#f44336', '&:hover': { bgcolor: '#d32f2f' } }}
                           >
                             Reject
                           </Button>
-                        </>
+                        </Box>
                       )}
                     </TableCell>
                   </TableRow>
@@ -710,35 +716,40 @@ const AdminDashboard = () => {
               </TableBody>
             </Table>
           </TableContainer>
-        </Paper>
+        </Box>
       )}
 
       {/* Orders Tab */}
       {activeTab === 3 && (
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom fontWeight="bold">
+        <Box sx={{ p: 4 }}>
+          <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ mb: 3 }}>
             Orders Management
           </Typography>
-          <TableContainer>
+          <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
             <Table>
-              <TableHead>
+              <TableHead sx={{ bgcolor: '#fafbfc' }}>
                 <TableRow>
-                  <TableCell>Order ID</TableCell>
-                  <TableCell>Customer</TableCell>
-                  <TableCell>Total</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Delivery Partner</TableCell>
-                  <TableCell>Actions</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Order ID</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Customer</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Total</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Delivery Partner</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {orders.map((order) => (
-                  <TableRow key={order._id}>
-                    <TableCell>#{order._id?.slice(-8).toUpperCase()}</TableCell>
+                  <TableRow key={order._id} hover sx={{ '&:hover': { bgcolor: '#f5f5f5' } }}>
+                    <TableCell sx={{ fontWeight: 500 }}>#{order._id?.slice(-8).toUpperCase()}</TableCell>
                     <TableCell>{order.user?.name}</TableCell>
-                    <TableCell>₹{order.totalPrice?.toLocaleString('en-IN')}</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>₹{order.totalPrice?.toLocaleString('en-IN')}</TableCell>
                     <TableCell>
-                      <Chip label={order.status} size="small" />
+                      <Chip 
+                        label={order.status} 
+                        size="small"
+                        color={order.status === 'delivered' ? 'success' : order.status === 'pending' ? 'warning' : 'default'}
+                        sx={{ fontWeight: 500 }}
+                      />
                     </TableCell>
                     <TableCell>{order.deliveryPartner?.name || 'Unassigned'}</TableCell>
                     <TableCell>
@@ -760,40 +771,43 @@ const AdminDashboard = () => {
               </TableBody>
             </Table>
           </TableContainer>
-        </Paper>
+        </Box>
       )}
 
       {/* Products Tab */}
       {activeTab === 4 && (
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom fontWeight="bold">
+        <Box sx={{ p: 4 }}>
+          <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ mb: 3 }}>
             Products Management
           </Typography>
-          <TableContainer>
+          <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
             <Table>
-              <TableHead>
+              <TableHead sx={{ bgcolor: '#fafbfc' }}>
                 <TableRow>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Category</TableCell>
-                  <TableCell>Price</TableCell>
-                  <TableCell>Stock</TableCell>
-                  <TableCell>Seller</TableCell>
-                  <TableCell>Actions</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Category</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Price</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Stock</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Seller</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {products.map((product) => (
-                  <TableRow key={product._id}>
-                    <TableCell>{product.name}</TableCell>
+                  <TableRow key={product._id} hover sx={{ '&:hover': { bgcolor: '#f5f5f5' } }}>
+                    <TableCell sx={{ fontWeight: 500 }}>{product.name}</TableCell>
                     <TableCell>{product.category}</TableCell>
-                    <TableCell>₹{product.price?.toLocaleString('en-IN')}</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>₹{product.price?.toLocaleString('en-IN')}</TableCell>
                     <TableCell>{product.stock}</TableCell>
                     <TableCell>{product.seller?.businessName}</TableCell>
                     <TableCell>
                       <Button
                         size="small"
+                        variant="contained"
                         color="error"
+                        startIcon={<Delete />}
                         onClick={() => handleDeleteProduct(product._id)}
+                        sx={{ bgcolor: '#f44336', '&:hover': { bgcolor: '#d32f2f' } }}
                       >
                         Delete
                       </Button>
@@ -803,41 +817,49 @@ const AdminDashboard = () => {
               </TableBody>
             </Table>
           </TableContainer>
-        </Paper>
+        </Box>
       )}
 
       {/* Users Tab */}
       {activeTab === 5 && (
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom fontWeight="bold">
+        <Box sx={{ p: 4 }}>
+          <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ mb: 3 }}>
             Users Management
           </Typography>
-          <TableContainer>
+          <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
             <Table>
-              <TableHead>
+              <TableHead sx={{ bgcolor: '#fafbfc' }}>
                 <TableRow>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Email</TableCell>
-                  <TableCell>Role</TableCell>
-                  <TableCell>Joined</TableCell>
-                  <TableCell>Actions</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Role</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Joined</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {users.map((userItem) => (
-                  <TableRow key={userItem._id}>
-                    <TableCell>{userItem.name}</TableCell>
+                  <TableRow key={userItem._id} hover sx={{ '&:hover': { bgcolor: '#f5f5f5' } }}>
+                    <TableCell sx={{ fontWeight: 500 }}>{userItem.name}</TableCell>
                     <TableCell>{userItem.email}</TableCell>
                     <TableCell>
-                      <Chip label={userItem.role} size="small" />
+                      <Chip 
+                        label={userItem.role} 
+                        size="small"
+                        color={userItem.role === 'admin' ? 'error' : userItem.role === 'seller' ? 'warning' : 'default'}
+                        sx={{ fontWeight: 500 }}
+                      />
                     </TableCell>
                     <TableCell>{new Date(userItem.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell>
                       {userItem.role !== 'admin' && (
                         <Button
                           size="small"
+                          variant="contained"
                           color="error"
+                          startIcon={<Delete />}
                           onClick={() => handleDeleteUser(userItem._id)}
+                          sx={{ bgcolor: '#f44336', '&:hover': { bgcolor: '#d32f2f' } }}
                         >
                           Delete
                         </Button>
@@ -848,7 +870,7 @@ const AdminDashboard = () => {
               </TableBody>
             </Table>
           </TableContainer>
-        </Paper>
+        </Box>
       )}
 
       {/* Status Update Dialog */}
@@ -868,7 +890,8 @@ const AdminDashboard = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+      </Container>
+    </Box>
   );
 };
 
