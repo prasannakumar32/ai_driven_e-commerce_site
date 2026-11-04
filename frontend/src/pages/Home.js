@@ -42,7 +42,7 @@ import { useAuth } from '../contexts/AuthContext';
 const Home = () => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { isAuthenticated, addToHistory } = useAuth();
+  const { isAuthenticated, user, addToHistory } = useAuth();
   
   const [trendingProducts, setTrendingProducts] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
@@ -90,7 +90,6 @@ const Home = () => {
 
       // Fetch personalized recommendations if authenticated
       if (isAuthenticated) {
-        const { user } = useAuth ? {} : {}; // accessed via closure below
         const recommendationsResponse = await fetchWithRetry(
           () => aiAPI.getRecommendations('current'), // backend now resolves 'current' via token
           2
@@ -321,7 +320,7 @@ const Home = () => {
                       >
                         Shop Now
                       </Button>
-                      {!isAuthenticated && (
+                      {(!isAuthenticated || user?.role === 'customer') && (
                         <Button 
                           variant="outlined" 
                           size="large"

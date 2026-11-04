@@ -200,8 +200,8 @@ const Header = () => {
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, justifyContent: 'flex-end' }}>
-            {/* Show Become Seller button only for non-authenticated users or customers, but not during loading */}
-            {!loading && (!isAuthenticated || user?.role !== 'seller') && (
+            {/* Show Become Seller button only for non-authenticated users or customers, but not during loading or for admins */}
+            {!loading && (!isAuthenticated || user?.role === 'customer') && (
               <Button
                 color="inherit"
                 startIcon={<Star />}
@@ -224,8 +224,8 @@ const Header = () => {
                 Become a Seller
               </Button>
             )}
-            {/* Show Become Delivery Partner button only for non-authenticated users or customers, but not during loading */}
-            {!loading && (!isAuthenticated || user?.role !== 'delivery_partner') && (
+            {/* Show Become Delivery Partner button only for non-authenticated users or customers, but not during loading or for admins */}
+            {!loading && (!isAuthenticated || user?.role === 'customer') && (
               <Button
                 color="inherit"
                 startIcon={<Store />}
