@@ -32,7 +32,7 @@ import {
   LocalShipping,
   CheckCircle,
   Truck,
-  Package,
+  Inventory,
   Home,
   Refresh,
   Edit
@@ -130,7 +130,7 @@ const OrderTracking = () => {
     {
       label: 'Processing',
       description: 'Your order is being prepared for shipment',
-      icon: <Package />
+      icon: <Inventory />
     },
     {
       label: 'Shipped',
@@ -277,7 +277,7 @@ const OrderTracking = () => {
           {order.orderItems?.map((item, index) => (
             <ListItem key={index} sx={{ pl: 0 }}>
               <ListItemIcon>
-                <Package />
+                <Inventory />
               </ListItemIcon>
               <ListItemText
                 primary={item.name}
@@ -327,8 +327,8 @@ const OrderTracking = () => {
               };
 
               const statusIconMap = {
-                'pending': <Package />,
-                'processing': <Package />,
+                'pending': <Inventory />,
+                'processing': <Inventory />,
                 'shipped': <LocalShipping />,
                 'in-transit': <Truck />,
                 'out-for-delivery': <Truck />,
@@ -457,7 +457,7 @@ const OrderTracking = () => {
                   Out for Delivery
                 </Typography>
                 <Typography>
-                  Package is with delivery partner
+                  Your package is with delivery partner
                 </Typography>
               </TimelineContent>
             </TimelineItem>
