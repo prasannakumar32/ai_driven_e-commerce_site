@@ -206,14 +206,15 @@ const PaymentSuccess = () => {
             return;
           }
 
-          // Validate all items have valid productIds before proceeding
-          const invalidItems = items.filter(item => !item.productId || item.productId === 'unknown');
-          if (invalidItems.length > 0) {
-            console.error('PaymentSuccess: Items with invalid productIds:', invalidItems);
-            setError(`Order data is corrupted. Some products have invalid IDs. Please contact support with your session ID: ${sessionId}`);
-            setLoading(false);
-            return;
-          }
+          // Note: Frontend validation disabled to allow backend fallback mechanism
+          // Backend now handles "unknown" product IDs by finding products by name
+          // const invalidItems = items.filter(item => !item.productId || item.productId === 'unknown');
+          // if (invalidItems.length > 0) {
+          //   console.error('PaymentSuccess: Items with invalid productIds:', invalidItems);
+          //   setError(`Order data is corrupted. Some products have invalid IDs. Please contact support with your session ID: ${sessionId}`);
+          //   setLoading(false);
+          //   return;
+          // }
 
           // Prepare order items with proper structure
           const orderItems = items.map(item => {
