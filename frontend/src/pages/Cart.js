@@ -248,12 +248,13 @@ const Cart = () => {
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <IconButton
                             size="small"
-                            onClick={() => handleQuantityChange(item.product._id, Math.max(1, item.quantity - 1))}
-                            disabled={item.quantity <= 1}
+                            onClick={() => handleQuantityChange(item.product._id, Math.max(1, (item.quantity || 1) - 1))}
+                            disabled={(item.quantity || 1) <= 1}
                             sx={{
                               border: '1px solid #e0e0e0',
-                              '&:hover': { borderColor: '#2874F0' },
-                              borderRadius: 1
+                              '&:hover': { borderColor: '#2874F0', backgroundColor: '#f5f5f5' },
+                              borderRadius: 1,
+                              transition: 'all 0.2s'
                             }}
                           >
                             <Remove />
@@ -262,14 +263,20 @@ const Cart = () => {
                             value={item.quantity || 1}
                             size="small"
                             sx={{
-                              width: 60,
+                              width: 50,
                               '& .MuiOutlinedInput-input': {
                                 textAlign: 'center',
                                 fontWeight: 'bold',
-                                padding: '8px 4px'
+                                padding: '6px 2px',
+                                fontSize: '0.95rem'
                               },
                               '& .MuiOutlinedInput-root': {
-                                borderRadius: 1
+                                borderRadius: 1,
+                                '&:hover': {
+                                  '& .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#2874F0'
+                                  }
+                                }
                               }
                             }}
                             inputProps={{
@@ -280,12 +287,13 @@ const Cart = () => {
                           />
                           <IconButton
                             size="small"
-                            onClick={() => handleQuantityChange(item.product._id, item.quantity + 1)}
-                            disabled={item.quantity >= item.product.stock}
+                            onClick={() => handleQuantityChange(item.product._id, (item.quantity || 1) + 1)}
+                            disabled={(item.quantity || 1) >= item.product.stock}
                             sx={{
                               border: '1px solid #e0e0e0',
-                              '&:hover': { borderColor: '#2874F0' },
-                              borderRadius: 1
+                              '&:hover': { borderColor: '#2874F0', backgroundColor: '#f5f5f5' },
+                              borderRadius: 1,
+                              transition: 'all 0.2s'
                             }}
                           >
                             <Add />

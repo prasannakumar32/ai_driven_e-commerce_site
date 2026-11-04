@@ -599,7 +599,7 @@ const Checkout = () => {
         {currentStep === 1 && (
           <Paper sx={{ p: 3, borderRadius: 2, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
             <Typography variant="h5" fontWeight="bold" color="primary.main" mb={3}>
-              Payment Method
+              Select Payment Method
             </Typography>
             
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -608,40 +608,61 @@ const Checkout = () => {
                 sx={{ 
                   cursor: 'pointer',
                   border: '2px solid',
-                  borderColor: 'grey.200',
+                  borderColor: 'primary.main',
                   transition: 'all 0.2s ease',
                   '&:hover': {
                     borderColor: 'primary.main',
-                    boxShadow: '0 4px 12px rgba(255, 107, 53, 0.15)'
+                    boxShadow: '0 4px 12px rgba(40, 116, 240, 0.2)',
+                    transform: 'translateY(-2px)'
                   }
                 }}
               >
-                <CardContent sx={{ p: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <CardContent sx={{ p: 2.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Box sx={{ 
+                      bgcolor: 'primary.light', 
+                      p: 1, 
+                      borderRadius: 1, 
+                      mr: 2 
+                    }}>
+                      <Payment sx={{ color: 'white', fontSize: 24 }} />
+                    </Box>
                     <Box>
-                      <Typography variant="h6" fontWeight="600">
+                      <Typography variant="h6" fontWeight="700" color="primary.main">
                         Cash on Delivery
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         Pay when you receive
                       </Typography>
-                      <Alert severity="info" sx={{ mt: 1 }}>
-                        <Typography variant="caption">
-                          Pay with cash when delivery arrives
-                        </Typography>
-                      </Alert>
                     </Box>
+                  </Box>
+                  <Alert severity="success" sx={{ mb: 2, borderRadius: 1 }}>
+                    <Typography variant="caption" fontWeight="600">
+                      ✓ No payment details required
+                    </Typography>
+                  </Alert>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Typography variant="h5" fontWeight="bold" color="primary.main">
+                      ₹{total.toLocaleString('en-IN')}
+                    </Typography>
                     <Button 
                       variant="contained" 
                       color="primary"
+                      size="large"
                       disabled={loading || items.length === 0}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleCashOnDelivery();
                       }}
-                      sx={{ minWidth: 120 }}
+                      sx={{ 
+                        minWidth: 140,
+                        py: 1.5,
+                        fontWeight: 700,
+                        textTransform: 'none',
+                        boxShadow: '0 4px 12px rgba(40, 116, 240, 0.3)'
+                      }}
                     >
-                      {loading ? 'Placing...' : 'Place Order'}
+                      {loading ? <CircularProgress size={20} sx={{ color: 'white' }} /> : 'Place Order'}
                     </Button>
                   </Box>
                 </CardContent>
@@ -655,40 +676,61 @@ const Checkout = () => {
                   borderColor: 'grey.200',
                   transition: 'all 0.2s ease',
                   '&:hover': {
-                    borderColor: 'secondary.main',
-                    boxShadow: '0 4px 12px rgba(40, 116, 240, 0.15)'
+                    borderColor: '#635bff',
+                    boxShadow: '0 4px 12px rgba(99, 91, 255, 0.2)',
+                    transform: 'translateY(-2px)'
                   }
                 }}
               >
-                <CardContent sx={{ p: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <CardContent sx={{ p: 2.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Box sx={{ 
+                      bgcolor: '#635bff', 
+                      p: 1, 
+                      borderRadius: 1, 
+                      mr: 2 
+                    }}>
+                      <CreditCard sx={{ color: 'white', fontSize: 24 }} />
+                    </Box>
                     <Box>
-                      <Typography variant="h6" fontWeight="600" color="secondary.main">
+                      <Typography variant="h6" fontWeight="700" color="#635bff">
                         Card Payment
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         Secure payment via Stripe
                       </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                        <Typography variant="caption" color="success.main" sx={{ mr: 1 }}>
-                          Secured
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Visa, Mastercard, Rupay
-                        </Typography>
-                      </Box>
                     </Box>
+                  </Box>
+                  <Alert severity="info" sx={{ mb: 2, borderRadius: 1 }}>
+                    <Typography variant="caption" fontWeight="600">
+                      🔒 SSL Encrypted • Instant Confirmation
+                    </Typography>
+                  </Alert>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Typography variant="h5" fontWeight="bold" color="#635bff">
+                      ₹{total.toLocaleString('en-IN')}
+                    </Typography>
                     <Button 
                       variant="contained" 
-                      color="secondary"
+                      size="large"
                       disabled={loading || items.length === 0}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleStripeCheckout();
                       }}
-                      sx={{ minWidth: 120 }}
+                      sx={{ 
+                        minWidth: 140,
+                        py: 1.5,
+                        fontWeight: 700,
+                        textTransform: 'none',
+                        backgroundColor: '#635bff',
+                        boxShadow: '0 4px 12px rgba(99, 91, 255, 0.3)',
+                        '&:hover': {
+                          backgroundColor: '#5b4cdb'
+                        }
+                      }}
                     >
-                      {loading ? 'Processing...' : 'Pay Now'}
+                      {loading ? <CircularProgress size={20} sx={{ color: 'white' }} /> : 'Pay Now'}
                     </Button>
                   </Box>
                 </CardContent>
@@ -704,7 +746,8 @@ const Checkout = () => {
                 sx={{ 
                   borderRadius: 2,
                   px: 3,
-                  py: 1
+                  py: 1.5,
+                  fontWeight: 600
                 }}
               >
                 Back to Cart
