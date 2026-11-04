@@ -248,34 +248,34 @@ const Cart = () => {
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <IconButton
                             size="small"
-                            onClick={() => handleQuantityChange(item.product._id, item.quantity - 1)}
+                            onClick={() => handleQuantityChange(item.product._id, Math.max(1, item.quantity - 1))}
                             disabled={item.quantity <= 1}
                             sx={{
                               border: '1px solid #e0e0e0',
-                              '&:hover': { borderColor: '#2874F0' }
+                              '&:hover': { borderColor: '#2874F0' },
+                              borderRadius: 1
                             }}
                           >
                             <Remove />
                           </IconButton>
                           <TextField
-                            value={item.quantity}
+                            value={item.quantity || 1}
                             size="small"
                             sx={{
                               width: 60,
                               '& .MuiOutlinedInput-input': {
                                 textAlign: 'center',
-                                fontWeight: 'bold'
+                                fontWeight: 'bold',
+                                padding: '8px 4px'
+                              },
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: 1
                               }
                             }}
                             inputProps={{
                               min: 1,
-                              max: item.product.stock
-                            }}
-                            onChange={(e) => {
-                              const value = parseInt(e.target.value) || 1;
-                              if (value >= 1 && value <= item.product.stock) {
-                                handleQuantityChange(item.product._id, value);
-                              }
+                              max: item.product.stock,
+                              readOnly: true
                             }}
                           />
                           <IconButton
@@ -284,7 +284,8 @@ const Cart = () => {
                             disabled={item.quantity >= item.product.stock}
                             sx={{
                               border: '1px solid #e0e0e0',
-                              '&:hover': { borderColor: '#2874F0' }
+                              '&:hover': { borderColor: '#2874F0' },
+                              borderRadius: 1
                             }}
                           >
                             <Add />

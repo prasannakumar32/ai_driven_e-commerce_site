@@ -386,21 +386,38 @@ const ShippingForm = ({
 
           {/* No Addresses - Show Add Form */}
           {userAddresses.length === 0 && viewMode === 'list' && (
-            <Paper sx={{ p: 3, borderRadius: 2, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <LocationOn sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
-                <Typography variant="h5" fontWeight="bold" color="primary.main">
-                  Add Your Delivery Address
-                </Typography>
+            <Paper sx={{ 
+              p: 4, 
+              borderRadius: 3, 
+              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+              background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)'
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 4, pb: 2, borderBottom: '2px solid #e0e0e0' }}>
+                <Box sx={{ 
+                  bgcolor: 'primary.main', 
+                  p: 1.5, 
+                  borderRadius: 2, 
+                  mr: 2 
+                }}>
+                  <LocationOn sx={{ color: 'white', fontSize: 32 }} />
+                </Box>
+                <Box>
+                  <Typography variant="h4" fontWeight="bold" color="primary.main">
+                    Add Delivery Address
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Enter your shipping details for order delivery
+                  </Typography>
+                </Box>
               </Box>
 
               <Box component="form" onSubmit={handleSubmitNewAddress}>
-                <Grid container spacing={2}>
+                <Grid container spacing={3}>
                   {/* Name */}
                   <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
-                      label="Full Name"
+                      label="Full Name *"
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
@@ -409,6 +426,22 @@ const ShippingForm = ({
                       placeholder="John Doe"
                       variant="outlined"
                       size="medium"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          backgroundColor: 'white',
+                          '&:hover': {
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'primary.main',
+                              borderWidth: 2
+                            }
+                          }
+                        },
+                        '& .Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'primary.main',
+                          borderWidth: 2
+                        }
+                      }}
                     />
                   </Grid>
 
@@ -416,7 +449,7 @@ const ShippingForm = ({
                   <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
-                      label="Phone Number"
+                      label="Phone Number *"
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
@@ -425,6 +458,22 @@ const ShippingForm = ({
                       placeholder="9876543210"
                       variant="outlined"
                       size="medium"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          backgroundColor: 'white',
+                          '&:hover': {
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'primary.main',
+                              borderWidth: 2
+                            }
+                          }
+                        },
+                        '& .Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'primary.main',
+                          borderWidth: 2
+                        }
+                      }}
                     />
                   </Grid>
 
@@ -442,6 +491,22 @@ const ShippingForm = ({
                       placeholder="john@example.com"
                       variant="outlined"
                       size="medium"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          backgroundColor: 'white',
+                          '&:hover': {
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'primary.main',
+                              borderWidth: 2
+                            }
+                          }
+                        },
+                        '& .Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'primary.main',
+                          borderWidth: 2
+                        }
+                      }}
                     />
                   </Grid>
 
@@ -456,6 +521,12 @@ const ShippingForm = ({
                       disabled
                       variant="outlined"
                       size="medium"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          backgroundColor: '#f5f5f5'
+                        }
+                      }}
                     />
                   </Grid>
 
@@ -463,7 +534,7 @@ const ShippingForm = ({
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
-                      label="Street Address"
+                      label="Street Address *"
                       name="address"
                       value={formData.address}
                       onChange={handleChange}
@@ -471,9 +542,25 @@ const ShippingForm = ({
                       helperText={errors.address}
                       placeholder="123 Main Street, Apt 4B"
                       multiline
-                      rows={2}
+                      rows={3}
                       variant="outlined"
                       size="medium"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          backgroundColor: 'white',
+                          '&:hover': {
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'primary.main',
+                              borderWidth: 2
+                            }
+                          }
+                        },
+                        '& .Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'primary.main',
+                          borderWidth: 2
+                        }
+                      }}
                     />
                   </Grid>
 
@@ -481,7 +568,7 @@ const ShippingForm = ({
                   <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
-                      label="City"
+                      label="City *"
                       name="city"
                       value={formData.city}
                       onChange={handleChange}
@@ -490,6 +577,22 @@ const ShippingForm = ({
                       placeholder="Mumbai"
                       variant="outlined"
                       size="medium"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          backgroundColor: 'white',
+                          '&:hover': {
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'primary.main',
+                              borderWidth: 2
+                            }
+                          }
+                        },
+                        '& .Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'primary.main',
+                          borderWidth: 2
+                        }
+                      }}
                     />
                   </Grid>
 
@@ -497,7 +600,7 @@ const ShippingForm = ({
                   <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
-                      label="State/Province"
+                      label="State/Province *"
                       name="state"
                       value={formData.state}
                       onChange={handleChange}
@@ -506,6 +609,22 @@ const ShippingForm = ({
                       placeholder="Maharashtra"
                       variant="outlined"
                       size="medium"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          backgroundColor: 'white',
+                          '&:hover': {
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'primary.main',
+                              borderWidth: 2
+                            }
+                          }
+                        },
+                        '& .Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'primary.main',
+                          borderWidth: 2
+                        }
+                      }}
                     />
                   </Grid>
 
@@ -513,7 +632,7 @@ const ShippingForm = ({
                   <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
-                      label="PIN Code"
+                      label="PIN Code *"
                       name="postalCode"
                       value={formData.postalCode}
                       onChange={handleChange}
@@ -522,6 +641,22 @@ const ShippingForm = ({
                       placeholder="400001"
                       variant="outlined"
                       size="medium"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          backgroundColor: 'white',
+                          '&:hover': {
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'primary.main',
+                              borderWidth: 2
+                            }
+                          }
+                        },
+                        '& .Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'primary.main',
+                          borderWidth: 2
+                        }
+                      }}
                     />
                   </Grid>
                 </Grid>
@@ -532,10 +667,23 @@ const ShippingForm = ({
                   color="primary"
                   disabled={isLoading}
                   fullWidth
-                  sx={{ py: 1.75, mt: 3, fontWeight: 700 }}
+                  sx={{ 
+                    py: 2, 
+                    mt: 4, 
+                    fontWeight: 700,
+                    fontSize: '1.1rem',
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    boxShadow: '0 4px 12px rgba(40, 116, 240, 0.3)',
+                    '&:hover': {
+                      boxShadow: '0 6px 16px rgba(40, 116, 240, 0.4)',
+                      transform: 'translateY(-2px)'
+                    },
+                    transition: 'all 0.2s ease'
+                  }}
                 >
-                  {isLoading ? <CircularProgress size={24} sx={{ mr: 1 }} /> : null}
-                  {isLoading ? 'Processing...' : '✓ Continue with This Address'}
+                  {isLoading ? <CircularProgress size={24} sx={{ mr: 1, color: 'white' }} /> : null}
+                  {isLoading ? 'Processing...' : 'Continue with This Address →'}
                 </Button>
               </Box>
             </Paper>
