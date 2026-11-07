@@ -114,7 +114,7 @@ router.post('/register', async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
+      { _id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'fallback_secret',
       { expiresIn: '7d' }
     );
@@ -186,7 +186,7 @@ router.post('/login', async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
+      { _id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'fallback_secret',
       { expiresIn: '7d' }
     );
@@ -212,7 +212,7 @@ router.post('/login', async (req, res) => {
 // Get user profile
 router.get('/profile', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id)
+    const user = await User.findById(req.user._id)
       .select('-password')
       .populate('browsingHistory.product', 'name images price')
       .populate('purchaseHistory.products.product', 'name images price');
@@ -228,7 +228,7 @@ router.put('/profile', auth, async (req, res) => {
   try {
     const { name, phone, username, preferences, role, deliveryPartnerStatus, vehicleType, vehicleNumber, licenseNumber, operatingArea } = req.body;
     
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user._id);
     
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -249,9 +249,9 @@ router.put('/profile', auth, async (req, res) => {
       }
 
       // Check if username already exists (but exclude current user)
-      const existingUsername = await User.findOne({ 
+      const existingUsername = await User.findOne({
         username: username,
-        _id: { $ne: req.user.id }
+        _id: { $ne: req.user._id }
       });
       if (existingUsername) {
         return res.status(400).json({ message: 'Username is already taken' });
@@ -316,15 +316,21 @@ router.put('/profile', auth, async (req, res) => {
 router.put('/preferences', auth, async (req, res) => {
   try {
     const { preferences } = req.body;
-    
-    const user = await User.findById(req.user.id);
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     user.preferences = { ...user.preferences, ...preferences };
-    
+
     await user.save();
 
     res.json(user.preferences);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error updating preferences:', error);
+    res.status(500).json({ message: error.message || 'Failed to update preferences' });
   }
 });
 
@@ -332,28 +338,39 @@ router.put('/preferences', auth, async (req, res) => {
 router.put('/ai-profile', auth, async (req, res) => {
   try {
     const { aiProfile } = req.body;
-    
-    const user = await User.findById(req.user.id);
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     user.aiProfile = { ...user.aiProfile, ...aiProfile };
-    
+
     await user.save();
 
     res.json(user.aiProfile);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error updating AI profile:', error);
+    res.status(500).json({ message: error.message || 'Failed to update AI profile' });
   }
 });
 
 // Get user browsing history
 router.get('/history', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id)
+    const user = await User.findById(req.user._id)
       .populate('browsingHistory.product', 'name images price category')
       .select('browsingHistory');
 
-    res.json(user.browsingHistory);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json(user.browsingHistory || []);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error fetching browsing history:', error);
+    res.status(500).json({ message: error.message || 'Failed to fetch browsing history' });
   }
 });
 
@@ -361,9 +378,22 @@ router.get('/history', auth, async (req, res) => {
 router.post('/history', auth, async (req, res) => {
   try {
     const { productId, duration = 0 } = req.body;
-    
-    const user = await User.findById(req.user.id);
-    
+
+    if (!productId) {
+      return res.status(400).json({ message: 'Product ID is required' });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Initialize browsingHistory if it doesn't exist
+    if (!user.browsingHistory || !Array.isArray(user.browsingHistory)) {
+      user.browsingHistory = [];
+    }
+
     // Add to browsing history
     user.browsingHistory.push({
       product: productId,
@@ -380,33 +410,54 @@ router.post('/history', auth, async (req, res) => {
 
     res.json({ message: 'Browsing history updated' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error adding to browsing history:', error);
+
+    // Handle validation errors specifically
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.keys(error.errors).map(key => ({
+        field: key,
+        message: error.errors[key].message
+      }));
+      return res.status(400).json({
+        message: 'Validation error',
+        details: validationErrors
+      });
+    }
+
+    res.status(500).json({ message: error.message || 'Failed to update browsing history' });
   }
 });
 
 // Clear browsing history
 router.delete('/history', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     user.browsingHistory = [];
     await user.save();
 
     res.json({ message: 'Browsing history cleared' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error clearing browsing history:', error);
+    res.status(500).json({ message: error.message || 'Failed to clear browsing history' });
   }
 });
 
 // Get saved addresses
 router.get('/addresses', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('addresses');
+    const user = await User.findById(req.user._id).select('addresses');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
     res.json(user.addresses || []);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error fetching addresses:', error);
+    res.status(500).json({ message: error.message || 'Failed to fetch addresses' });
   }
 });
 
@@ -424,7 +475,7 @@ router.post('/addresses', auth, async (req, res) => {
     };
     
     const user = await User.findByIdAndUpdate(
-      req.user.id,
+      req.user._id,
       { $push: { addresses: newAddress } },
       { new: true, runValidators: false }
     );
@@ -436,7 +487,7 @@ router.post('/addresses', auth, async (req, res) => {
     res.json(user.addresses);
   } catch (error) {
     console.error('Error adding address:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message || 'Failed to add address' });
   }
 });
 
@@ -448,7 +499,7 @@ router.put('/addresses/:addressId', auth, async (req, res) => {
     const addressData = req.body;
     
     // Check if address exists first
-    const userCheck = await User.findById(req.user.id);
+    const userCheck = await User.findById(req.user._id);
     if (!userCheck) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -460,7 +511,7 @@ router.put('/addresses/:addressId', auth, async (req, res) => {
     
     // Update the specific address using array filters
     const user = await User.findByIdAndUpdate(
-      req.user.id,
+      req.user._id,
       {
         $set: {
           'addresses.$[addr]': {
@@ -480,7 +531,7 @@ router.put('/addresses/:addressId', auth, async (req, res) => {
     res.json(user.addresses);
   } catch (error) {
     console.error('Error updating address:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message || 'Failed to update address' });
   }
 });
 
@@ -491,14 +542,14 @@ router.put('/addresses/:addressId/set-default', auth, async (req, res) => {
     
     // First, set all addresses to isDefault: false
     await User.findByIdAndUpdate(
-      req.user.id,
+      req.user._id,
       { $set: { 'addresses[].isDefault': false } },
       { runValidators: false }
     );
     
     // Then set the specific address to isDefault: true
     const user = await User.findByIdAndUpdate(
-      req.user.id,
+      req.user._id,
       { $set: { 'addresses.$[addr].isDefault': true } },
       {
         arrayFilters: [{ 'addr._id': addressId }],
@@ -514,7 +565,7 @@ router.put('/addresses/:addressId/set-default', auth, async (req, res) => {
     res.json(user.addresses);
   } catch (error) {
     console.error('Error setting default address:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message || 'Failed to set default address' });
   }
 });
 
@@ -524,7 +575,7 @@ router.delete('/addresses/:addressId', auth, async (req, res) => {
     const { addressId } = req.params;
     
     const user = await User.findByIdAndUpdate(
-      req.user.id,
+      req.user._id,
       { $pull: { addresses: { _id: addressId } } },
       { new: true, runValidators: false }
     );
@@ -536,7 +587,7 @@ router.delete('/addresses/:addressId', auth, async (req, res) => {
     res.json(user.addresses);
   } catch (error) {
     console.error('Error deleting address:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message || 'Failed to delete address' });
   }
 });
 

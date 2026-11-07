@@ -161,7 +161,7 @@ router.get('/seller', auth, async (req, res) => {
       return res.status(403).json({ message: 'Access denied. Only sellers can view products.' });
     }
     
-    const sellerId = req.user.id;
+    const sellerId = req.user._id;
     console.log('Seller products route - sellerId:', sellerId);
     
     const products = await Product.find({ seller: sellerId })
@@ -447,7 +447,7 @@ router.post('/', auth, async (req, res) => {
       images,
       tags: Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim()).filter(t => t),
       features: Array.isArray(features) ? features : features.split(',').map(f => f.trim()).filter(f => f),
-      seller: req.user.id
+      seller: req.user._id
     });
 
     const savedProduct = await product.save();
@@ -473,7 +473,7 @@ router.put('/:id', auth, async (req, res) => {
     }
 
     // Check if the product belongs to the seller
-    if (product.seller.toString() !== req.user.id) {
+    if (product.seller.toString() !== req.user._id) {
       return res.status(403).json({ message: 'You can only update your own products' });
     }
 
@@ -531,7 +531,7 @@ router.delete('/:id', auth, async (req, res) => {
     }
 
     // Check if the product belongs to the seller
-    if (product.seller.toString() !== req.user.id) {
+    if (product.seller.toString() !== req.user._id) {
       return res.status(403).json({ message: 'You can only delete your own products' });
     }
 

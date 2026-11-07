@@ -180,12 +180,12 @@ export const AuthProvider = ({ children }) => {
   const addToHistory = async (productId, duration = 0) => {
     try {
       // Only add to history if user is authenticated
-      if (state.isAuthenticated) {
+      if (state.isAuthenticated && productId) {
         await authAPI.addToHistory({ productId, duration });
       }
     } catch (error) {
-      // Don't throw errors for history tracking failures
-      console.error('Failed to update browsing history:', error);
+      // Don't throw errors for history tracking failures - they shouldn't break the app
+      console.warn('Failed to update browsing history:', error.message);
     }
   };
 

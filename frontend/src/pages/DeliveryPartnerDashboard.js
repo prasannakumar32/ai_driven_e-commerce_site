@@ -102,13 +102,18 @@ const DeliveryPartnerDashboard = () => {
 
   const handleUpdateStatus = async () => {
     try {
+      console.log('Updating order status:', {
+        orderId: statusDialog.order._id,
+        data: statusUpdate
+      });
       await deliveryPartnerAPI.updateOrderStatus(statusDialog.order._id, statusUpdate);
       setStatusDialog({ open: false, order: null });
       setStatusUpdate({ status: '', location: '', notes: '' });
       await fetchData();
     } catch (err) {
       console.error('Error updating status:', err);
-      alert('Failed to update status. Please try again.');
+      console.error('Error response:', err.response?.data);
+      alert(`Failed to update status: ${err.response?.data?.message || err.message || 'Please try again.'}`);
     }
   };
 

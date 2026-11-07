@@ -8,7 +8,7 @@ const carts = new Map();
 // Get user's cart
 router.get('/', async (req, res) => {
   try {
-    const userId = req.user?.id || req.session?.id || 'guest';
+    const userId = req.user?._id || req.session?.id || 'guest';
     const cart = carts.get(userId) || { items: [], total: 0 };
     res.json(cart);
   } catch (error) {
@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
 router.post('/add', async (req, res) => {
   try {
     const { productId, quantity = 1 } = req.body;
-    const userId = req.user?.id || req.session?.id || 'guest';
+    const userId = req.user?._id || req.session?.id || 'guest';
 
     const product = await Product.findById(productId);
     if (!product) {
@@ -71,7 +71,7 @@ router.post('/add', async (req, res) => {
 router.put('/update', async (req, res) => {
   try {
     const { productId, quantity } = req.body;
-    const userId = req.user?.id || req.session?.id || 'guest';
+    const userId = req.user?._id || req.session?.id || 'guest';
 
     if (quantity < 1) {
       return res.status(400).json({ message: 'Quantity must be at least 1' });
@@ -113,7 +113,7 @@ router.put('/update', async (req, res) => {
 router.delete('/remove/:productId', async (req, res) => {
   try {
     const { productId } = req.params;
-    const userId = req.user?.id || req.session?.id || 'guest';
+    const userId = req.user?._id || req.session?.id || 'guest';
 
     let cart = carts.get(userId) || { items: [], total: 0 };
 
@@ -138,7 +138,7 @@ router.delete('/remove/:productId', async (req, res) => {
 // Clear cart
 router.delete('/clear', async (req, res) => {
   try {
-    const userId = req.user?.id || req.session?.id || 'guest';
+    const userId = req.user?._id || req.session?.id || 'guest';
     carts.delete(userId);
     res.json({ message: 'Cart cleared' });
   } catch (error) {
@@ -149,7 +149,7 @@ router.delete('/clear', async (req, res) => {
 // Get cart summary
 router.get('/summary', async (req, res) => {
   try {
-    const userId = req.user?.id || req.session?.id || 'guest';
+    const userId = req.user?._id || req.session?.id || 'guest';
     const cart = carts.get(userId) || { items: [], total: 0 };
 
     const summary = {
@@ -169,7 +169,7 @@ router.get('/summary', async (req, res) => {
 // Apply AI recommendations to cart
 router.post('/recommendations', async (req, res) => {
   try {
-    const userId = req.user?.id || req.session?.id || 'guest';
+    const userId = req.user?._id || req.session?.id || 'guest';
     const cart = carts.get(userId) || { items: [], total: 0 };
 
     if (cart.items.length === 0) {

@@ -120,7 +120,9 @@ router.put('/accept-order/:orderId', auth, async (req, res) => {
       return res.status(403).json({ message: 'You are currently marked as unavailable.' });
     }
 
-    const order = await Order.findById(req.params.orderId);
+    const order = await Order.findById(req.params.orderId)
+      .populate('user', 'name email phone')
+      .populate('orderItems.product', 'name images');
 
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
@@ -138,6 +140,12 @@ router.put('/accept-order/:orderId', auth, async (req, res) => {
     order.deliveryPartner = req.user._id;
     order.deliveryPartnerAssignedAt = new Date();
     order.status = 'in-transit';
+
+    // Initialize statusTimeline if it doesn't exist
+    if (!order.statusTimeline || !Array.isArray(order.statusTimeline)) {
+      order.statusTimeline = [];
+    }
+
     order.statusTimeline.push({
       status: 'in-transit',
       timestamp: new Date(),
@@ -162,6 +170,13 @@ router.put('/accept-order/:orderId', auth, async (req, res) => {
 // Update order status (for delivery partner)
 router.put('/update-status/:orderId', auth, async (req, res) => {
   try {
+    console.log('📦 Update status request:', {
+      orderId: req.params.orderId,
+      userId: req.user._id,
+      userRole: req.user.role,
+      requestBody: req.body
+    });
+
     if (req.user.role !== 'delivery_partner') {
       return res.status(403).json({ message: 'Access denied. Only delivery partners can update order status.' });
     }
@@ -178,15 +193,41 @@ router.put('/update-status/:orderId', auth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid status. Must be one of: in-transit, out-for-delivery, delivered' });
     }
 
-    const order = await Order.findById(req.params.orderId);
+    const order = await Order.findById(req.params.orderId)
+      .populate('user', 'name email phone')
+      .populate('orderItems.product', 'name images');
 
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
 
+    console.log('📦 Order found:', {
+      orderId: order._id,
+      currentStatus: order.status,
+      deliveryPartner: order.deliveryPartner?.toString(),
+      requesterId: req.user._id.toString()
+    });
+
     // Verify the order is assigned to this delivery partner
     if (order.deliveryPartner?.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'This order is not assigned to you' });
+    }
+
+    // Validate status transition
+    const validTransitions = {
+      'shipped': ['in-transit'],
+      'in-transit': ['out-for-delivery', 'delivered'],
+      'out-for-delivery': ['delivered']
+    };
+
+    const allowedTransitions = validTransitions[order.status] || [];
+    if (!allowedTransitions.includes(status)) {
+      return res.status(400).json({
+        message: `Invalid status transition from ${order.status} to ${status}`,
+        currentStatus: order.status,
+        requestedStatus: status,
+        allowedTransitions
+      });
     }
 
     // Update status

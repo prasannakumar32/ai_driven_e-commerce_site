@@ -28,11 +28,21 @@ router.get('/stats', auth, adminAuth, async (req, res) => {
     ] = await Promise.all([
       User.countDocuments({ role: { $in: ['customer', 'admin'] } }),
       User.countDocuments({ role: 'seller' }),
-      User.countDocuments({ role: 'delivery_partner' }),
+      User.countDocuments({
+        $or: [
+          { role: 'delivery_partner' },
+          { vehicleType: { $exists: true } }
+        ]
+      }),
       Order.countDocuments(),
       Product.countDocuments(),
       User.countDocuments({ role: 'seller', sellerStatus: 'pending' }),
-      User.countDocuments({ role: 'delivery_partner', deliveryPartnerStatus: 'pending' }),
+      User.countDocuments({
+        $or: [
+          { role: 'delivery_partner', deliveryPartnerStatus: 'pending' },
+          { vehicleType: { $exists: true }, deliveryPartnerStatus: 'pending' }
+        ]
+      }),
       Order.find().sort({ createdAt: -1 }).limit(10).populate('user', 'name email')
     ]);
 
@@ -112,12 +122,20 @@ router.put('/sellers/:id/reject', auth, adminAuth, async (req, res) => {
 // Get all delivery partners with status
 router.get('/delivery-partners', auth, adminAuth, async (req, res) => {
   try {
-    const partners = await User.find({ role: 'delivery_partner' })
+    // Find users who either have role: 'delivery_partner' OR have delivery partner details
+    const partners = await User.find({
+      $or: [
+        { role: 'delivery_partner' },
+        { vehicleType: { $exists: true } },
+        { deliveryPartnerStatus: { $exists: true } }
+      ]
+    })
       .select('-password')
       .sort({ createdAt: -1 });
 
     res.json(partners);
   } catch (error) {
+    console.error('Error fetching delivery partners:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -127,7 +145,10 @@ router.put('/delivery-partners/:id/approve', auth, adminAuth, async (req, res) =
   try {
     const partner = await User.findByIdAndUpdate(
       req.params.id,
-      { deliveryPartnerStatus: 'active' },
+      {
+        deliveryPartnerStatus: 'active',
+        role: 'delivery_partner' // Ensure role is set to delivery_partner
+      },
       { new: true }
     ).select('-password');
 
@@ -135,8 +156,10 @@ router.put('/delivery-partners/:id/approve', auth, adminAuth, async (req, res) =
       return res.status(404).json({ message: 'Delivery partner not found' });
     }
 
+    console.log(`✅ Delivery partner approved: ${partner.name} (${partner.email})`);
     res.json(partner);
   } catch (error) {
+    console.error('Error approving delivery partner:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -374,6 +397,87 @@ router.post('/users', auth, adminAuth, async (req, res) => {
 
     res.status(201).json(userResponse);
   } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Create test orders for delivery partners
+router.post('/create-test-orders', auth, adminAuth, async (req, res) => {
+  try {
+    const { count = 5 } = req.body;
+
+    // Get a customer user
+    const customer = await User.findOne({ role: 'customer' });
+    if (!customer) {
+      return res.status(404).json({ message: 'No customer user found' });
+    }
+
+    // Get some products
+    const products = await Product.find().limit(10);
+    if (products.length === 0) {
+      return res.status(404).json({ message: 'No products found' });
+    }
+
+    // Create test orders
+    const orders = [];
+    for (let i = 0; i < count; i++) {
+      const order = new Order({
+        user: customer._id,
+        orderItems: [
+          {
+            name: products[i % products.length].name,
+            quantity: 1,
+            image: products[i % products.length].images[0],
+            price: products[i % products.length].price,
+            product: products[i % products.length]._id
+          }
+        ],
+        shippingAddress: {
+          name: customer.name,
+          phone: '9876543210',
+          email: customer.email,
+          address: '123 Main Street',
+          city: 'Namakkal',
+          state: 'Tamil Nadu',
+          postalCode: '637001',
+          country: 'India'
+        },
+        paymentMethod: 'COD',
+        taxPrice: 100,
+        shippingPrice: 50,
+        totalPrice: products[i % products.length].price + 150,
+        isPaid: true,
+        paidAt: new Date(),
+        status: 'shipped', // Ready for delivery
+        statusTimeline: [
+          {
+            status: 'pending',
+            timestamp: new Date(Date.now() - 86400000),
+            notes: 'Order created'
+          },
+          {
+            status: 'processing',
+            timestamp: new Date(Date.now() - 43200000),
+            notes: 'Order processing'
+          },
+          {
+            status: 'shipped',
+            timestamp: new Date(),
+            notes: 'Order shipped and ready for delivery'
+          }
+        ]
+      });
+
+      await order.save();
+      orders.push(order);
+    }
+
+    res.json({
+      message: `Created ${orders.length} test orders`,
+      orders: orders.map(o => o.orderId)
+    });
+  } catch (error) {
+    console.error('Error creating test orders:', error);
     res.status(500).json({ message: error.message });
   }
 });

@@ -21,7 +21,7 @@ router.post('/', auth, async (req, res) => {
       total
     } = req.body;
 
-    const userId = new mongoose.Types.ObjectId(req.user.id);
+    const userId = new mongoose.Types.ObjectId(req.user._id);
     
     console.log('📦 Order creation request:', {
       userId,
@@ -270,7 +270,7 @@ router.post('/', auth, async (req, res) => {
 // Get user's orders
 router.get('/myorders', auth, async (req, res) => {
   try {
-    const userId = new mongoose.Types.ObjectId(req.user.id);
+    const userId = new mongoose.Types.ObjectId(req.user._id);
 
     const orders = await Order.find({ user: userId })
       .sort({ createdAt: -1 })
@@ -348,7 +348,7 @@ router.get('/:id', auth, async (req, res) => {
     
     if (req.user?.isAdmin) {
       isAuthorized = true;
-    } else if (order.user && req.user?.id && order.user._id.toString() === req.user.id) {
+    } else if (order.user && req.user?.id && order.user._id.toString() === req.user._id) {
       isAuthorized = true;
     }
     

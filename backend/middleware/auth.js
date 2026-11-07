@@ -12,7 +12,13 @@ const auth = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
     console.log('Auth middleware - Decoded:', decoded);
-    req.user = decoded;
+    // Ensure consistent ID field naming
+    req.user = {
+      _id: decoded.id || decoded._id,
+      email: decoded.email,
+      role: decoded.role,
+      ...decoded
+    };
     next();
   } catch (error) {
     console.error('Auth middleware - Error:', error);
