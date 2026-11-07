@@ -286,8 +286,8 @@ router.get('/myorders', auth, async (req, res) => {
 // Get seller's orders (MUST come before /:id route)
 router.get('/seller', auth, async (req, res) => {
   try {
-    const userId = new mongoose.Types.ObjectId(req.user?.id);
-    
+    const userId = new mongoose.Types.ObjectId(req.user._id);
+
     if (!userId) {
       return res.status(401).json({ message: 'User not authenticated' });
     }
@@ -300,14 +300,15 @@ router.get('/seller', auth, async (req, res) => {
     const orders = await Order.find({})
       .populate('user', 'name email')
       .populate('orderItems.product', 'name images seller')
+      .populate('deliveryPartner', 'name phone vehicleType vehicleNumber')
       .sort({ createdAt: -1 });
 
     // Filter orders to only include those with seller's products
-    const sellerOrders = orders.filter(order => 
+    const sellerOrders = orders.filter(order =>
       order.orderItems.some(item => item.product.seller && item.product.seller.toString() === userId)
     ).map(order => ({
       ...order.toObject(),
-      items: order.orderItems.filter(item => 
+      items: order.orderItems.filter(item =>
         item.product.seller && item.product.seller.toString() === userId
       ).map(item => ({
         quantity: item.quantity,
@@ -363,13 +364,17 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
-// Update order status (admin only) - with timeline tracking
+// Update order status (admin and seller) - with timeline tracking
 router.put('/:id/status', auth, async (req, res) => {
   try {
     const { status, location, notes, estimatedDeliveryDate, carrier, trackingNumber } = req.body;
 
-    if (!req.user?.isAdmin) {
-      return res.status(401).json({ message: 'Admin access required' });
+    // Check if user is admin or seller
+    const isAdmin = req.user?.isAdmin;
+    const isSeller = req.user?.role === 'seller';
+
+    if (!isAdmin && !isSeller) {
+      return res.status(401).json({ message: 'Admin or seller access required' });
     }
 
     if (!status) {
@@ -380,6 +385,23 @@ router.put('/:id/status', auth, async (req, res) => {
 
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // If seller, verify they own this order
+    if (isSeller && !isAdmin) {
+      const sellerOwnsOrder = order.orderItems?.some(item => {
+        const product = item.product;
+        return product && product.seller && product.seller.toString() === req.user._id.toString();
+      });
+
+      if (!sellerOwnsOrder) {
+        return res.status(403).json({ message: 'You can only update orders for your products' });
+      }
+
+      // Sellers can only update to 'processing' or 'shipped'
+      if (status !== 'processing' && status !== 'shipped') {
+        return res.status(403).json({ message: 'Sellers can only update orders to processing or shipped status' });
+      }
     }
 
     // Update status

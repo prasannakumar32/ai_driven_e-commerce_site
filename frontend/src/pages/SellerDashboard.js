@@ -73,6 +73,12 @@ const SellerDashboard = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [orderStatusFilter, setOrderStatusFilter] = useState('all');
+  const [shippingDialog, setShippingDialog] = useState({ open: false, order: null });
+  const [shippingDetails, setShippingDetails] = useState({
+    carrier: '',
+    trackingNumber: '',
+    notes: ''
+  });
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -247,9 +253,36 @@ const SellerDashboard = () => {
     try {
       await api.put(`/orders/${orderId}/status`, { status: newStatus });
       fetchOrders();
+      setSuccess(`Order status updated to ${newStatus}`);
+      setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
       setError('Failed to update order status');
       console.error('Error updating order status:', error);
+    }
+  };
+
+  const handleShipOrder = async (orderId) => {
+    const order = orders.find(o => o._id === orderId);
+    setShippingDialog({ open: true, order });
+  };
+
+  const handleConfirmShipping = async () => {
+    try {
+      const { order } = shippingDialog;
+      await api.put(`/orders/${order._id}/status`, {
+        status: 'shipped',
+        carrier: shippingDetails.carrier,
+        trackingNumber: shippingDetails.trackingNumber,
+        notes: shippingDetails.notes
+      });
+      setShippingDialog({ open: false, order: null });
+      setShippingDetails({ carrier: '', trackingNumber: '', notes: '' });
+      fetchOrders();
+      setSuccess('Order shipped successfully! Delivery partner will be auto-assigned.');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (error) {
+      setError('Failed to ship order');
+      console.error('Error shipping order:', error);
     }
   };
 
@@ -813,6 +846,7 @@ const SellerDashboard = () => {
                 <TableCell>Total</TableCell>
                 <TableCell>Date</TableCell>
                 <TableCell>Status</TableCell>
+                <TableCell>Delivery Partner</TableCell>
                 <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -862,13 +896,74 @@ const SellerDashboard = () => {
                     />
                   </TableCell>
                   <TableCell>
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      onClick={() => navigate(`/orders/${order._id}`)}
-                    >
-                      <Visibility />
-                    </IconButton>
+                    {order.deliveryPartner ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Chip
+                          label={`Assigned: ${order.deliveryPartner.name || 'Partner'}`}
+                          size="small"
+                          color="success"
+                          icon={<CheckCircle />}
+                        />
+                      </Box>
+                    ) : order.status === 'shipped' ? (
+                      <Chip
+                        label="Assigning Partner..."
+                        size="small"
+                        color="warning"
+                      />
+                    ) : (
+                      <Typography variant="caption" color="text.secondary">
+                        Not assigned
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={() => navigate(`/orders/${order._id}`)}
+                      >
+                        <Visibility />
+                      </IconButton>
+                      {order.status === 'processing' && (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          startIcon={<LocalShipping />}
+                          onClick={() => handleShipOrder(order._id)}
+                          sx={{
+                            backgroundColor: '#1a73e8',
+                            color: 'white',
+                            fontWeight: 600,
+                            textTransform: 'none',
+                            '&:hover': {
+                              backgroundColor: '#1557b0'
+                            }
+                          }}
+                        >
+                          Ship
+                        </Button>
+                      )}
+                      {order.status === 'pending' && (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          onClick={() => handleUpdateOrderStatus(order._id, 'processing')}
+                          sx={{
+                            backgroundColor: '#4CAF50',
+                            color: 'white',
+                            fontWeight: 600,
+                            textTransform: 'none',
+                            '&:hover': {
+                              backgroundColor: '#45a049'
+                            }
+                          }}
+                        >
+                          Process
+                        </Button>
+                      )}
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}
@@ -1060,6 +1155,92 @@ const SellerDashboard = () => {
             {renderProductForm()}
           </Box>
         </DialogContent>
+      </Dialog>
+
+      {/* Shipping Dialog */}
+      <Dialog
+        open={shippingDialog.open}
+        onClose={() => setShippingDialog({ open: false, order: null })}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          bgcolor: 'linear-gradient(135deg, #1a73e8 0%, #4285f4 100%)',
+          color: 'white',
+          py: 3,
+          px: 4,
+          borderRadius: '16px 16px 0 0'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)' }}>
+              <LocalShipping />
+            </Avatar>
+            <Box>
+              <Typography variant="h6" fontWeight="bold">
+                Ship Order
+              </Typography>
+              <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                Order #{shippingDialog.order?._id?.slice(-8)}
+              </Typography>
+            </Box>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 4, bgcolor: '#fafafa' }}>
+          <Box sx={{ mt: 2 }}>
+            <TextField
+              fullWidth
+              label="Carrier (e.g., FedEx, UPS, BlueDart)"
+              value={shippingDetails.carrier}
+              onChange={(e) => setShippingDetails({ ...shippingDetails, carrier: e.target.value })}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Tracking Number"
+              value={shippingDetails.trackingNumber}
+              onChange={(e) => setShippingDetails({ ...shippingDetails, trackingNumber: e.target.value })}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Shipping Notes (Optional)"
+              multiline
+              rows={3}
+              value={shippingDetails.notes}
+              onChange={(e) => setShippingDetails({ ...shippingDetails, notes: e.target.value })}
+            />
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Once shipped, a delivery partner will be automatically assigned based on the delivery location.
+            </Alert>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, borderTop: '1px solid #e0e0e0' }}>
+          <Button
+            onClick={() => setShippingDialog({ open: false, order: null })}
+            sx={{ color: '#666' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleConfirmShipping}
+            sx={{
+              backgroundColor: '#1a73e8',
+              color: 'white',
+              fontWeight: 600,
+              px: 4,
+              '&:hover': { backgroundColor: '#1557b0' }
+            }}
+          >
+            Confirm Shipment
+          </Button>
+        </DialogActions>
       </Dialog>
     </Container>
   );
