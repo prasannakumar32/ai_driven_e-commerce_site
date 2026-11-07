@@ -347,19 +347,20 @@ router.get('/:id', auth, async (req, res) => {
 
     // Check if user owns the order or is admin
     let isAuthorized = false;
-    
+
     if (req.user?.isAdmin) {
       isAuthorized = true;
-    } else if (order.user && req.user?.id && order.user._id.toString() === req.user._id) {
+    } else if (order.user && req.user._id && order.user._id.toString() === req.user._id.toString()) {
       isAuthorized = true;
     }
-    
+
     if (!isAuthorized) {
       return res.status(401).json({ message: 'Not authorized' });
     }
 
     res.json(order);
   } catch (error) {
+    console.error('Error fetching order:', error);
     res.status(500).json({ message: error.message });
   }
 });
