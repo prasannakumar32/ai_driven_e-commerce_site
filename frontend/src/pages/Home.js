@@ -133,101 +133,205 @@ const Home = () => {
   };
 
   const ProductCard = ({ product, showRecommendationScore = false }) => (
-    <Card 
-      sx={{ 
-        height: '100%', 
-        display: 'flex', 
+    <Card
+      sx={{
+        height: '100%',
+        display: 'flex',
         flexDirection: 'column',
-        transition: 'transform 0.2s, box-shadow 0.2s',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        border: '1px solid #e8e8e8',
+        borderRadius: 2,
+        overflow: 'hidden',
+        position: 'relative',
+        backgroundColor: '#fff',
         '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: 4
+          transform: 'translateY(-6px)',
+          boxShadow: '0 12px 28px rgba(0,0,0,0.15)',
+          borderColor: '#1a73e8'
         }
       }}
     >
-      <Box sx={{ position: 'relative' }}>
+      <Box sx={{ position: 'relative', overflow: 'hidden' }}>
         <CardMedia
           component="img"
-          height="200"
-          image={product.images?.[0] || '/placeholder-product.jpg'}
+          height="220"
+          image={product.images?.[0] || 'https://via.placeholder.com/300x220/f5f5f5/999999?text=No+Image'}
           alt={product.name}
-          sx={{ cursor: 'pointer' }}
+          sx={{
+            cursor: 'pointer',
+            objectFit: 'cover',
+            transition: 'transform 0.3s ease',
+            '&:hover': {
+              transform: 'scale(1.05)'
+            }
+          }}
           onClick={() => handleProductClick(product)}
         />
         {showRecommendationScore && product.aiScore && (
           <Chip
             label={`${Math.round(product.aiScore * 100)}% Match`}
             size="small"
-            color="primary"
             sx={{
               position: 'absolute',
-              top: 8,
-              right: 8,
-              fontSize: '0.7rem'
+              top: 12,
+              right: 12,
+              fontSize: '0.75rem',
+              backgroundColor: '#1a73e8',
+              color: 'white',
+              fontWeight: 600,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
             }}
           />
         )}
-        {product.rating > 4 && (
+        {product.rating >= 4.5 && (
           <Chip
             icon={<Star fontSize="small" />}
-            label="Popular"
+            label="Best Seller"
             size="small"
-            color="secondary"
             sx={{
               position: 'absolute',
-              top: 8,
-              left: 8,
-              fontSize: '0.7rem'
+              top: 12,
+              left: 12,
+              fontSize: '0.75rem',
+              backgroundColor: '#ff4757',
+              color: 'white',
+              fontWeight: 600,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+            }}
+          />
+        )}
+        {product.discountPercentage > 15 && (
+          <Chip
+            label={`${product.discountPercentage}% OFF`}
+            size="small"
+            sx={{
+              position: 'absolute',
+              bottom: 12,
+              left: 12,
+              fontSize: '0.75rem',
+              backgroundColor: '#ff4757',
+              color: 'white',
+              fontWeight: 700,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
             }}
           />
         )}
       </Box>
-      
-      <CardContent sx={{ flexGrow: 1 }}>
-        <Typography 
-          variant="h6" 
-          component="h3" 
+
+      <CardContent sx={{ flexGrow: 1, pb: 1, px: 2, pt: 2 }}>
+        <Typography
+          variant="h6"
+          component="h3"
           gutterBottom
-          sx={{ 
+          sx={{
             cursor: 'pointer',
-            '&:hover': { color: 'primary.main' }
+            fontSize: '1rem',
+            fontWeight: 600,
+            lineHeight: 1.4,
+            height: '2.8rem',
+            overflow: 'hidden',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            color: '#333',
+            '&:hover': { color: '#1a73e8' }
           }}
           onClick={() => handleProductClick(product)}
         >
           {product.name}
         </Typography>
         
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <Typography variant="body2" color="#666" sx={{ mb: 1, fontSize: '0.85rem', fontWeight: 500 }}>
           {product.brand}
         </Typography>
-        
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <Rating 
-            value={product.rating} 
-            precision={0.1} 
-            readOnly 
+
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+          <Rating
+            value={product.rating}
+            precision={0.1}
+            readOnly
             size="small"
+            sx={{ color: '#ff9800' }}
           />
-          <Typography variant="caption" sx={{ ml: 1 }}>
+          <Typography variant="caption" sx={{ ml: 1, color: '#757575', fontSize: '0.8rem' }}>
             ({product.numReviews || 0})
           </Typography>
         </Box>
-        
-        <Typography variant="h6" color="#2874F0" fontWeight="bold">
-          ₹{product.price.toLocaleString('en-IN')}
-        </Typography>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          <Typography variant="h6" color="#1a73e8" fontWeight="bold" sx={{ fontSize: '1.25rem' }}>
+            ₹{product.price.toLocaleString('en-IN')}
+          </Typography>
+          {product.initialPrice && product.initialPrice > product.price && (
+            <>
+              <Typography
+                variant="body2"
+                color="#9e9e9e"
+                sx={{
+                  textDecoration: 'line-through',
+                  fontSize: '0.9rem',
+                  fontWeight: 500
+                }}
+              >
+                ₹{product.initialPrice.toLocaleString('en-IN')}
+              </Typography>
+              <Chip
+                label={`${Math.round(((product.initialPrice - product.price) / product.initialPrice) * 100)}% OFF`}
+                size="small"
+                sx={{
+                  backgroundColor: '#ff4757',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '0.7rem',
+                  height: 20
+                }}
+              />
+            </>
+          )}
+        </Box>
       </CardContent>
-      
-      <CardActions>
+
+      <CardActions sx={{ px: 2, pb: 2, pt: 0, gap: 1 }}>
         <Button
           size="small"
+          variant="contained"
           startIcon={<ShoppingCart />}
           onClick={() => handleAddToCart(product)}
           disabled={product.stock === 0}
+          sx={{
+            backgroundColor: '#1a73e8',
+            color: 'white',
+            fontWeight: 600,
+            px: 2,
+            textTransform: 'none',
+            '&:hover': {
+              backgroundColor: '#1557b0',
+              boxShadow: '0 4px 12px rgba(26, 115, 232, 0.3)'
+            },
+            '&:disabled': {
+              backgroundColor: '#e0e0e0',
+              color: '#757575'
+            }
+          }}
         >
-          {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+          {product.stock === 0 ? 'Out of Stock' : 'Add'}
         </Button>
-        <IconButton size="small">
+        <IconButton
+          size="small"
+          sx={{
+            border: '1px solid #e0e0e0',
+            '&:hover': {
+              borderColor: '#ff4757',
+              color: '#ff4757',
+              backgroundColor: 'rgba(255, 71, 87, 0.04)'
+            }
+          }}
+        >
+          <FavoriteBorder />
+        </IconButton>
+      </CardActions>
+    </Card>
+  );
           <FavoriteBorder />
         </IconButton>
       </CardActions>

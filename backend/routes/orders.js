@@ -245,10 +245,11 @@ router.post('/', auth, async (req, res) => {
     const order = new Order(orderData);
     const createdOrder = await order.save();
 
-    // Auto-assign delivery partner if order status is shipped (rare case, but handle it)
+    // Auto-assign delivery partner if order is created with 'shipped' status
     if (createdOrder.status === 'shipped' && !createdOrder.deliveryPartner) {
+      console.log('📦 Order created with shipped status, attempting auto-assignment...');
       assignDeliveryPartner(createdOrder._id).catch(err => {
-        console.error('Error in auto-assignment after order creation:', err);
+        console.error('Error in auto-assignment:', err);
       });
     }
 
@@ -366,7 +367,7 @@ router.get('/:id', auth, async (req, res) => {
 router.put('/:id/status', auth, async (req, res) => {
   try {
     const { status, location, notes, estimatedDeliveryDate, carrier, trackingNumber } = req.body;
-    
+
     if (!req.user?.isAdmin) {
       return res.status(401).json({ message: 'Admin access required' });
     }
@@ -376,7 +377,7 @@ router.put('/:id/status', auth, async (req, res) => {
     }
 
     const order = await Order.findById(req.params.id);
-    
+
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
@@ -386,6 +387,9 @@ router.put('/:id/status', auth, async (req, res) => {
     order.status = status;
 
     // Add to status timeline
+    if (!order.statusTimeline || !Array.isArray(order.statusTimeline)) {
+      order.statusTimeline = [];
+    }
     order.statusTimeline.push({
       status: status,
       timestamp: new Date(),
@@ -436,11 +440,12 @@ router.put('/:id/status', auth, async (req, res) => {
     }
 
     const updatedOrder = await order.save();
-    
+
     console.log(`✅ Order status updated: ${previousStatus} → ${status}`);
     res.json(updatedOrder);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error updating order status:', error);
+    res.status(500).json({ message: error.message || 'Failed to update order status' });
   }
 });
 

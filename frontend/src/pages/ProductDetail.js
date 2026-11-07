@@ -251,36 +251,45 @@ const ProductDetail = () => {
 
             {/* Price Section */}
             <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                <Typography variant="h4" color="#2874F0" fontWeight="bold">
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1, flexWrap: 'wrap' }}>
+                <Typography variant="h4" color="#1a73e8" fontWeight="bold" sx={{ fontSize: '2rem' }}>
                   ₹{product.price.toLocaleString('en-IN')}
                 </Typography>
-                {product.originalPrice && product.originalPrice > product.price && (
+                {(product.originalPrice || product.initialPrice) && (product.originalPrice || product.initialPrice) > product.price && (
                   <>
-                    <Typography 
-                      variant="h6" 
-                      color="#757575"
-                      sx={{ textDecoration: 'line-through' }}
+                    <Typography
+                      variant="h5"
+                      color="#9e9e9e"
+                      sx={{
+                        textDecoration: 'line-through',
+                        fontWeight: 500
+                      }}
                     >
-                      ₹{product.originalPrice.toLocaleString('en-IN')}
+                      ₹{(product.originalPrice || product.initialPrice).toLocaleString('en-IN')}
                     </Typography>
                     <Chip
-                      label={`${Math.round((1 - product.price / product.originalPrice) * 100)}% OFF`}
-                      size="small"
-                      sx={{ backgroundColor: '#FF6B35', color: 'white', fontWeight: 'bold' }}
+                      label={`${Math.round(((product.originalPrice || product.initialPrice) - product.price) / (product.originalPrice || product.initialPrice) * 100)}% OFF`}
+                      size="medium"
+                      sx={{
+                        backgroundColor: '#ff4757',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        fontSize: '0.9rem',
+                        height: 28
+                      }}
                     />
                   </>
                 )}
               </Box>
-              {product.discount > 0 && (
+              {product.discountPercentage > 15 && (
                 <Chip
                   icon={<FlashOn />}
-                  label={`Limited Time: ${product.discount}% OFF`}
-                  sx={{ 
-                    backgroundColor: '#FFE500', 
-                    color: '#212121',
+                  label={`Limited Time: ${product.discountPercentage}% OFF`}
+                  sx={{
+                    backgroundColor: '#ff4757',
+                    color: 'white',
                     fontWeight: 'bold',
-                    mb: 1
+                    animation: 'pulse 2s infinite'
                   }}
                 />
               )}

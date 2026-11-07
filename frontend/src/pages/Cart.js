@@ -140,10 +140,10 @@ const Cart = () => {
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom fontWeight="bold" color="text.primary">
-          PKS Shopping Cart
+        <Typography variant="h4" gutterBottom fontWeight="bold" color="#333">
+          Shopping Cart
         </Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="body1" color="#666">
           Review your items and proceed to checkout
         </Typography>
       </Box>
@@ -153,11 +153,11 @@ const Cart = () => {
         <Grid size={{ xs: 12, md: 8 }}>
           {items.length === 0 ? (
             <Paper sx={{ p: 6, textAlign: 'center', background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)' }}>
-              <ShoppingCart sx={{ fontSize: 80, color: '#2874F0', mb: 3 }} />
-              <Typography variant="h5" gutterBottom fontWeight="bold" color="text.primary">
+              <ShoppingCart sx={{ fontSize: 80, color: '#1a73e8', mb: 3 }} />
+              <Typography variant="h5" gutterBottom fontWeight="bold" color="#333">
                 Your cart is empty
               </Typography>
-              <Typography variant="body1" color="text.secondary" gutterBottom sx={{ mb: 3 }}>
+              <Typography variant="body1" color="#666" gutterBottom sx={{ mb: 3 }}>
                 Add some amazing products to get started!
               </Typography>
               <Button
@@ -165,11 +165,16 @@ const Cart = () => {
                 size="large"
                 startIcon={<FlashOn />}
                 onClick={() => navigate('/products')}
-                sx={{ 
-                  backgroundColor: '#FF6B35',
-                  '&:hover': { backgroundColor: '#E55A2B' },
+                sx={{
+                  backgroundColor: '#1a73e8',
+                  fontWeight: 600,
                   px: 4,
-                  py: 1.5
+                  py: 1.5,
+                  textTransform: 'none',
+                  '&:hover': {
+                    backgroundColor: '#1557b0',
+                    boxShadow: '0 4px 12px rgba(26, 115, 232, 0.3)'
+                  }
                 }}
               >
                 Start Shopping
@@ -178,20 +183,21 @@ const Cart = () => {
           ) : (
             <Box>
               {items.map((item) => (
-                <Card key={item.product._id} sx={{ mb: 2, border: '1px solid #e0e0e0', '&:hover': { boxShadow: '0 4px 12px rgba(0,0,0,0.1)' } }}>
+                <Card key={item.product._id} sx={{ mb: 2, border: '1px solid #e8e8e8', borderRadius: 2, '&:hover': { boxShadow: '0 4px 12px rgba(0,0,0,0.08)' } }}>
                   <CardContent sx={{ p: 3 }}>
                     <Grid container spacing={2} alignItems="center">
                       <Grid size={{ xs: 12, sm: 2 }}>
                         <CardMedia
                           component="img"
-                          height="80"
-                          image={item.product.images?.[0] || '/placeholder-product.jpg'}
+                          height="100"
+                          image={item.product.images?.[0] || 'https://via.placeholder.com/100x100/f5f5f5/999999?text=No+Image'}
                           alt={item.product.name}
-                          sx={{ 
-                            borderRadius: 2, 
+                          sx={{
+                            borderRadius: 2,
                             cursor: 'pointer',
-                            border: '1px solid #e0e0e0',
-                            '&:hover': { borderColor: '#2874F0' }
+                            border: '1px solid #e8e8e8',
+                            objectFit: 'cover',
+                            '&:hover': { borderColor: '#1a73e8' }
                           }}
                           onClick={() => navigate(`/products/${item.product._id}`)}
                         />
@@ -200,29 +206,30 @@ const Cart = () => {
                       <Grid size={{ xs: 12, sm: 4 }}>
                         <Typography
                           variant="h6"
-                          sx={{ 
-                            cursor: 'pointer', 
-                            fontWeight: 500,
-                            '&:hover': { color: '#2874F0' },
-                            mb: 1
+                          sx={{
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            '&:hover': { color: '#1a73e8' },
+                            mb: 1,
+                            fontSize: '1rem'
                           }}
                           onClick={() => navigate(`/products/${item.product._id}`)}
                         >
                           {item.product.name}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                        <Typography variant="body2" color="#666" sx={{ mb: 0.5, fontSize: '0.85rem', fontWeight: 500 }}>
                           {item.product.brand}
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           {item.product.stock > 0 ? (
                             <>
                               <Verified fontSize="small" sx={{ color: '#4CAF50' }} />
-                              <Typography variant="caption" color="#4CAF50">
+                              <Typography variant="caption" color="#4CAF50" sx={{ fontSize: '0.8rem' }}>
                                 In Stock ({item.product.stock} available)
                               </Typography>
                             </>
                           ) : (
-                            <Typography variant="caption" color="error">
+                            <Typography variant="caption" color="#ff4757" sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
                               Out of Stock
                             </Typography>
                           )}
@@ -230,18 +237,37 @@ const Cart = () => {
                       </Grid>
 
                       <Grid size={{ xs: 12, sm: 3 }}>
-                        <Typography variant="h6" color="#2874F0" fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
-                          ₹{item.product.price.toLocaleString('en-IN')}
-                        </Typography>
-                        {item.product.originalPrice && item.product.originalPrice > item.product.price && (
-                          <Typography
-                            variant="body2"
-                            color="#757575"
-                            sx={{ textDecoration: 'line-through', whiteSpace: 'nowrap' }}
-                          >
-                            ₹{item.product.originalPrice.toLocaleString('en-IN')}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                          <Typography variant="h6" color="#1a73e8" fontWeight="bold" sx={{ fontSize: '1.25rem' }}>
+                            ₹{item.product.price.toLocaleString('en-IN')}
                           </Typography>
-                        )}
+                          {(item.product.originalPrice || item.product.initialPrice) && (item.product.originalPrice || item.product.initialPrice) > item.product.price && (
+                            <>
+                              <Typography
+                                variant="body2"
+                                color="#9e9e9e"
+                                sx={{
+                                  textDecoration: 'line-through',
+                                  fontSize: '0.9rem',
+                                  fontWeight: 500
+                                }}
+                              >
+                                ₹{(item.product.originalPrice || item.product.initialPrice).toLocaleString('en-IN')}
+                              </Typography>
+                              <Chip
+                                label={`${Math.round(((item.product.originalPrice || item.product.initialPrice) - item.product.price) / (item.product.originalPrice || item.product.initialPrice) * 100)}% OFF`}
+                                size="small"
+                                sx={{
+                                  backgroundColor: '#ff4757',
+                                  color: 'white',
+                                  fontWeight: 'bold',
+                                  fontSize: '0.7rem',
+                                  height: 20
+                                }}
+                              />
+                            </>
+                          )}
+                        </Box>
                       </Grid>
 
                       <Grid size={{ xs: 12, sm: 2 }}>
@@ -252,7 +278,7 @@ const Cart = () => {
                             disabled={(item.quantity || 1) <= 1}
                             sx={{
                               border: '1px solid #e0e0e0',
-                              '&:hover': { borderColor: '#2874F0', backgroundColor: '#f5f5f5' },
+                              '&:hover': { borderColor: '#1a73e8', backgroundColor: '#f5f5f5' },
                               borderRadius: 1,
                               transition: 'all 0.2s'
                             }}
@@ -274,7 +300,7 @@ const Cart = () => {
                                 borderRadius: 1,
                                 '&:hover': {
                                   '& .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#2874F0'
+                                    borderColor: '#1a73e8'
                                   }
                                 }
                               }
@@ -291,7 +317,7 @@ const Cart = () => {
                             disabled={(item.quantity || 1) >= item.product.stock}
                             sx={{
                               border: '1px solid #e0e0e0',
-                              '&:hover': { borderColor: '#2874F0', backgroundColor: '#f5f5f5' },
+                              '&:hover': { borderColor: '#1a73e8', backgroundColor: '#f5f5f5' },
                               borderRadius: 1,
                               transition: 'all 0.2s'
                             }}
@@ -303,16 +329,16 @@ const Cart = () => {
 
                       <Grid size={{ xs: 12, sm: 2 }}>
                         <Box sx={{ textAlign: 'right' }}>
-                          <Typography variant="h6" color="#2874F0" fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
+                          <Typography variant="h6" color="#1a73e8" fontWeight="bold" sx={{ whiteSpace: 'nowrap', fontSize: '1.25rem' }}>
                             ₹{(item.product.price * item.quantity).toLocaleString('en-IN')}
                           </Typography>
                           <IconButton
                             size="small"
-                            color="error"
+                            color="#ff4757"
                             onClick={() => handleRemoveItem(item.product._id)}
                             sx={{
                               '&:hover': {
-                                backgroundColor: 'rgba(244, 67, 54, 0.1)'
+                                backgroundColor: 'rgba(255, 71, 87, 0.04)'
                               }
                             }}
                           >
@@ -329,14 +355,15 @@ const Cart = () => {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Button
                     variant="outlined"
-                    color="error"
                     onClick={handleClearCart}
                     startIcon={<Delete />}
-                    sx={{ 
-                      borderColor: '#F44336',
-                      color: '#F44336',
+                    sx={{
+                      borderColor: '#ff4757',
+                      color: '#ff4757',
+                      textTransform: 'none',
                       '&:hover': {
-                        backgroundColor: 'rgba(244, 67, 54, 0.1)'
+                        backgroundColor: 'rgba(255, 71, 87, 0.04)',
+                        borderColor: '#ff4757'
                       }
                     }}
                   >
@@ -346,11 +373,13 @@ const Cart = () => {
                     variant="outlined"
                     startIcon={<ArrowBack />}
                     onClick={() => navigate('/products')}
-                    sx={{ 
-                      borderColor: '#2874F0',
-                      color: '#2874F0',
+                    sx={{
+                      borderColor: '#1a73e8',
+                      color: '#1a73e8',
+                      textTransform: 'none',
                       '&:hover': {
-                        backgroundColor: 'rgba(40, 116, 240, 0.1)'
+                        backgroundColor: 'rgba(26, 115, 232, 0.04)',
+                        borderColor: '#1a73e8'
                       }
                     }}
                   >
@@ -364,53 +393,53 @@ const Cart = () => {
 
         {/* Order Summary */}
         <Grid size={{ xs: 12, md: 4 }}>
-          <Paper sx={{ p: 3, position: 'sticky', top: 20, border: '1px solid #e0e0e0' }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold" color="text.primary">
+          <Paper sx={{ p: 3, position: 'sticky', top: 20, border: '1px solid #e8e8e8', borderRadius: 2 }}>
+            <Typography variant="h6" gutterBottom fontWeight="bold" color="#333" sx={{ mb: 3 }}>
               Order Summary
             </Typography>
-            
+
             {summary && (
               <Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2" color="text.secondary">Subtotal ({items.length} items)</Typography>
-                  <Typography variant="body2" fontWeight="bold">₹{summary.subtotal.toLocaleString('en-IN')}</Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                  <Typography variant="body2" color="#666">Subtotal ({items.length} items)</Typography>
+                  <Typography variant="body2" fontWeight="600" color="#333">₹{summary.subtotal.toLocaleString('en-IN')}</Typography>
                 </Box>
-                
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2" color="text.secondary">Tax (8%)</Typography>
-                  <Typography variant="body2" fontWeight="bold">₹{summary.tax.toLocaleString('en-IN')}</Typography>
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                  <Typography variant="body2" color="#666">Tax (8%)</Typography>
+                  <Typography variant="body2" fontWeight="600" color="#333">₹{summary.tax.toLocaleString('en-IN')}</Typography>
                 </Box>
-                
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <LocalShipping sx={{ mr: 1, fontSize: 16, color: '#2874F0' }} />
-                    <Typography variant="body2" color="text.secondary">Shipping</Typography>
+                    <LocalShipping sx={{ mr: 1, fontSize: 16, color: '#1a73e8' }} />
+                    <Typography variant="body2" color="#666">Shipping</Typography>
                   </Box>
-                  <Typography variant="body2" fontWeight="bold" color={summary.shipping === 0 ? '#4CAF50' : 'text.primary'}>
+                  <Typography variant="body2" fontWeight="600" color={summary.shipping === 0 ? '#4CAF50' : '#333'}>
                     {summary.shipping === 0 ? 'FREE' : `₹${summary.shipping.toLocaleString('en-IN')}`}
                   </Typography>
                 </Box>
-                
+
                 {summary.shipping > 0 && (
-                  <Box sx={{ 
-                    mb: 2, 
-                    p: 1.5, 
+                  <Box sx={{
+                    mb: 2,
+                    p: 1.5,
                     backgroundColor: '#e3f2fd',
                     borderRadius: 1,
                     border: '1px solid #bbdefb'
                   }}>
-                    <Typography variant="caption" color="#1976d2" sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography variant="caption" color="#1976d2" sx={{ display: 'flex', alignItems: 'center', fontSize: '0.8rem' }}>
                       <FlashOn sx={{ mr: 1, fontSize: 16 }} />
                       Add ₹{(5000 - summary.subtotal).toLocaleString('en-IN')} more for FREE shipping
                     </Typography>
                   </Box>
                 )}
-                
-                <Divider sx={{ my: 2 }} />
-                
+
+                <Divider sx={{ my: 3 }} />
+
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                  <Typography variant="h6" fontWeight="bold">Total</Typography>
-                  <Typography variant="h6" color="#2874F0" fontWeight="bold">
+                  <Typography variant="h5" fontWeight="bold" color="#333">Total</Typography>
+                  <Typography variant="h5" color="#1a73e8" fontWeight="bold" sx={{ fontSize: '1.5rem' }}>
                     ₹{summary.total.toLocaleString('en-IN')}
                   </Typography>
                 </Box>
@@ -424,14 +453,20 @@ const Cart = () => {
               startIcon={<CreditCard />}
               onClick={handleCheckout}
               disabled={items.length === 0}
-              sx={{ 
+              sx={{
                 mb: 2,
-                backgroundColor: '#FF6B35',
-                fontWeight: 'bold',
+                backgroundColor: '#1a73e8',
+                fontWeight: 600,
                 py: 1.5,
-                '&:hover': { 
-                  backgroundColor: '#E55A2B',
-                  boxShadow: '0 4px 12px rgba(255, 107, 53, 0.3)'
+                textTransform: 'none',
+                fontSize: '1rem',
+                '&:hover': {
+                  backgroundColor: '#1557b0',
+                  boxShadow: '0 4px 12px rgba(26, 115, 232, 0.3)'
+                },
+                '&:disabled': {
+                  backgroundColor: '#e0e0e0',
+                  color: '#757575'
                 }
               }}
             >
@@ -441,28 +476,28 @@ const Cart = () => {
             {!isAuthenticated && (
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 2 }}>
                 <Security sx={{ fontSize: 16, color: '#757575' }} />
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color="#757575">
                   Login required to checkout
                 </Typography>
               </Box>
             )}
 
             {/* Security Badge */}
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
               justifyContent: 'center',
               gap: 1,
               p: 1,
               backgroundColor: '#f8f9fa',
               borderRadius: 1,
-              border: '1px solid #e0e0e0'
+              border: '1px solid #e8e8e8'
             }}>
-              <Security sx={{ fontSize: 16, color: '#4CAF50' }} />
-              <Typography variant="caption" color="#4CAF50">
+              <Security sx={{ fontSize: 18, color: '#4CAF50' }} />
+              <Typography variant="caption" color="#4CAF50" sx={{ fontWeight: 600, fontSize: '0.85rem' }}>
                 Secure Checkout
               </Typography>
-              <Verified sx={{ fontSize: 16, color: '#4CAF50' }} />
+              <Verified sx={{ fontSize: 18, color: '#4CAF50' }} />
             </Box>
           </Paper>
         </Grid>

@@ -707,42 +707,48 @@ const Products = () => {
   };
 
   const ProductCard = ({ product, showScore = false, isRelated = false }) => (
-    <Card 
-      sx={{ 
-        height: '100%', 
-        display: 'flex', 
+    <Card
+      sx={{
+        height: '100%',
+        display: 'flex',
         flexDirection: 'column',
-        transition: 'all 0.3s ease',
-        border: '1px solid #e0e0e0',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        border: '1px solid #e8e8e8',
+        borderRadius: 2,
+        overflow: 'hidden',
+        position: 'relative',
+        backgroundColor: '#fff',
         '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-          borderColor: '#2874F0'
+          transform: 'translateY(-6px)',
+          boxShadow: '0 12px 28px rgba(0,0,0,0.15)',
+          borderColor: '#1a73e8'
         }
       }}
     >
-      <Box sx={{ position: 'relative' }}>
+      <Box sx={{ position: 'relative', overflow: 'hidden' }}>
         <CardMedia
           component="img"
-          height="200"
-          image={product.images?.[0] || 'https://via.placeholder.com/300x200/cccccc/666666?text=No+Image'}
+          height="220"
+          image={product.images?.[0] || 'https://via.placeholder.com/300x220/f5f5f5/999999?text=No+Image'}
           alt={product.name}
-          sx={{ 
+          sx={{
             cursor: 'pointer',
-            objectFit: 'cover'
+            objectFit: 'cover',
+            transition: 'transform 0.3s ease',
+            '&:hover': {
+              transform: 'scale(1.05)'
+            }
           }}
           onClick={() => handleProductClick(product)}
           onError={(e) => {
-            // Try next image in array or fallback
             const currentSrc = e.target.src;
             const imageArray = product.images || [];
             const currentIndex = imageArray.findIndex(img => img === currentSrc);
-            
+
             if (currentIndex < imageArray.length - 1) {
               e.target.src = imageArray[currentIndex + 1];
             } else {
-              // Final fallback to placeholder
-              e.target.src = 'https://via.placeholder.com/300x200/cccccc/666666?text=No+Image';
+              e.target.src = 'https://via.placeholder.com/300x220/f5f5f5/999999?text=No+Image';
             }
           }}
         />
@@ -753,12 +759,13 @@ const Products = () => {
             size="small"
             sx={{
               position: 'absolute',
-              top: 8,
-              right: 8,
-              fontSize: '0.7rem',
-              backgroundColor: '#FF6B35',
+              top: 12,
+              right: 12,
+              fontSize: '0.75rem',
+              backgroundColor: '#ff6b35',
               color: 'white',
-              fontWeight: 'bold'
+              fontWeight: 600,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
             }}
           />
         )}
@@ -766,133 +773,143 @@ const Products = () => {
           <Chip
             label={`${Math.round(product.aiScore * 100)}% Match`}
             size="small"
-            color="primary"
             sx={{
               position: 'absolute',
-              top: 8,
-              right: 8,
-              fontSize: '0.7rem',
-              backgroundColor: '#2874F0',
-              color: 'white'
+              top: 12,
+              right: 12,
+              fontSize: '0.75rem',
+              backgroundColor: '#1a73e8',
+              color: 'white',
+              fontWeight: 600,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
             }}
           />
         )}
-        {!isRelated && showScore && product.vectorScore && !product.aiScore && (
-          <Chip
-            label={`${Math.round(product.vectorScore * 100)}% Vector`}
-            size="small"
-            color="secondary"
-            sx={{
-              position: 'absolute',
-              top: 8,
-              right: 8,
-              fontSize: '0.7rem',
-              backgroundColor: '#FF6B35',
-              color: 'white'
-            }}
-          />
-        )}
-        {product.rating >= 4 && (
+        {product.rating >= 4.5 && (
           <Chip
             icon={<Verified fontSize="small" />}
-            label="Verified"
+            label="Best Seller"
             size="small"
             sx={{
               position: 'absolute',
-              top: 8,
-              left: 8,
-              fontSize: '0.7rem',
-              backgroundColor: '#4CAF50',
-              color: 'white'
+              top: 12,
+              left: 12,
+              fontSize: '0.75rem',
+              backgroundColor: '#ff4757',
+              color: 'white',
+              fontWeight: 600,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
             }}
           />
         )}
-        {product.discountPercentage > 0 && (
+        {product.discountPercentage > 15 && (
           <Chip
             label={`${product.discountPercentage}% OFF`}
             size="small"
             sx={{
               position: 'absolute',
-              bottom: 8,
-              left: 8,
-              fontSize: '0.7rem',
-              backgroundColor: '#FF6B35',
+              bottom: 12,
+              left: 12,
+              fontSize: '0.75rem',
+              backgroundColor: '#ff4757',
               color: 'white',
-              fontWeight: 'bold'
+              fontWeight: 700,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              animation: 'pulse 2s infinite'
             }}
           />
         )}
       </Box>
       
-      <CardContent sx={{ flexGrow: 1, pb: 1 }}>
-        <Typography 
-          variant="h6" 
-          component="h3" 
+      <CardContent sx={{ flexGrow: 1, pb: 1, px: 2, pt: 2 }}>
+        <Typography
+          variant="h6"
+          component="h3"
           gutterBottom
-          sx={{ 
+          sx={{
             cursor: 'pointer',
             fontSize: '1rem',
-            fontWeight: 500,
-            lineHeight: 1.3,
-            height: '2.6rem',
+            fontWeight: 600,
+            lineHeight: 1.4,
+            height: '2.8rem',
             overflow: 'hidden',
             display: '-webkit-box',
             WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
-            '&:hover': { color: '#2874F0' }
+            color: '#333',
+            '&:hover': { color: '#1a73e8' }
           }}
           onClick={() => handleProductClick(product)}
         >
           {product.name}
         </Typography>
-        
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontSize: '0.875rem' }}>
+
+        <Typography variant="body2" color="#666" sx={{ mb: 1, fontSize: '0.85rem', fontWeight: 500 }}>
           {product.brand}
         </Typography>
-        
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <Rating 
-            value={product.rating} 
-            precision={0.1} 
-            readOnly 
+
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+          <Rating
+            value={product.rating}
+            precision={0.1}
+            readOnly
             size="small"
-            sx={{ color: '#FFB400' }}
+            sx={{ color: '#ff9800' }}
           />
-          <Typography variant="caption" sx={{ ml: 1, color: '#757575' }}>
+          <Typography variant="caption" sx={{ ml: 1, color: '#757575', fontSize: '0.8rem' }}>
             ({product.numReviews || 0})
           </Typography>
         </Box>
-        
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="h6" color="#2874F0" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          <Typography variant="h6" color="#1a73e8" fontWeight="bold" sx={{ fontSize: '1.25rem' }}>
             ₹{product.price.toLocaleString('en-IN')}
           </Typography>
           {product.initialPrice && product.initialPrice > product.price && (
-            <Typography 
-              variant="body2" 
-              color="#757575"
-              sx={{ textDecoration: 'line-through' }}
-            >
-              ₹{product.initialPrice.toLocaleString('en-IN')}
-            </Typography>
+            <>
+              <Typography
+                variant="body2"
+                color="#9e9e9e"
+                sx={{
+                  textDecoration: 'line-through',
+                  fontSize: '0.9rem',
+                  fontWeight: 500
+                }}
+              >
+                ₹{product.initialPrice.toLocaleString('en-IN')}
+              </Typography>
+              <Chip
+                label={`${Math.round(((product.initialPrice - product.price) / product.initialPrice) * 100)}% OFF`}
+                size="small"
+                sx={{
+                  backgroundColor: '#ff4757',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '0.7rem',
+                  height: 20
+                }}
+              />
+            </>
           )}
         </Box>
       </CardContent>
-      
-      <CardActions sx={{ px: 2, pb: 2, pt: 0 }}>
+
+      <CardActions sx={{ px: 2, pb: 2, pt: 0, gap: 1 }}>
         <Button
           size="small"
+          variant="contained"
           startIcon={<ShoppingCart />}
           onClick={() => handleAddToCart(product)}
           disabled={product.stock === 0}
-          sx={{ 
-            backgroundColor: '#FF6B35',
+          sx={{
+            backgroundColor: '#1a73e8',
             color: 'white',
-            fontWeight: 'bold',
+            fontWeight: 600,
             px: 2,
-            '&:hover': { 
-              backgroundColor: '#E55A2B',
-              boxShadow: '0 2px 8px rgba(255, 107, 53, 0.3)'
+            textTransform: 'none',
+            '&:hover': {
+              backgroundColor: '#1557b0',
+              boxShadow: '0 4px 12px rgba(26, 115, 232, 0.3)'
             },
             '&:disabled': {
               backgroundColor: '#e0e0e0',
@@ -900,7 +917,7 @@ const Products = () => {
             }
           }}
         >
-          {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+          {product.stock === 0 ? 'Out of Stock' : 'Add'}
         </Button>
 
         <Button
@@ -909,20 +926,27 @@ const Products = () => {
           onClick={() => handleBuyNow(product)}
           disabled={product.stock === 0}
           sx={{
-            ml: 1,
-            textTransform: 'none'
+            borderColor: '#1a73e8',
+            color: '#1a73e8',
+            fontWeight: 600,
+            textTransform: 'none',
+            '&:hover': {
+              backgroundColor: 'rgba(26, 115, 232, 0.04)',
+              borderColor: '#1a73e8'
+            }
           }}
         >
           Buy Now
         </Button>
 
-        <IconButton 
-          size="small" 
-          sx={{ 
+        <IconButton
+          size="small"
+          sx={{
             border: '1px solid #e0e0e0',
-            '&:hover': { 
-              borderColor: '#FF6B35',
-              color: '#FF6B35'
+            '&:hover': {
+              borderColor: '#ff4757',
+              color: '#ff4757',
+              backgroundColor: 'rgba(255, 71, 87, 0.04)'
             }
           }}
         >
