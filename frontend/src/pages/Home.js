@@ -332,11 +332,6 @@ const Home = () => {
       </CardActions>
     </Card>
   );
-          <FavoriteBorder />
-        </IconButton>
-      </CardActions>
-    </Card>
-  );
 
   const SkeletonCard = () => (
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

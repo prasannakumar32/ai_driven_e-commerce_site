@@ -12,7 +12,8 @@ import {
   Grid,
   Divider,
   Paper,
-  CircularProgress
+  CircularProgress,
+  Chip
 } from '@mui/material';
 import {
   ShoppingCart,
