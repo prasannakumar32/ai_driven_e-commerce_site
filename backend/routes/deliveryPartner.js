@@ -172,6 +172,12 @@ router.put('/update-status/:orderId', auth, async (req, res) => {
       return res.status(400).json({ message: 'Status is required' });
     }
 
+    // Validate status value
+    const validStatuses = ['in-transit', 'out-for-delivery', 'delivered'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: 'Invalid status. Must be one of: in-transit, out-for-delivery, delivered' });
+    }
+
     const order = await Order.findById(req.params.orderId);
 
     if (!order) {
@@ -188,7 +194,7 @@ router.put('/update-status/:orderId', auth, async (req, res) => {
     order.status = status;
 
     // Initialize statusTimeline if it doesn't exist
-    if (!order.statusTimeline) {
+    if (!order.statusTimeline || !Array.isArray(order.statusTimeline)) {
       order.statusTimeline = [];
     }
 
@@ -221,10 +227,6 @@ router.put('/update-status/:orderId', auth, async (req, res) => {
       order.actualDeliveryDate = new Date();
     }
 
-    // Mark as modified to ensure save works
-    order.markModified('statusTimeline');
-    order.markModified('status');
-
     const updatedOrder = await order.save();
 
     console.log(`✅ Order status updated by delivery partner: ${previousStatus} → ${status}`);
@@ -237,8 +239,21 @@ router.put('/update-status/:orderId', auth, async (req, res) => {
       stack: error.stack,
       errors: error.errors
     });
-    res.status(500).json({ 
-      message: error.message,
+
+    // Handle validation errors specifically
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.keys(error.errors).map(key => ({
+        field: key,
+        message: error.errors[key].message
+      }));
+      return res.status(400).json({
+        message: 'Validation error',
+        details: validationErrors
+      });
+    }
+
+    res.status(500).json({
+      message: error.message || 'Failed to update order status',
       details: error.errors ? Object.keys(error.errors).map(key => ({
         field: key,
         message: error.errors[key].message
