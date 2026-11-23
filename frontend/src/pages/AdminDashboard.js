@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Container,
   Typography,
@@ -16,6 +16,7 @@ import {
   TableRow,
   Tabs,
   Tab,
+  Pagination,
   CircularProgress,
   Alert,
   Dialog,
@@ -27,8 +28,6 @@ import {
   FormControl,
   InputLabel,
   Avatar,
-  IconButton,
-  LinearProgress,
   TextField,
   Stack,
   Skeleton
@@ -44,12 +43,7 @@ import {
   Cancel,
   Refresh,
   TrendingUp,
-  Visibility,
   Delete,
-  Verified,
-  Pending,
-  Business,
-  MoreVert,
   PersonAdd,
   Email,
   Phone,
@@ -57,6 +51,18 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../utils/api';
+
+const orderStatusTransitions = {
+  pending: ['processing', 'cancelled'],
+  processing: ['shipped', 'cancelled'],
+  shipped: ['in-transit', 'cancelled'],
+  'in-transit': ['out-for-delivery', 'delivered', 'cancelled'],
+  'out-for-delivery': ['delivered', 'cancelled'],
+  delivered: [],
+  cancelled: []
+};
+
+const PAGE_SIZE = 25;
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -67,11 +73,40 @@ const AdminDashboard = () => {
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [users, setUsers] = useState([]);
+  const [listTotals, setListTotals] = useState({
+    sellers: null,
+    deliveryPartners: null,
+    orders: null,
+    products: null,
+    users: null
+  });
+  const [listStatus, setListStatus] = useState({
+    sellers: { loading: true, error: '' },
+    deliveryPartners: { loading: true, error: '' },
+    orders: { loading: true, error: '' },
+    products: { loading: true, error: '' },
+    users: { loading: true, error: '' }
+  });
+  const [pages, setPages] = useState({
+    sellers: 1,
+    deliveryPartners: 1,
+    orders: 1,
+    products: 1,
+    users: 1
+  });
+  const listRequestIds = useRef({});
+  const [assignmentPartners, setAssignmentPartners] = useState([]);
+  const [assignmentPartnersTotal, setAssignmentPartnersTotal] = useState(0);
+  const [assignmentPartnersLoading, setAssignmentPartnersLoading] = useState(false);
+  const [assignmentPartnersError, setAssignmentPartnersError] = useState('');
+  const [assignmentPage, setAssignmentPage] = useState(1);
+  const assignmentRequestId = useRef(0);
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [creatingUser, setCreatingUser] = useState(false);
   const [createUserError, setCreateUserError] = useState('');
+  const [updatingOrderId, setUpdatingOrderId] = useState('');
   const [statusDialog, setStatusDialog] = useState({ open: false, type: '', id: '', status: '' });
   const [createUserDialog, setCreateUserDialog] = useState({ open: false });
   const [assignDialog, setAssignDialog] = useState({ open: false, orderId: '' });
@@ -91,15 +126,92 @@ const AdminDashboard = () => {
     }
   }, [user]);
 
-  useEffect(() => {
-    if (user?.role === 'admin') {
-      if (activeTab === 1) fetchSellers();
-      if (activeTab === 2) fetchDeliveryPartners();
-      if (activeTab === 3) fetchOrders();
-      if (activeTab === 4) fetchProducts();
-      if (activeTab === 5) fetchUsers();
+  const fetchList = useCallback(async (key, page) => {
+    const config = {
+      sellers: { endpoint: '/admin/sellers', dataKey: 'sellers', setData: setSellers },
+      deliveryPartners: { endpoint: '/admin/delivery-partners', dataKey: 'deliveryPartners', setData: setDeliveryPartners },
+      orders: { endpoint: '/admin/orders', dataKey: 'orders', setData: setOrders },
+      products: { endpoint: '/admin/products', dataKey: 'products', setData: setProducts },
+      users: { endpoint: '/admin/users', dataKey: 'users', setData: setUsers }
+    }[key];
+
+    if (!config) return;
+
+    const requestId = (listRequestIds.current[key] || 0) + 1;
+    listRequestIds.current[key] = requestId;
+    setListStatus((current) => ({ ...current, [key]: { loading: true, error: '' } }));
+
+    try {
+      const response = await api.get(config.endpoint, {
+        params: { limit: PAGE_SIZE, skip: (page - 1) * PAGE_SIZE }
+      });
+      if (listRequestIds.current[key] !== requestId) return;
+
+      const rows = response.data[config.dataKey];
+      if (!Array.isArray(rows) || !Number.isFinite(response.data.total)) {
+        throw new Error('The server returned an invalid list response.');
+      }
+
+      const total = response.data.total;
+      const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
+      setListTotals((current) => ({ ...current, [key]: total }));
+      if (page > lastPage) {
+        setPages((current) => ({ ...current, [key]: lastPage }));
+      } else {
+        config.setData(rows);
+      }
+    } catch (err) {
+      if (listRequestIds.current[key] !== requestId) return;
+      console.error(`Error fetching admin ${key}:`, err);
+      setListStatus((current) => ({
+        ...current,
+        [key]: {
+          loading: false,
+          error: err.response?.data?.message || err.friendlyMessage || err.message || `Failed to load ${key}.`
+        }
+      }));
+      return;
     }
-  }, [activeTab, user]);
+
+    if (listRequestIds.current[key] === requestId) {
+      setListStatus((current) => ({ ...current, [key]: { loading: false, error: '' } }));
+    }
+  }, []);
+
+  const fetchAvailableDeliveryPartners = useCallback(async (page) => {
+    const requestId = assignmentRequestId.current + 1;
+    assignmentRequestId.current = requestId;
+    setAssignmentPartnersLoading(true);
+    setAssignmentPartnersError('');
+
+    try {
+      const response = await api.get('/admin/delivery-partners', {
+        params: { available: true, limit: PAGE_SIZE, skip: (page - 1) * PAGE_SIZE }
+      });
+      if (assignmentRequestId.current !== requestId) return;
+      if (!Array.isArray(response.data.deliveryPartners) || !Number.isFinite(response.data.total)) {
+        throw new Error('The server returned an invalid delivery partner list.');
+      }
+
+      setAssignmentPartners(response.data.deliveryPartners);
+      setAssignmentPartnersTotal(response.data.total);
+    } catch (err) {
+      if (assignmentRequestId.current !== requestId) return;
+      console.error('Error fetching available delivery partners:', err);
+      setAssignmentPartnersError(err.response?.data?.message || err.friendlyMessage || err.message || 'Failed to load delivery partners.');
+    } finally {
+      if (assignmentRequestId.current === requestId) setAssignmentPartnersLoading(false);
+    }
+  }, []);
+
+  const activeListKey = [null, 'sellers', 'deliveryPartners', 'orders', 'products', 'users'][activeTab];
+  const activeListPage = activeListKey ? pages[activeListKey] : null;
+
+  useEffect(() => {
+    if (user?.role !== 'admin') return;
+
+    if (activeListKey) fetchList(activeListKey, activeListPage);
+  }, [activeTab, activeListKey, activeListPage, user?.role, fetchList]);
 
   const fetchStats = async () => {
     try {
@@ -115,61 +227,8 @@ const AdminDashboard = () => {
     }
   };
 
-  const fetchSellers = async () => {
-    try {
-      const response = await api.get('/admin/sellers');
-      setSellers(response.data);
-    } catch (err) {
-      console.error('Error fetching sellers:', err);
-    }
-  };
-
-  const fetchDeliveryPartners = async () => {
-    try {
-      const response = await api.get('/admin/delivery-partners');
-      setDeliveryPartners(response.data);
-    } catch (err) {
-      console.error('Error fetching delivery partners:', err);
-    }
-  };
-
-  const fetchOrders = async () => {
-    try {
-      const response = await api.get('/admin/orders');
-      setOrders(response.data.orders);
-    } catch (err) {
-      console.error('Error fetching orders:', err);
-    }
-  };
-
-  const fetchProducts = async () => {
-    try {
-      const response = await api.get('/admin/products');
-      setProducts(response.data.products);
-    } catch (err) {
-      console.error('Error fetching products:', err);
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const response = await api.get('/admin/users');
-      setUsers(response.data.users);
-    } catch (err) {
-      console.error('Error fetching users:', err);
-    }
-  };
-
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
-    switch (newValue) {
-      case 1: fetchSellers(); break;
-      case 2: fetchDeliveryPartners(); break;
-      case 3: fetchOrders(); break;
-      case 4: fetchProducts(); break;
-      case 5: fetchUsers(); break;
-      default: break;
-    }
   };
 
   const handleStatusUpdate = async () => {
@@ -187,21 +246,30 @@ const AdminDashboard = () => {
       setStatusDialog({ open: false, type: '', id: '', status: '' });
 
       // Refresh data
-      if (type === 'seller') fetchSellers();
-      if (type === 'deliveryPartner') fetchDeliveryPartners();
+      if (type === 'seller') fetchList('sellers', pages.sellers);
+      if (type === 'deliveryPartner') fetchList('deliveryPartners', pages.deliveryPartners);
+      await fetchStats();
     } catch (err) {
       console.error('Error updating status:', err);
-      alert('Failed to update status. Please try again.');
+      alert(err.response?.data?.message || err.friendlyMessage || 'Failed to update status. Please try again.');
     }
   };
 
   const handleOrderStatusUpdate = async (orderId, newStatus) => {
+    if (updatingOrderId) return;
+
+    setUpdatingOrderId(orderId);
     try {
-      await api.put(`/admin/orders/${orderId}/status`, { status: newStatus });
-      fetchOrders();
+      const response = await api.put(`/admin/orders/${orderId}/status`, { status: newStatus });
+      setOrders((currentOrders) =>
+        currentOrders.map((order) => order._id === orderId ? response.data : order)
+      );
+      await fetchStats();
     } catch (err) {
       console.error('Error updating order status:', err);
-      alert('Failed to update order status. Please try again.');
+      alert(err.response?.data?.message || err.friendlyMessage || 'Failed to update order status. Please try again.');
+    } finally {
+      setUpdatingOrderId('');
     }
   };
 
@@ -209,22 +277,22 @@ const AdminDashboard = () => {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
         await api.delete(`/admin/products/${productId}`);
-        fetchProducts();
+        fetchList('products', pages.products);
       } catch (err) {
         console.error('Error deleting product:', err);
-        alert('Failed to delete product. Please try again.');
+        alert(err.response?.data?.message || err.friendlyMessage || 'Failed to delete product. Please try again.');
       }
     }
   };
 
   const handleDeleteUser = async (userId) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
+    if (window.confirm('Delete this user? Accounts with order history, assigned deliveries, or products cannot be deleted.')) {
       try {
         await api.delete(`/admin/users/${userId}`);
-        fetchUsers();
+        fetchList('users', pages.users);
       } catch (err) {
         console.error('Error deleting user:', err);
-        alert('Failed to delete user. Please try again.');
+        alert(err.response?.data?.message || err.friendlyMessage || 'Failed to delete user. Please try again.');
       }
     }
   };
@@ -243,7 +311,7 @@ const AdminDashboard = () => {
       });
       setCreateUserDialog({ open: false });
       setNewUser({ name: '', email: '', password: '', role: 'customer', phone: '' });
-      fetchUsers();
+      fetchList('users', pages.users);
       fetchStats();
       alert('User created successfully!');
     } catch (err) {
@@ -255,18 +323,27 @@ const AdminDashboard = () => {
   };
 
   const handleAssignDeliveryPartner = async () => {
+    if (!assignDialog.orderId || !selectedDeliveryPartner) return;
+
     try {
       await api.put(`/admin/orders/${assignDialog.orderId}/assign-delivery-partner`, { 
         deliveryPartnerId: selectedDeliveryPartner 
       });
       setAssignDialog({ open: false, orderId: '' });
       setSelectedDeliveryPartner('');
-      fetchOrders();
+      fetchList('orders', pages.orders);
       alert('Delivery partner assigned successfully!');
     } catch (err) {
       console.error('Error assigning delivery partner:', err);
-      alert('Failed to assign delivery partner. Please try again.');
+      alert(err.response?.data?.message || err.friendlyMessage || 'Failed to assign delivery partner. Please try again.');
     }
+  };
+
+  const openAssignDialog = (orderId) => {
+    setSelectedDeliveryPartner('');
+    setAssignDialog({ open: true, orderId });
+    setAssignmentPage(1);
+    fetchAvailableDeliveryPartners(1);
   };
 
   if (loading) {
@@ -290,13 +367,67 @@ const AdminDashboard = () => {
   }
 
   const summaryCards = [
-    { label: 'Total Users', value: stats?.users || 0, icon: <People />, color: '#4f46e5', tint: '#eef2ff' },
+    { label: 'Total Accounts', value: stats?.users || 0, icon: <People />, color: '#4f46e5', tint: '#eef2ff' },
     { label: 'Sellers', value: stats?.sellers || 0, icon: <Store />, color: '#c026d3', tint: '#fdf4ff' },
     { label: 'Delivery Partners', value: stats?.deliveryPartners || 0, icon: <LocalShipping />, color: '#0284c7', tint: '#f0f9ff' },
     { label: 'Orders', value: stats?.orders || 0, icon: <ShoppingCart />, color: '#059669', tint: '#ecfdf5' },
     { label: 'Products', value: stats?.products || 0, icon: <Inventory />, color: '#ea580c', tint: '#fff7ed' },
-    { label: 'Total Revenue', value: `₹${(stats?.totalRevenue || 0).toLocaleString('en-IN')}`, icon: <AttachMoney />, color: '#0f766e', tint: '#f0fdfa', isCurrency: true }
+    { label: 'Delivered Order Value', value: `₹${(stats?.deliveredOrderValue || 0).toLocaleString('en-IN')}`, icon: <AttachMoney />, color: '#0f766e', tint: '#f0fdfa', isCurrency: true }
   ];
+  const availableDeliveryPartners = assignmentPartners;
+  const getTabCount = (key, statsKey) => listTotals[key] ?? stats?.[statsKey] ?? 0;
+  const renderListStatus = (key, rows, colSpan, emptyMessage) => {
+    const status = listStatus[key];
+    if (!status.loading && !status.error && rows.length > 0) return null;
+
+    let content;
+    if (status.loading) {
+      content = (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1.5, py: 2 }}>
+          <CircularProgress size={20} />
+          <Typography variant="body2" color="text.secondary">Loading...</Typography>
+        </Box>
+      );
+    } else if (status.error) {
+      content = (
+        <Alert
+          severity="error"
+          action={<Button color="inherit" size="small" onClick={() => fetchList(key, pages[key])}>Retry</Button>}
+        >
+          {status.error}
+        </Alert>
+      );
+    } else {
+      content = <Alert severity="info">{emptyMessage}</Alert>;
+    }
+
+    return (
+      <TableRow>
+        <TableCell colSpan={colSpan} sx={{ py: 2 }}>
+          {content}
+        </TableCell>
+      </TableRow>
+    );
+  };
+  const renderListPagination = (key) => {
+    const total = listTotals[key] || 0;
+    const pageCount = Math.ceil(total / PAGE_SIZE);
+    if (pageCount <= 1) return null;
+
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, px: 1 }}>
+        <Typography variant="body2" color="text.secondary">
+          Showing {(pages[key] - 1) * PAGE_SIZE + 1}–{Math.min(pages[key] * PAGE_SIZE, total)} of {total}
+        </Typography>
+        <Pagination
+          count={pageCount}
+          page={pages[key]}
+          onChange={(event, page) => setPages((current) => ({ ...current, [key]: page }))}
+          color="primary"
+        />
+      </Box>
+    );
+  };
   const statsGridSx = {
     display: 'grid',
     gridTemplateColumns: {
@@ -304,6 +435,9 @@ const AdminDashboard = () => {
       sm: 'repeat(2, minmax(0, 1fr))',
       md: 'repeat(3, minmax(0, 1fr))',
       lg: 'repeat(6, minmax(0, 1fr))'
+    },
+    '@media (min-width: 768px) and (max-width: 899.95px)': {
+      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))'
     },
     gap: 2.5,
     mb: 4
@@ -375,7 +509,7 @@ const AdminDashboard = () => {
         {statsLoading ? (
           <Box sx={statsGridSx}>
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Skeleton key={i} variant="rectangular" height={148} sx={{ borderRadius: 3 }} />
+              <Skeleton key={i} variant="rectangular" height={136} sx={{ borderRadius: 3 }} />
             ))}
           </Box>
         ) : (
@@ -384,7 +518,7 @@ const AdminDashboard = () => {
               <Card key={metric.label} sx={{
                 height: '100%',
                 minWidth: 0,
-                minHeight: 148,
+                minHeight: 136,
                 bgcolor: '#fff',
                 border: '1px solid #e8edf4',
                 borderTop: `3px solid ${metric.color}`,
@@ -496,11 +630,11 @@ const AdminDashboard = () => {
             }}
           >
             <Tab label="Overview" icon={<TrendingUp />} iconPosition="start" />
-            <Tab label={`Sellers (${sellers.length})`} icon={<Store />} iconPosition="start" />
-            <Tab label={`Delivery Partners (${deliveryPartners.length})`} icon={<LocalShipping />} iconPosition="start" />
-            <Tab label={`Orders (${orders.length})`} icon={<ShoppingCart />} iconPosition="start" />
-            <Tab label={`Products (${products.length})`} icon={<Inventory />} iconPosition="start" />
-            <Tab label={`Users (${users.length})`} icon={<People />} iconPosition="start" />
+            <Tab label={`Sellers (${getTabCount('sellers', 'sellers')})`} icon={<Store />} iconPosition="start" />
+            <Tab label={`Delivery Partners (${getTabCount('deliveryPartners', 'deliveryPartners')})`} icon={<LocalShipping />} iconPosition="start" />
+            <Tab label={`Orders (${getTabCount('orders', 'orders')})`} icon={<ShoppingCart />} iconPosition="start" />
+            <Tab label={`Products (${getTabCount('products', 'products')})`} icon={<Inventory />} iconPosition="start" />
+            <Tab label={`Users (${getTabCount('users', 'users')})`} icon={<People />} iconPosition="start" />
           </Tabs>
         </Paper>
 
@@ -522,6 +656,13 @@ const AdminDashboard = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
+                {(!stats.recentOrders || stats.recentOrders.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={5}>
+                      <Alert severity="info">No recent orders found.</Alert>
+                    </TableCell>
+                  </TableRow>
+                )}
                 {stats.recentOrders?.map((order) => (
                   <TableRow key={order._id} hover sx={{ '&:hover': { bgcolor: '#f5f5f5' } }}>
                     <TableCell sx={{ fontWeight: 500 }}>#{order._id?.slice(-8).toUpperCase()}</TableCell>
@@ -562,7 +703,8 @@ const AdminDashboard = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {sellers.map((seller) => (
+                {renderListStatus('sellers', sellers, 5, 'No sellers found.')}
+                {!listStatus.sellers.loading && !listStatus.sellers.error && sellers.map((seller) => (
                   <TableRow key={seller._id} hover sx={{ '&:hover': { bgcolor: '#f5f5f5' } }}>
                     <TableCell sx={{ fontWeight: 500 }}>{seller.name}</TableCell>
                     <TableCell>{seller.email}</TableCell>
@@ -576,7 +718,7 @@ const AdminDashboard = () => {
                       />
                     </TableCell>
                     <TableCell>
-                      {seller.sellerStatus !== 'approved' && (
+                      {(seller.sellerStatus || 'pending') === 'pending' && (
                         <Box sx={{ display: 'flex', gap: 1 }}>
                           <Button
                             size="small"
@@ -598,12 +740,24 @@ const AdminDashboard = () => {
                           </Button>
                         </Box>
                       )}
+                      {['rejected', 'suspended'].includes(seller.sellerStatus) && (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          startIcon={<CheckCircle />}
+                          onClick={() => setStatusDialog({ open: true, type: 'seller', id: seller._id, status: 'approved' })}
+                          sx={{ bgcolor: '#4caf50', '&:hover': { bgcolor: '#45a049' } }}
+                        >
+                          Approve
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
+          {renderListPagination('sellers')}
         </Box>
       )}
 
@@ -626,7 +780,8 @@ const AdminDashboard = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {deliveryPartners.map((partner) => (
+                {renderListStatus('deliveryPartners', deliveryPartners, 6, 'No delivery partners found.')}
+                {!listStatus.deliveryPartners.loading && !listStatus.deliveryPartners.error && deliveryPartners.map((partner) => (
                   <TableRow key={partner._id} hover sx={{ '&:hover': { bgcolor: '#f5f5f5' } }}>
                     <TableCell sx={{ fontWeight: 500 }}>{partner.name}</TableCell>
                     <TableCell>{partner.email}</TableCell>
@@ -636,12 +791,12 @@ const AdminDashboard = () => {
                       <Chip
                         label={partner.deliveryPartnerStatus || 'pending'}
                         size="small"
-                        color={partner.deliveryPartnerStatus === 'active' ? 'success' : partner.deliveryPartnerStatus === 'suspended' ? 'error' : 'warning'}
+                        color={['active', 'approved'].includes(partner.deliveryPartnerStatus) ? 'success' : partner.deliveryPartnerStatus === 'suspended' ? 'error' : 'warning'}
                         sx={{ fontWeight: 500 }}
                       />
                     </TableCell>
                     <TableCell>
-                      {partner.deliveryPartnerStatus !== 'active' && (
+                      {(partner.deliveryPartnerStatus || 'pending') === 'pending' && (
                         <Box sx={{ display: 'flex', gap: 1 }}>
                           <Button
                             size="small"
@@ -663,12 +818,35 @@ const AdminDashboard = () => {
                           </Button>
                         </Box>
                       )}
+                      {partner.deliveryPartnerStatus === 'suspended' && (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          startIcon={<CheckCircle />}
+                          onClick={() => setStatusDialog({ open: true, type: 'deliveryPartner', id: partner._id, status: 'approved' })}
+                          sx={{ bgcolor: '#4caf50', '&:hover': { bgcolor: '#45a049' } }}
+                        >
+                          Approve
+                        </Button>
+                      )}
+                      {['active', 'approved'].includes(partner.deliveryPartnerStatus) && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="warning"
+                          startIcon={<Cancel />}
+                          onClick={() => setStatusDialog({ open: true, type: 'deliveryPartner', id: partner._id, status: 'suspended' })}
+                        >
+                          Suspend
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
+          {renderListPagination('deliveryPartners')}
         </Box>
       )}
 
@@ -691,7 +869,8 @@ const AdminDashboard = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {orders.map((order) => (
+                {renderListStatus('orders', orders, 6, 'No orders found.')}
+                {!listStatus.orders.loading && !listStatus.orders.error && orders.map((order) => (
                   <TableRow key={order._id} hover sx={{ '&:hover': { bgcolor: '#f5f5f5' } }}>
                     <TableCell sx={{ fontWeight: 500 }}>#{order._id?.slice(-8).toUpperCase()}</TableCell>
                     <TableCell>{order.user?.name}</TableCell>
@@ -710,13 +889,19 @@ const AdminDashboard = () => {
                         <FormControl size="small" sx={{ minWidth: 120 }}>
                           <Select
                             value={order.status}
+                            disabled={Boolean(updatingOrderId)}
                             onChange={(e) => handleOrderStatusUpdate(order._id, e.target.value)}
                           >
-                            <MenuItem value="pending">Pending</MenuItem>
-                            <MenuItem value="processing">Processing</MenuItem>
-                            <MenuItem value="shipped">Shipped</MenuItem>
-                            <MenuItem value="delivered">Delivered</MenuItem>
-                            <MenuItem value="cancelled">Cancelled</MenuItem>
+                            <MenuItem value={order.status} disabled>
+                              {order.status.replace(/-/g, ' ')}
+                            </MenuItem>
+                            {(orderStatusTransitions[order.status] || [])
+                              .filter((status) => status !== 'in-transit' || order.deliveryPartner)
+                              .map((status) => (
+                              <MenuItem key={status} value={status}>
+                                {status.replace(/-/g, ' ')}
+                              </MenuItem>
+                            ))}
                           </Select>
                         </FormControl>
                         {order.status === 'shipped' && !order.deliveryPartner && (
@@ -724,7 +909,7 @@ const AdminDashboard = () => {
                             size="small"
                             variant="contained"
                             startIcon={<LocalShipping />}
-                            onClick={() => setAssignDialog({ open: true, orderId: order._id })}
+                            onClick={() => openAssignDialog(order._id)}
                             sx={{ bgcolor: '#1976d2', '&:hover': { bgcolor: '#1565c0' } }}
                           >
                             Assign
@@ -737,6 +922,7 @@ const AdminDashboard = () => {
               </TableBody>
             </Table>
           </TableContainer>
+          {renderListPagination('orders')}
         </Box>
       )}
 
@@ -759,7 +945,8 @@ const AdminDashboard = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {products.map((product) => (
+                {renderListStatus('products', products, 6, 'No products found.')}
+                {!listStatus.products.loading && !listStatus.products.error && products.map((product) => (
                   <TableRow key={product._id} hover sx={{ '&:hover': { bgcolor: '#f5f5f5' } }}>
                     <TableCell sx={{ fontWeight: 500 }}>{product.name}</TableCell>
                     <TableCell>{product.category}</TableCell>
@@ -783,6 +970,7 @@ const AdminDashboard = () => {
               </TableBody>
             </Table>
           </TableContainer>
+          {renderListPagination('products')}
         </Box>
       )}
 
@@ -823,7 +1011,8 @@ const AdminDashboard = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {users.map((userItem) => (
+                {renderListStatus('users', users, 5, 'No users found.')}
+                {!listStatus.users.loading && !listStatus.users.error && users.map((userItem) => (
                   <TableRow key={userItem._id} hover sx={{ '&:hover': { bgcolor: '#f5f5f5' } }}>
                     <TableCell sx={{ fontWeight: 500 }}>{userItem.name}</TableCell>
                     <TableCell>{userItem.email}</TableCell>
@@ -837,7 +1026,7 @@ const AdminDashboard = () => {
                     </TableCell>
                     <TableCell>{new Date(userItem.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      {userItem.role !== 'admin' && (
+                      {userItem.role !== 'admin' && String(userItem._id) !== String(user?._id) && (
                         <Button
                           size="small"
                           variant="contained"
@@ -855,16 +1044,17 @@ const AdminDashboard = () => {
               </TableBody>
             </Table>
           </TableContainer>
+          {renderListPagination('users')}
         </Box>
       )}
 
       {/* Status Update Dialog */}
       <Dialog open={statusDialog.open} onClose={() => setStatusDialog({ open: false, type: '', id: '', status: '' })}>
         <DialogTitle>
-          {statusDialog.status === 'approved' ? 'Approve' : 'Reject'} {statusDialog.type === 'seller' ? 'Seller' : 'Delivery Partner'}
+          {statusDialog.status === 'approved' ? 'Approve' : statusDialog.status === 'suspended' ? 'Suspend' : 'Reject'} {statusDialog.type === 'seller' ? 'Seller' : 'Delivery Partner'}
         </DialogTitle>
         <DialogContent>
-          Are you sure you want to {statusDialog.status === 'approved' ? 'approve' : 'reject'} this {statusDialog.type === 'seller' ? 'seller' : 'delivery partner'}?
+          Are you sure you want to {statusDialog.status === 'approved' ? 'approve' : statusDialog.status === 'suspended' ? 'suspend' : 'reject'} this {statusDialog.type === 'seller' ? 'seller' : 'delivery partner'}?
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setStatusDialog({ open: false, type: '', id: '', status: '' })}>
@@ -992,22 +1182,62 @@ const AdminDashboard = () => {
         </DialogTitle>
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 2 }}>
+            {assignmentPartnersLoading && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <CircularProgress size={20} />
+                <Typography variant="body2" color="text.secondary">
+                  Loading available delivery partners...
+                </Typography>
+              </Box>
+            )}
+            {assignmentPartnersError && (
+              <Alert
+                severity="error"
+                action={
+                  <Button color="inherit" size="small" onClick={() => fetchAvailableDeliveryPartners(assignmentPage)}>
+                    Retry
+                  </Button>
+                }
+              >
+                {assignmentPartnersError}
+              </Alert>
+            )}
+            {!assignmentPartnersLoading && !assignmentPartnersError && assignmentPartnersTotal === 0 && (
+              <Alert severity="info">
+                No active or approved delivery partners were found.
+              </Alert>
+            )}
+            {!assignmentPartnersLoading && !assignmentPartnersError && assignmentPartnersTotal > 0 && availableDeliveryPartners.length === 0 && (
+              <Alert severity="info">
+                No delivery partners are available on this page.
+              </Alert>
+            )}
             <FormControl fullWidth>
               <InputLabel>Select Delivery Partner</InputLabel>
               <Select
                 value={selectedDeliveryPartner}
                 label="Select Delivery Partner"
+                disabled={assignmentPartnersLoading || Boolean(assignmentPartnersError) || availableDeliveryPartners.length === 0}
                 onChange={(e) => setSelectedDeliveryPartner(e.target.value)}
               >
-                {deliveryPartners
-                  .filter(dp => dp.deliveryPartnerStatus === 'active' || dp.deliveryPartnerStatus === 'approved')
-                  .map((dp) => (
-                    <MenuItem key={dp._id} value={dp._id}>
-                      {dp.name} - {dp.vehicleType} ({dp.operatingArea})
-                    </MenuItem>
-                  ))}
+                {availableDeliveryPartners.map((dp) => (
+                  <MenuItem key={dp._id} value={dp._id}>
+                    {dp.name} - {dp.vehicleType} ({dp.operatingArea})
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
+            {assignmentPartnersTotal > PAGE_SIZE && (
+              <Pagination
+                count={Math.ceil(assignmentPartnersTotal / PAGE_SIZE)}
+                page={assignmentPage}
+                onChange={(event, page) => {
+                  setAssignmentPage(page);
+                  fetchAvailableDeliveryPartners(page);
+                }}
+                color="primary"
+              />
+            )}
           </Stack>
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
@@ -1020,7 +1250,7 @@ const AdminDashboard = () => {
           <Button 
             variant="contained" 
             onClick={handleAssignDeliveryPartner}
-            disabled={!selectedDeliveryPartner}
+            disabled={!selectedDeliveryPartner || assignmentPartnersLoading || Boolean(assignmentPartnersError)}
             sx={{ 
               px: 3,
               bgcolor: '#1976d2',
