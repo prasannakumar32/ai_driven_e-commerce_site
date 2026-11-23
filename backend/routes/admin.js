@@ -373,20 +373,62 @@ router.delete('/users/:id', auth, adminAuth, async (req, res) => {
 router.post('/users', auth, adminAuth, async (req, res) => {
   try {
     const { name, email, password, role, phone } = req.body;
+    const normalizedName = typeof name === 'string' ? name.trim() : '';
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    const normalizedRole = role || 'customer';
+    const normalizedPhone = typeof phone === 'string' ? phone.trim() : '';
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'User with this email already exists' });
+    if (!normalizedName || !normalizedEmail || typeof password !== 'string' || !password) {
+      return res.status(400).json({ message: 'Name, email, and password are required' });
     }
 
-    // Create new user
+    if (normalizedName.length < 2 || normalizedName.length > 50) {
+      return res.status(400).json({ message: 'Name must be between 2 and 50 characters long' });
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return res.status(400).json({ message: 'Please enter a valid email address' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+    }
+
+    if (!['customer', 'seller', 'delivery_partner', 'admin'].includes(normalizedRole)) {
+      return res.status(400).json({ message: 'Invalid user role' });
+    }
+
+    const existingUser = await User.findOne({ email: normalizedEmail }).select('_id');
+    if (existingUser) {
+      return res.status(409).json({ message: 'User with this email already exists' });
+    }
+
+    const emailPrefix = normalizedEmail.split('@')[0];
+    let usernameBase = emailPrefix
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    if (usernameBase.length < 3) {
+      usernameBase = `user_${usernameBase}`;
+    }
+    usernameBase = (usernameBase || 'user').slice(0, 30);
+
+    let username = usernameBase;
+    let suffix = 1;
+    while (await User.exists({ username })) {
+      const suffixText = `_${suffix}`;
+      username = `${usernameBase.slice(0, 30 - suffixText.length)}${suffixText}`;
+      suffix += 1;
+    }
+
     const user = new User({
-      name,
-      email,
+      username,
+      name: normalizedName,
+      email: normalizedEmail,
       password,
-      role: role || 'customer',
-      phone: phone || ''
+      role: normalizedRole,
+      phone: normalizedPhone
     });
 
     await user.save();
@@ -397,8 +439,23 @@ router.post('/users', auth, adminAuth, async (req, res) => {
 
     res.status(201).json(userResponse);
   } catch (error) {
+    if (error.code === 11000) {
+      const duplicateField = Object.keys(error.keyPattern || error.keyValue || {})[0];
+      if (duplicateField === 'email') {
+        return res.status(409).json({ message: 'User with this email already exists' });
+      }
+      if (duplicateField === 'username') {
+        return res.status(409).json({ message: 'Unable to generate a unique username. Please try again.' });
+      }
+    }
+
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map((validationError) => validationError.message);
+      return res.status(400).json({ message: messages.join(', ') });
+    }
+
     console.error('Error creating user:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: 'Failed to create user' });
   }
 });
 

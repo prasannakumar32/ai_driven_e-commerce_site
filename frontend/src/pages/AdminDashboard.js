@@ -4,7 +4,6 @@ import {
   Typography,
   Box,
   Paper,
-  Grid,
   Card,
   CardContent,
   Button,
@@ -71,6 +70,8 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [createUserError, setCreateUserError] = useState('');
   const [statusDialog, setStatusDialog] = useState({ open: false, type: '', id: '', status: '' });
   const [createUserDialog, setCreateUserDialog] = useState({ open: false });
   const [assignDialog, setAssignDialog] = useState({ open: false, orderId: '' });
@@ -229,8 +230,17 @@ const AdminDashboard = () => {
   };
 
   const handleCreateUser = async () => {
+    if (creatingUser) return;
+
+    setCreatingUser(true);
+    setCreateUserError('');
     try {
-      await api.post('/admin/users', newUser);
+      await api.post('/admin/users', {
+        ...newUser,
+        name: newUser.name.trim(),
+        email: newUser.email.trim().toLowerCase(),
+        phone: newUser.phone.trim()
+      });
       setCreateUserDialog({ open: false });
       setNewUser({ name: '', email: '', password: '', role: 'customer', phone: '' });
       fetchUsers();
@@ -238,7 +248,9 @@ const AdminDashboard = () => {
       alert('User created successfully!');
     } catch (err) {
       console.error('Error creating user:', err);
-      alert('Failed to create user. Please try again.');
+      setCreateUserError(err.response?.data?.message || err.friendlyMessage || 'Failed to create user. Please try again.');
+    } finally {
+      setCreatingUser(false);
     }
   };
 
@@ -276,6 +288,26 @@ const AdminDashboard = () => {
       </Container>
     );
   }
+
+  const summaryCards = [
+    { label: 'Total Users', value: stats?.users || 0, icon: <People />, color: '#4f46e5', tint: '#eef2ff' },
+    { label: 'Sellers', value: stats?.sellers || 0, icon: <Store />, color: '#c026d3', tint: '#fdf4ff' },
+    { label: 'Delivery Partners', value: stats?.deliveryPartners || 0, icon: <LocalShipping />, color: '#0284c7', tint: '#f0f9ff' },
+    { label: 'Orders', value: stats?.orders || 0, icon: <ShoppingCart />, color: '#059669', tint: '#ecfdf5' },
+    { label: 'Products', value: stats?.products || 0, icon: <Inventory />, color: '#ea580c', tint: '#fff7ed' },
+    { label: 'Total Revenue', value: `₹${(stats?.totalRevenue || 0).toLocaleString('en-IN')}`, icon: <AttachMoney />, color: '#0f766e', tint: '#f0fdfa', isCurrency: true }
+  ];
+  const statsGridSx = {
+    display: 'grid',
+    gridTemplateColumns: {
+      xs: '1fr',
+      sm: 'repeat(2, minmax(0, 1fr))',
+      md: 'repeat(3, minmax(0, 1fr))',
+      lg: 'repeat(6, minmax(0, 1fr))'
+    },
+    gap: 2.5,
+    mb: 4
+  };
 
   return (
     <Box sx={{ 
@@ -341,214 +373,69 @@ const AdminDashboard = () => {
 
         {/* Stats Cards */}
         {statsLoading ? (
-          <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Box sx={statsGridSx}>
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Grid item xs={12} sm={6} md={2.4} key={i}>
-                <Skeleton variant="rectangular" height={140} sx={{ borderRadius: 3 }} />
-              </Grid>
+              <Skeleton key={i} variant="rectangular" height={148} sx={{ borderRadius: 3 }} />
             ))}
-          </Grid>
+          </Box>
         ) : (
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={6} md={2.4}>
-              <Card sx={{ 
-                bgcolor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
+          <Box sx={statsGridSx}>
+            {summaryCards.map((metric) => (
+              <Card key={metric.label} sx={{
+                height: '100%',
+                minWidth: 0,
+                minHeight: 148,
+                bgcolor: '#fff',
+                border: '1px solid #e8edf4',
+                borderTop: `3px solid ${metric.color}`,
                 borderRadius: 3,
-                boxShadow: '0 4px 20px rgba(102, 126, 234, 0.4)',
-                transition: 'transform 0.3s, box-shadow 0.3s',
+                boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                 '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 8px 30px rgba(102, 126, 234, 0.5)'
+                  transform: 'translateY(-3px)',
+                  boxShadow: '0 8px 20px rgba(15, 23, 42, 0.1)'
                 }
               }}>
-                <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography variant="h3" fontWeight="bold" sx={{ fontSize: '2.5rem' }}>
-                        {stats.users || 0}
-                      </Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.9, mt: 1 }}>
-                        Total Users
-                      </Typography>
-                    </Box>
-                    <Avatar sx={{ 
-                      bgcolor: 'rgba(255,255,255,0.2)',
-                      width: 56,
-                      height: 56
+                <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                    <Avatar sx={{
+                      bgcolor: metric.tint,
+                      color: metric.color,
+                      width: 38,
+                      height: 38,
+                      flexShrink: 0
                     }}>
-                      <People sx={{ fontSize: 32 }} />
+                      {React.cloneElement(metric.icon, { sx: { fontSize: 21 } })}
                     </Avatar>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: '#64748b',
+                        fontWeight: 600,
+                        lineHeight: 1.3,
+                        overflowWrap: 'anywhere'
+                      }}
+                    >
+                      {metric.label}
+                    </Typography>
                   </Box>
+                  <Typography
+                    variant="h5"
+                    sx={{
+                      color: '#172033',
+                      fontWeight: 700,
+                      letterSpacing: '-0.03em',
+                      lineHeight: 1.2,
+                      fontSize: metric.isCurrency ? 'clamp(1rem, 1.25vw, 1.4rem)' : '2rem',
+                      overflowWrap: 'anywhere'
+                    }}
+                  >
+                    {metric.value}
+                  </Typography>
                 </CardContent>
               </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={2.4}>
-              <Card sx={{ 
-                bgcolor: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                color: 'white',
-                borderRadius: 3,
-                boxShadow: '0 4px 20px rgba(240, 147, 251, 0.4)',
-                transition: 'transform 0.3s, box-shadow 0.3s',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 8px 30px rgba(240, 147, 251, 0.5)'
-                }
-              }}>
-                <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography variant="h3" fontWeight="bold" sx={{ fontSize: '2.5rem' }}>
-                        {stats.sellers || 0}
-                      </Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.9, mt: 1 }}>
-                        Sellers
-                      </Typography>
-                    </Box>
-                    <Avatar sx={{ 
-                      bgcolor: 'rgba(255,255,255,0.2)',
-                      width: 56,
-                      height: 56
-                    }}>
-                      <Store sx={{ fontSize: 32 }} />
-                    </Avatar>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={2.4}>
-              <Card sx={{ 
-                bgcolor: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-                color: 'white',
-                borderRadius: 3,
-                boxShadow: '0 4px 20px rgba(79, 172, 254, 0.4)',
-                transition: 'transform 0.3s, box-shadow 0.3s',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 8px 30px rgba(79, 172, 254, 0.5)'
-                }
-              }}>
-                <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography variant="h3" fontWeight="bold" sx={{ fontSize: '2.5rem' }}>
-                        {stats.deliveryPartners || 0}
-                      </Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.9, mt: 1 }}>
-                        Delivery Partners
-                      </Typography>
-                    </Box>
-                    <Avatar sx={{ 
-                      bgcolor: 'rgba(255,255,255,0.2)',
-                      width: 56,
-                      height: 56
-                    }}>
-                      <LocalShipping sx={{ fontSize: 32 }} />
-                    </Avatar>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={2.4}>
-              <Card sx={{ 
-                bgcolor: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-                color: 'white',
-                borderRadius: 3,
-                boxShadow: '0 4px 20px rgba(67, 233, 123, 0.4)',
-                transition: 'transform 0.3s, box-shadow 0.3s',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 8px 30px rgba(67, 233, 123, 0.5)'
-                }
-              }}>
-                <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography variant="h3" fontWeight="bold" sx={{ fontSize: '2.5rem' }}>
-                        {stats.orders || 0}
-                      </Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.9, mt: 1 }}>
-                        Orders
-                      </Typography>
-                    </Box>
-                    <Avatar sx={{ 
-                      bgcolor: 'rgba(255,255,255,0.2)',
-                      width: 56,
-                      height: 56
-                    }}>
-                      <ShoppingCart sx={{ fontSize: 32 }} />
-                    </Avatar>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={2.4}>
-              <Card sx={{ 
-                bgcolor: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-                color: 'white',
-                borderRadius: 3,
-                boxShadow: '0 4px 20px rgba(250, 112, 154, 0.4)',
-                transition: 'transform 0.3s, box-shadow 0.3s',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 8px 30px rgba(250, 112, 154, 0.5)'
-                }
-              }}>
-                <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography variant="h3" fontWeight="bold" sx={{ fontSize: '2.5rem' }}>
-                        {stats.products || 0}
-                      </Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.9, mt: 1 }}>
-                        Products
-                      </Typography>
-                    </Box>
-                    <Avatar sx={{ 
-                      bgcolor: 'rgba(255,255,255,0.2)',
-                      width: 56,
-                      height: 56
-                    }}>
-                      <Inventory sx={{ fontSize: 32 }} />
-                    </Avatar>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={2.4}>
-              <Card sx={{ 
-                bgcolor: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
-                color: 'white',
-                borderRadius: 3,
-                boxShadow: '0 4px 20px rgba(48, 207, 208, 0.4)',
-                transition: 'transform 0.3s, box-shadow 0.3s',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 8px 30px rgba(48, 207, 208, 0.5)'
-                }
-              }}>
-                <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography variant="h3" fontWeight="bold" sx={{ fontSize: '2rem' }}>
-                        ₹{(stats.totalRevenue || 0).toLocaleString('en-IN')}
-                      </Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.9, mt: 1 }}>
-                        Total Revenue
-                      </Typography>
-                    </Box>
-                    <Avatar sx={{ 
-                      bgcolor: 'rgba(255,255,255,0.2)',
-                      width: 56,
-                      height: 56
-                    }}>
-                      <AttachMoney sx={{ fontSize: 32 }} />
-                    </Avatar>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
+            ))}
+          </Box>
         )}
 
         {/* Pending Approvals Alert */}
@@ -909,7 +796,10 @@ const AdminDashboard = () => {
             <Button
               variant="contained"
               startIcon={<PersonAdd />}
-              onClick={() => setCreateUserDialog({ open: true })}
+              onClick={() => {
+                setCreateUserError('');
+                setCreateUserDialog({ open: true });
+              }}
               sx={{
                 bgcolor: '#1976d2',
                 '&:hover': { bgcolor: '#1565c0' },
@@ -1001,9 +891,11 @@ const AdminDashboard = () => {
         </DialogTitle>
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 2 }}>
+            {createUserError && <Alert severity="error">{createUserError}</Alert>}
             <TextField
               fullWidth
               label="Full Name"
+              required
               value={newUser.name}
               onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
               InputProps={{
@@ -1014,6 +906,7 @@ const AdminDashboard = () => {
               fullWidth
               label="Email"
               type="email"
+              required
               value={newUser.email}
               onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
               InputProps={{
@@ -1024,6 +917,8 @@ const AdminDashboard = () => {
               fullWidth
               label="Password"
               type="password"
+              required
+              inputProps={{ minLength: 6 }}
               value={newUser.password}
               onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
               InputProps={{
@@ -1064,7 +959,12 @@ const AdminDashboard = () => {
           <Button 
             variant="contained" 
             onClick={handleCreateUser}
-            disabled={!newUser.name || !newUser.email || !newUser.password}
+            disabled={
+              creatingUser ||
+              newUser.name.trim().length < 2 ||
+              !newUser.email.trim() ||
+              newUser.password.length < 6
+            }
             sx={{ 
               px: 3,
               bgcolor: '#1976d2',
@@ -1072,7 +972,7 @@ const AdminDashboard = () => {
               '&:disabled': { bgcolor: '#ccc' }
             }}
           >
-            Create User
+            {creatingUser ? 'Creating...' : 'Create User'}
           </Button>
         </DialogActions>
       </Dialog>
